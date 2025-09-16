@@ -14,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  * In-memory implementation of MessageService.
@@ -26,6 +28,7 @@ public class InMemoryMessageService implements MessageService {
     private final Map<String, List<MessageHandler>> topicSubscriptions = new ConcurrentHashMap<>();
     private final Map<String, PredicateSubscription> predicateSubscriptions = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> pendingRequests = new ConcurrentHashMap<>();
+    private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
     
     @Override
     public CompletableFuture<Void> send(Message message) {
@@ -49,7 +52,7 @@ public class InMemoryMessageService implements MessageService {
             // Deliver to predicate subscribers
             deliverToPredicateSubscribers(message);
             
-        }, Thread.ofVirtual().factory());
+        }, VIRTUAL_EXECUTOR);
     }
     
     @Override

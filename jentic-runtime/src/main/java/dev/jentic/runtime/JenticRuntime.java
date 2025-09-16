@@ -138,7 +138,7 @@ public class JenticRuntime {
      */
     public void registerAgent(Agent agent) {
         agents.put(agent.getAgentId(), agent);
-        
+        processAnnotations(agent);
         // Configure agent services
         if (agent instanceof BaseAgent baseAgent) {
             baseAgent.setMessageService(messageService);
@@ -155,7 +155,7 @@ public class JenticRuntime {
     public <T extends Agent> T createAgent(Class<T> agentClass) {
         try {
             T agent = instantiateAgent(agentClass);
-            processAnnotations(agent);
+
             registerAgent(agent);
             return agent;
         } catch (Exception e) {
