@@ -239,9 +239,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🙋 Support
 
-- 📧 Email: support@jentic.dev
-- 💬 Discord: [Jentic Community](https://discord.gg/jentic)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/jentic/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic)
 
 ## 🏆 Acknowledgments
 
