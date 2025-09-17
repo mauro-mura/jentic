@@ -22,7 +22,7 @@
         
         <!-- Dependencies Versions -->
         <slf4j.version>2.0.9</slf4j.version>
-        <logback.version>1.4.14</logback.version>
+        <logback.version>1.5.13</logback.version>
         <jackson.version>2.16.1</jackson.version>
         <junit.version>5.10.1</junit.version>
         <mockito.version>5.8.0</mockito.version>
@@ -76,6 +76,11 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
             </dependency>
 
