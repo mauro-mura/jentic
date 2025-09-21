@@ -153,7 +153,13 @@ public class JenticRuntime {
      * Register a new agent instance
      */
     public void registerAgent(Agent agent) {
-        agents.put(agent.getAgentId(), agent);
+        Objects.requireNonNull(agent, "Agent cannot be null");
+        String agentId = agent.getAgentId();
+        if (agentId == null || agentId.isBlank()) {
+            agentId = java.util.UUID.randomUUID().toString();
+            log.warn("Agent ID not set. Generated random ID: {}", agentId);
+        }
+        agents.put(agentId, agent);
 
         // Configure agent services
         if (agent instanceof BaseAgent baseAgent) {
@@ -171,6 +177,8 @@ public class JenticRuntime {
     public <T extends Agent> T createAgent(Class<T> agentClass) {
         try {
             T agent = agentFactory.createAgent(agentClass);
+            Objects.requireNonNull(agent, "Factory returned null agent for class: " + agentClass.getName());
+
             registerAgent(agent);
 
             // Process annotations if runtime is already started

@@ -114,10 +114,15 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
         
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
             () -> {
-                if (behavior.isActive()) {
-                    executeBehavior(behavior);
-                } else {
-                    cancel(behavior.getBehaviorId());
+                try {
+                    if (behavior.isActive()) {
+                        executeBehavior(behavior);
+                    } else {
+                        cancel(behavior.getBehaviorId());
+                    }
+                } catch (Throwable t) {
+                    // Never let exceptions bubble to the scheduler
+                    log.error("Scheduled runner failed for behavior: {}", behavior.getBehaviorId(), t);
                 }
             },
             0,
@@ -162,7 +167,12 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
         Thread.startVirtualThread(() -> {
             try {
                 log.trace("Executing behavior: {}", behavior.getBehaviorId());
-                behavior.execute().join();
+                behavior.execute().whenComplete((res, ex) -> {
+                    if (ex != null) {
+                        // Error handling for custom behaviors
+                        log.error("Error in behavior execution: {}", behavior.getBehaviorId(), ex);
+                    }
+                });
             } catch (Exception e) {
                 log.error("Error executing behavior: {}", behavior.getBehaviorId(), e);
             }
