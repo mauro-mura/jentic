@@ -151,23 +151,26 @@ class SimpleBehaviorSchedulerTest {
         assertThat(latch.await(1, TimeUnit.SECONDS)).isFalse();
     }
     
-//    @Test
-//    void shouldHandleBehaviorExceptions() throws InterruptedException {
-//        // Given
-//        CountDownLatch latch = new CountDownLatch(2); // Should execute twice despite exception
-//        AtomicInteger executeCount = new AtomicInteger(0);
-//
-//        CyclicBehavior faultyBehavior = CyclicBehavior.from("faulty", Duration.ofMillis(200), () -> {
-//            executeCount.incrementAndGet();
-//            latch.countDown();
-//            throw new RuntimeException("Behavior error");
-//        });
-//
-//        // When
-//        scheduler.schedule(faultyBehavior).join();
-//
-//        // Then
-//        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
-//        assertThat(executeCount.get()).isGreaterThanOrEqualTo(2);
-//    }
+    @Test
+    void shouldHandleBehaviorExceptions() throws InterruptedException {
+        // Given
+        CountDownLatch latch = new CountDownLatch(3); // Should execute twice despite exception
+        AtomicInteger executeCount = new AtomicInteger(0);
+
+        CyclicBehavior faultyBehavior = CyclicBehavior.from("faulty", Duration.ofMillis(150), () -> {
+            executeCount.incrementAndGet();
+            latch.countDown();
+            throw new RuntimeException("Behavior error");
+        });
+
+        // When
+        scheduler.schedule(faultyBehavior).join();
+
+        // Then
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(executeCount.get()).isGreaterThanOrEqualTo(3);
+
+        // Stop the behavior to clean up
+        faultyBehavior.stop();
+    }
 }

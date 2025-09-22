@@ -114,15 +114,15 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
         
         ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(
             () -> {
-                try {
-                    if (behavior.isActive()) {
+                if (behavior.isActive()) {
+                    try {
                         executeBehavior(behavior);
-                    } else {
-                        cancel(behavior.getBehaviorId());
+                    } catch (Throwable t) {
+                        // Never let exceptions bubble to the scheduler
+                        log.error("Scheduled runner failed for behavior: {}", behavior.getBehaviorId(), t);
                     }
-                } catch (Throwable t) {
-                    // Never let exceptions bubble to the scheduler
-                    log.error("Scheduled runner failed for behavior: {}", behavior.getBehaviorId(), t);
+                } else {
+                    cancel(behavior.getBehaviorId());
                 }
             },
             0,
@@ -163,19 +163,10 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     }
     
     private void executeBehavior(Behavior behavior) {
-        // Execute behavior in virtual thread
-        Thread.startVirtualThread(() -> {
-            try {
-                log.trace("Executing behavior: {}", behavior.getBehaviorId());
-                behavior.execute().whenComplete((res, ex) -> {
-                    if (ex != null) {
-                        // Error handling for custom behaviors
-                        log.error("Error in behavior execution: {}", behavior.getBehaviorId(), ex);
-                    }
-                });
-            } catch (Exception e) {
-                log.error("Error executing behavior: {}", behavior.getBehaviorId(), e);
-            }
-        });
+        try {
+            behavior.execute().join();  // ← Sincrono, eccezioni catturate
+        } catch (Exception e) {
+            log.error("Error executing behavior: {}", behavior.getBehaviorId(), e);
+        }
     }
 }
