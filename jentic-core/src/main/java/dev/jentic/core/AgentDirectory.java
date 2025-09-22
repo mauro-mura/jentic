@@ -13,14 +13,14 @@ public interface AgentDirectory {
     /**
      * Register an agent in the directory
      * @param descriptor the agent descriptor
-     * @return CompletableFuture that completes when agent is registered
+     * @return CompletableFuture that completes when the agent is registered
      */
     CompletableFuture<Void> register(AgentDescriptor descriptor);
     
     /**
      * Unregister an agent from the directory
      * @param agentId the ID of the agent to unregister
-     * @return CompletableFuture that completes when agent is unregistered
+     * @return CompletableFuture that completes when the agent is unregistered
      */
     CompletableFuture<Void> unregister(String agentId);
     

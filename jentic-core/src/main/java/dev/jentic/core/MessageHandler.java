@@ -4,18 +4,18 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * Functional interface for handling received messages.
- * Can be implemented as lambda or method reference.
+ * Can be implemented as a lambda or method reference.
  */
 @FunctionalInterface
 public interface MessageHandler {
-    
+
     /**
      * Handle a received message
      * @param message the received message
      * @return CompletableFuture that completes when handling is done
      */
     CompletableFuture<Void> handle(Message message);
-    
+
     /**
      * Default implementation for synchronous handlers
      * @param syncHandler synchronous message handler
@@ -31,7 +31,7 @@ public interface MessageHandler {
             }
         };
     }
-    
+
     @FunctionalInterface
     interface SyncMessageHandler {
         void handle(Message message) throws Exception;

@@ -7,11 +7,14 @@ import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
 import dev.jentic.runtime.discovery.AnnotationProcessor;
+import dev.jentic.runtime.lifecycle.LifecycleListener;
+import dev.jentic.runtime.lifecycle.LifecycleManager;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,6 +35,11 @@ public class JenticRuntime {
     private final AgentScanner agentScanner;
     private final AgentFactory agentFactory;
     private final AnnotationProcessor annotationProcessor;
+    private final LifecycleManager lifecycleManager;
+
+    // Configuration
+    private static final Duration DEFAULT_STARTUP_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
 
     private final Map<String, Agent> agents = new ConcurrentHashMap<>();
     private final Set<String> scanPackages = new HashSet<>();
@@ -52,6 +60,10 @@ public class JenticRuntime {
         this.agentScanner = new AgentScanner();
         this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler);
         this.annotationProcessor = new AnnotationProcessor(messageService);
+        this.lifecycleManager = new LifecycleManager();
+
+        // Add default lifecycle listener
+        this.lifecycleManager.addLifecycleListener(LifecycleListener.logging());
 
         // Configuration
         this.scanPackages.addAll(builder.scanPackages);
@@ -117,7 +129,16 @@ public class JenticRuntime {
                 // Stop all agents
                 List<CompletableFuture<Void>> stopFutures = new ArrayList<>();
                 for (Agent agent : agents.values()) {
-                    stopFutures.add(agent.stop());
+                    if (agent.isRunning()) {
+                        CompletableFuture<Void> stopFuture = lifecycleManager
+                                .stopAgent(agent, DEFAULT_SHUTDOWN_TIMEOUT)
+                                .exceptionally(throwable -> {
+                                    log.error("Failed to stop agent: {} - {}",
+                                            agent.getAgentId(), throwable.getMessage());
+                                    return null;
+                                });
+                        stopFutures.add(stopFuture);
+                    }
                 }
 
                 // Wait for all agents to stop
@@ -200,6 +221,13 @@ public class JenticRuntime {
     }
 
     /**
+     * Get the lifecycle manager
+     */
+    public LifecycleManager getLifecycleManager() {
+        return lifecycleManager;
+    }
+
+    /**
      * Get runtime statistics
      */
     public RuntimeStats getStats() {
@@ -276,7 +304,16 @@ public class JenticRuntime {
         for (Agent agent : agents.values()) {
             // Check if agent should auto-start
             if (shouldAutoStart(agent)) {
-                startFutures.add(agent.start());
+                // Use LifecycleManager for proper state tracking and timeout handling
+                CompletableFuture<Void> startFuture = lifecycleManager
+                        .startAgent(agent, DEFAULT_STARTUP_TIMEOUT)
+                        .exceptionally(throwable -> {
+                            log.error("Failed to start agent: {} - {}",
+                                    agent.getAgentId(), throwable.getMessage());
+                            // Don't fail entire startup for one agent
+                            return null;
+                        });
+                startFutures.add(startFuture);
             }
         }
 

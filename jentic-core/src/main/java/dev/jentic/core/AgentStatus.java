@@ -28,6 +28,16 @@ public enum AgentStatus {
      * Agent encountered an error
      */
     ERROR,
+
+    /**
+     * Agent crashed and needs recovery
+     */
+    CRASHED,
+
+    /**
+     * Agent is temporarily suspended
+     */
+    SUSPENDED,
     
     /**
      * Agent status is unknown

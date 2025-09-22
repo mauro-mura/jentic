@@ -18,7 +18,7 @@ public interface BehaviorScheduler {
     /**
      * Cancel a scheduled behavior
      * @param behaviorId the ID of the behavior to cancel
-     * @return true if behavior was found and cancelled
+     * @return true if behavior was found and canceled
      */
     boolean cancel(String behaviorId);
     

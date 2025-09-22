@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Map;
 
 /**
- * Configuration object for Jentic framework.
+ * Configuration object for the Jentic framework.
  * Can be loaded from YAML, JSON, or properties files.
  */
 public record JenticConfiguration(

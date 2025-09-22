@@ -24,13 +24,14 @@ public abstract class BaseAgent implements Agent {
     private final String agentName;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Map<String, Behavior> behaviors = new ConcurrentHashMap<>();
-    
+    private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
+
     protected MessageService messageService;
     protected BehaviorScheduler behaviorScheduler;
     protected AgentDirectory agentDirectory;
     
     /**
-     * Create agent with auto-generated ID
+     * Create an agent with auto-generated ID
      */
     protected BaseAgent() {
         this(UUID.randomUUID().toString());
@@ -44,7 +45,7 @@ public abstract class BaseAgent implements Agent {
     }
     
     /**
-     * Create agent with ID and name
+     * Create an agent with ID and name
      */
     protected BaseAgent(String agentId, String agentName) {
         this.agentId = agentId;
@@ -70,7 +71,8 @@ public abstract class BaseAgent implements Agent {
     public CompletableFuture<Void> start() {
         if (running.compareAndSet(false, true)) {
             log.info("Starting agent: {} ({})", agentName, agentId);
-            
+            currentStatus = AgentStatus.STARTING;
+
             return CompletableFuture.runAsync(() -> {
                 try {
                     // Initialize services if not already set
@@ -84,11 +86,14 @@ public abstract class BaseAgent implements Agent {
                     
                     // Call lifecycle hook
                     onStart();
-                    
+
+                    currentStatus = AgentStatus.RUNNING;
                     log.info("Agent started successfully: {} ({})", agentName, agentId);
                     
                 } catch (Exception e) {
+                    currentStatus = AgentStatus.ERROR;
                     running.set(false);
+                    log.error("Failed to start agent: {}", agentId, e);
                     throw new RuntimeException("Failed to start agent: " + agentId, e);
                 }
             });
@@ -101,6 +106,7 @@ public abstract class BaseAgent implements Agent {
     public CompletableFuture<Void> stop() {
         if (running.compareAndSet(true, false)) {
             log.info("Stopping agent: {} ({})", agentName, agentId);
+            currentStatus = AgentStatus.STOPPING;
             
             return CompletableFuture.runAsync(() -> {
                 try {
@@ -112,10 +118,12 @@ public abstract class BaseAgent implements Agent {
                     
                     // Unregister from directory
                     unregisterFromDirectory();
-                    
+
+                    currentStatus = AgentStatus.STOPPED;
                     log.info("Agent stopped successfully: {} ({})", agentName, agentId);
                     
                 } catch (Exception e) {
+                    currentStatus = AgentStatus.ERROR;
                     log.error("Error stopping agent: " + agentId, e);
                 }
             });
@@ -161,7 +169,14 @@ public abstract class BaseAgent implements Agent {
     public void setBehaviorScheduler(BehaviorScheduler behaviorScheduler) {
         this.behaviorScheduler = behaviorScheduler;
     }
-    
+
+    /**
+     * Get current agent status
+     */
+    public AgentStatus getStatus() {
+        return currentStatus;
+    }
+
     /**
      * Set the agent directory for this agent
      */
