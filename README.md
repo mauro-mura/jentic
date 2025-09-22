@@ -73,6 +73,8 @@ public class HelloWorld {
 
 Jentic follows a modular, interface-first architecture:
 
+For details, read the Architecture Guide at docs/architecture.md.
+
 ```
 ┌──────────────────┬─────────────────┬─────────────────┐
 │   jentic-core    │ jentic-runtime  │ jentic-adapters │
