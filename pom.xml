@@ -27,8 +27,6 @@
         <junit.version>5.11.3</junit.version>
         <mockito.version>5.14.2</mockito.version>
         <assertj.version>3.26.3</assertj.version>
-        <spring.version>6.3.4</spring.version>
-        <spring.boot.version>3.4.4</spring.boot.version>
     </properties>
 
     <modules>
@@ -56,15 +54,6 @@
                 <groupId>dev.jentic</groupId>
                 <artifactId>jentic-adapters</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-
-            <!-- Spring Boot BOM -->
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
             </dependency>
 
             <!-- Logging -->
@@ -186,11 +175,6 @@
                     <version>3.5.1</version>
                 </plugin>
 
-                <plugin>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring.boot.version}</version>
-                </plugin>
             </plugins>
         </pluginManagement>
 
