@@ -129,7 +129,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>0.1.1</version>
+    <version>0.2.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -140,7 +140,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>0.1.1</version>
+    <version>0.2.0-SNAPSHOT</version>
 </dependency>
 ```
 
