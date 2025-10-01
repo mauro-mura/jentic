@@ -109,7 +109,10 @@ public class AnnotationProcessor {
             case CYCLIC -> createCyclicBehavior(agent, method, annotation);
             case WAKER -> createWakerBehavior(agent, method, annotation);
             case EVENT_DRIVEN -> createEventDrivenBehavior(agent, method, annotation);
+            case CONDITIONAL -> createConditionalBehavior(agent, method, annotation);
+            case THROTTLED -> createThrottledBehavior(agent, method, annotation);
             case CUSTOM -> createCustomBehavior(agent, method, annotation);
+            default -> throw new UnsupportedOperationException("Behavior type not supported: " + annotation.type());
         };
         
         if (behavior != null) {
@@ -125,7 +128,110 @@ public class AnnotationProcessor {
                     agent.getAgentName());
         }
     }
-    
+
+    private Behavior createConditionalBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String conditionExpr = annotation.condition();
+        if (conditionExpr.isEmpty()) {
+            log.warn("CONDITIONAL behavior requires 'condition' parameter: {}", method.getName());
+            return null;
+        }
+
+        // Parse condition expression
+        dev.jentic.core.condition.Condition condition = parseCondition(conditionExpr);
+        Duration interval = annotation.interval().isEmpty() ? null : parseDuration(annotation.interval());
+
+        String behaviorId = generateBehaviorId(agent, method);
+
+        return new dev.jentic.runtime.behavior.advanced.ConditionalBehavior(behaviorId, condition, interval) {
+            @Override
+            protected void conditionalAction() {
+                invokeMethod(agent, method);
+            }
+        };
+    }
+
+    private Behavior createThrottledBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String rateLimitSpec = annotation.rateLimit();
+        if (rateLimitSpec.isEmpty()) {
+            log.warn("THROTTLED behavior requires 'rateLimit' parameter: {}", method.getName());
+            return null;
+        }
+
+        // Parse rate limit
+        dev.jentic.core.ratelimit.RateLimit rateLimit =
+                dev.jentic.core.ratelimit.RateLimit.parse(rateLimitSpec);
+        Duration interval = annotation.interval().isEmpty() ? null : parseDuration(annotation.interval());
+
+        String behaviorId = generateBehaviorId(agent, method);
+
+        return new dev.jentic.runtime.behavior.advanced.ThrottledBehavior(behaviorId, rateLimit, interval, true) {
+            @Override
+            protected void throttledAction() {
+                invokeMethod(agent, method);
+            }
+        };
+    }
+
+    private dev.jentic.core.condition.Condition parseCondition(String expression) {
+        // Simple condition parser - supports AND/OR operators
+        expression = expression.trim();
+        
+        // Handle compound conditions with AND
+        if (expression.toLowerCase().contains(" and ")) {
+            String[] parts = expression.split("(?i)\\s+and\\s+", 2);
+            dev.jentic.core.condition.Condition left = parseCondition(parts[0]);
+            dev.jentic.core.condition.Condition right = parseCondition(parts[1]);
+            return left.and(right);
+        }
+        
+        // Handle compound conditions with OR
+        if (expression.toLowerCase().contains(" or ")) {
+            String[] parts = expression.split("(?i)\\s+or\\s+", 2);
+            dev.jentic.core.condition.Condition left = parseCondition(parts[0]);
+            dev.jentic.core.condition.Condition right = parseCondition(parts[1]);
+            return left.or(right);
+        }
+        
+        // Parse single condition
+        String exprLower = expression.toLowerCase();
+
+        // System conditions
+        if (exprLower.matches("system\\.cpu\\s*<\\s*(\\d+(?:\\.\\d+)?)")) {
+            double threshold = Double.parseDouble(exprLower.replaceAll(".*<\\s*(\\d+(?:\\.\\d+)?).*", "$1"));
+            return dev.jentic.runtime.condition.SystemCondition.cpuBelow(threshold);
+        }
+        if (exprLower.matches("system\\.memory\\s*<\\s*(\\d+(?:\\.\\d+)?)")) {
+            double threshold = Double.parseDouble(exprLower.replaceAll(".*<\\s*(\\d+(?:\\.\\d+)?).*", "$1"));
+            return dev.jentic.runtime.condition.SystemCondition.memoryBelow(threshold);
+        }
+        if (exprLower.equals("system.healthy")) {
+            return dev.jentic.runtime.condition.SystemCondition.systemHealthy();
+        }
+        if (exprLower.equals("system.underload")) {
+            return dev.jentic.runtime.condition.SystemCondition.systemUnderLoad();
+        }
+
+        // Time conditions
+        if (exprLower.equals("time.businesshours")) {
+            return dev.jentic.runtime.condition.TimeCondition.businessHours();
+        }
+        if (exprLower.equals("time.weekday")) {
+            return dev.jentic.runtime.condition.TimeCondition.weekday();
+        }
+        if (exprLower.equals("time.weekend")) {
+            return dev.jentic.runtime.condition.TimeCondition.weekend();
+        }
+
+        // Agent conditions
+        if (exprLower.equals("agent.running")) {
+            return dev.jentic.runtime.condition.AgentCondition.isRunning();
+        }
+
+        // Default: always true
+        log.warn("Unknown condition expression: {}, using always-true", expression);
+        return dev.jentic.core.condition.Condition.always();
+    }
+
     /**
      * Create message handler from @JenticMessageHandler annotation
      */

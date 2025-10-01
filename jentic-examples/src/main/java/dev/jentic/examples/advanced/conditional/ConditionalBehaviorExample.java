@@ -1,17 +1,13 @@
 package dev.jentic.examples.advanced.conditional;
 
+import dev.jentic.core.BehaviorType;
 import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.condition.Condition;
+import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.runtime.behavior.advanced.ConditionalBehavior;
-import dev.jentic.runtime.condition.SystemCondition;
-import dev.jentic.runtime.condition.TimeCondition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
 
 /**
  * Example demonstrating ConditionalBehavior usage.
@@ -55,18 +51,7 @@ public class ConditionalBehaviorExample {
     
     private static void printStatistics(JenticRuntime runtime) {
         log.info("\n=== Execution Statistics ===");
-        
-        runtime.getAgent("resource-aware-agent").ifPresent(agent -> {
-            if (agent instanceof ResourceAwareAgent raAgent) {
-                raAgent.printStatistics();
-            }
-        });
-        
-        runtime.getAgent("business-hours-agent").ifPresent(agent -> {
-            if (agent instanceof BusinessHoursAgent bhAgent) {
-                bhAgent.printStatistics();
-            }
-        });
+        log.info("Agents are running with conditional behaviors");
     }
 }
 
@@ -76,33 +61,24 @@ public class ConditionalBehaviorExample {
 @JenticAgent("resource-aware-agent")
 class ResourceAwareAgent extends BaseAgent {
 
-    private ConditionalBehavior heavyTaskBehavior;
-
     public ResourceAwareAgent() {
         super("resource-aware-agent", "Resource Aware Agent");
     }
 
     @Override
     protected void onStart() {
-        log.info("Starting Resource Aware Agent");
-
-        // Condition: Execute only when CPU < 50% AND Memory < 70%
-        Condition lowLoad = SystemCondition.cpuBelow(50.0)
-                .and(SystemCondition.memoryBelow(70.0));
-
-        // Heavy task behavior
-        heavyTaskBehavior = ConditionalBehavior.cyclic(
-                lowLoad,
-                Duration.ofSeconds(3),
-                this::performHeavyTask
-        );
-        heavyTaskBehavior.setAgent(this);
-
-        addBehavior(heavyTaskBehavior);
-
-        log.info("Heavy task will execute only when system load is low");
+        log.info("Starting Resource Aware Agent - heavy task will execute only when system load is low");
     }
 
+    /**
+     * Heavy task that executes only when CPU < 50% AND Memory < 70%
+     * Runs every 3 seconds but only executes when condition is met
+     */
+    @JenticBehavior(
+        type = BehaviorType.CONDITIONAL,
+        condition = "system.cpu < 50 AND system.memory < 70",
+        interval = "3s"
+    )
     private void performHeavyTask() {
         log.info("🔨 Executing heavy computational task (system load is acceptable)");
 
@@ -122,13 +98,6 @@ class ResourceAwareAgent extends BaseAgent {
 
         messageService.send(result);
     }
-
-    public void printStatistics() {
-        log.info("Resource Aware Agent Statistics:");
-        log.info("  - Successful executions: {}", heavyTaskBehavior.getSuccessfulExecutions());
-        log.info("  - Skipped executions: {}", heavyTaskBehavior.getSkippedExecutions());
-        log.info("  - Satisfaction rate: {:.1f}%", heavyTaskBehavior.getSatisfactionRate() * 100);
-    }
 }
 
 /**
@@ -137,33 +106,24 @@ class ResourceAwareAgent extends BaseAgent {
 @JenticAgent("business-hours-agent")
 class BusinessHoursAgent extends BaseAgent {
 
-    private ConditionalBehavior notificationBehavior;
-
     public BusinessHoursAgent() {
         super("business-hours-agent", "Business Hours Agent");
     }
 
     @Override
     protected void onStart() {
-        log.info("Starting Business Hours Agent");
-
-        // Condition: Business hours (9 AM - 5 PM) on weekdays
-        Condition businessTime = TimeCondition.businessHours()
-                .and(TimeCondition.weekday());
-
-        // Notification behavior
-        notificationBehavior = ConditionalBehavior.cyclic(
-                businessTime,
-                Duration.ofSeconds(5),
-                this::sendNotification
-        );
-        notificationBehavior.setAgent(this);
-
-        addBehavior(notificationBehavior);
-
-        log.info("Notifications will be sent only during business hours (9 AM - 5 PM, weekdays)");
+        log.info("Starting Business Hours Agent - notifications will be sent only during business hours (9 AM - 5 PM, weekdays)");
     }
 
+    /**
+     * Sends notifications only during business hours (9 AM - 5 PM) on weekdays
+     * Checks every 5 seconds but only sends when condition is met
+     */
+    @JenticBehavior(
+        type = BehaviorType.CONDITIONAL,
+        condition = "time.businessHours AND time.weekday",
+        interval = "5s"
+    )
     private void sendNotification() {
         log.info("📧 Sending business notification (currently business hours)");
 
@@ -174,13 +134,6 @@ class BusinessHoursAgent extends BaseAgent {
                 .build();
 
         messageService.send(notification);
-    }
-
-    public void printStatistics() {
-        log.info("Business Hours Agent Statistics:");
-        log.info("  - Notifications sent: {}", notificationBehavior.getSuccessfulExecutions());
-        log.info("  - Skipped (outside hours): {}", notificationBehavior.getSkippedExecutions());
-        log.info("  - Satisfaction rate: {:.1f}%", notificationBehavior.getSatisfactionRate() * 100);
     }
 }
 
@@ -196,39 +149,45 @@ class AdaptiveAgent extends BaseAgent {
 
     @Override
     protected void onStart() {
-        log.info("Starting Adaptive Agent");
+        log.info("Starting Adaptive Agent - adaptive behaviors configured based on system load");
+    }
 
-        // High priority task - runs when system is healthy
-        Condition systemHealthy = SystemCondition.systemHealthy();
-        ConditionalBehavior highPriorityTask = ConditionalBehavior.cyclic(
-                systemHealthy,
-                Duration.ofSeconds(2),
-                () -> log.info("⚡ High priority task (system healthy)")
-        );
-        highPriorityTask.setAgent(this);
-        addBehavior(highPriorityTask);
+    /**
+     * High priority task that runs when system is healthy
+     * Executes every 2 seconds when condition is met
+     */
+    @JenticBehavior(
+        type = BehaviorType.CONDITIONAL,
+        condition = "system.healthy",
+        interval = "2s"
+    )
+    private void highPriorityTask() {
+        log.info("⚡ High priority task (system healthy)");
+    }
 
-        // Low priority task - runs only when system is VERY idle
-        Condition veryIdle = SystemCondition.cpuBelow(30.0)
-                .and(SystemCondition.memoryBelow(50.0));
-        ConditionalBehavior lowPriorityTask = ConditionalBehavior.cyclic(
-                veryIdle,
-                Duration.ofSeconds(4),
-                () -> log.info("🐌 Low priority background task (system very idle)")
-        );
-        lowPriorityTask.setAgent(this);
-        addBehavior(lowPriorityTask);
+    /**
+     * Low priority task that runs only when system is VERY idle
+     * Executes every 4 seconds when CPU < 30% AND Memory < 50%
+     */
+    @JenticBehavior(
+        type = BehaviorType.CONDITIONAL,
+        condition = "system.cpu < 30 AND system.memory < 50",
+        interval = "4s"
+    )
+    private void lowPriorityTask() {
+        log.info("🐌 Low priority background task (system very idle)");
+    }
 
-        // Emergency task - runs when system is under load (inverted condition)
-        Condition underLoad = SystemCondition.systemUnderLoad();
-        ConditionalBehavior emergencyTask = ConditionalBehavior.cyclic(
-                underLoad,
-                Duration.ofSeconds(6),
-                () -> log.warn("🚨 Emergency monitoring (system under load!)")
-        );
-        emergencyTask.setAgent(this);
-        addBehavior(emergencyTask);
-
-        log.info("Adaptive behaviors configured based on system load");
+    /**
+     * Emergency monitoring that runs when system is under load
+     * Executes every 6 seconds when condition is met
+     */
+    @JenticBehavior(
+        type = BehaviorType.CONDITIONAL,
+        condition = "system.underload",
+        interval = "6s"
+    )
+    private void emergencyTask() {
+        log.warn("🚨 Emergency monitoring (system under load!)");
     }
 }

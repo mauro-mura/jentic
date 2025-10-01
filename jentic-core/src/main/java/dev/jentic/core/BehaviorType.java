@@ -27,5 +27,40 @@ public enum BehaviorType {
     /**
      * Custom behavior type
      */
-    CUSTOM
+    CUSTOM,
+
+    /**
+     * Execute only when condition is satisfied
+     */
+    CONDITIONAL,
+
+    /**
+     * Execute with rate limiting
+     */
+    THROTTLED,
+
+    /**
+     * Batch processing
+     */
+    BATCH,
+
+    /**
+     * Retry with backoff on failure
+     */
+    RETRY,
+
+    /**
+     * Circuit breaker pattern
+     */
+    CIRCUIT_BREAKER,
+
+    /**
+     * Cron-like scheduled execution
+     */
+    SCHEDULED,
+
+    /**
+     * Multi-stage pipeline processing
+     */
+    PIPELINE
 }
