@@ -4,8 +4,12 @@ import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.core.composite.CompletionStrategy;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.*;
+import dev.jentic.runtime.behavior.composite.FSMBehavior;
+import dev.jentic.runtime.behavior.composite.ParallelBehavior;
+import dev.jentic.runtime.behavior.composite.SequentialBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,6 +116,9 @@ public class AnnotationProcessor {
             case CONDITIONAL -> createConditionalBehavior(agent, method, annotation);
             case THROTTLED -> createThrottledBehavior(agent, method, annotation);
             case CUSTOM -> createCustomBehavior(agent, method, annotation);
+            case SEQUENTIAL -> createSequentialBehavior(agent, method, annotation);
+            case PARALLEL -> createParallelBehavior(agent, method, annotation);
+            case FSM -> createFSMBehavior(agent, method, annotation);
             default -> throw new UnsupportedOperationException("Behavior type not supported: " + annotation.type());
         };
         
@@ -127,6 +134,79 @@ public class AnnotationProcessor {
                     method.getName(), 
                     agent.getAgentName());
         }
+    }
+
+    private Behavior createSequentialBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String behaviorId = generateBehaviorId(agent, method);
+        boolean repeat = annotation.repeatSequence();
+        Duration timeout = annotation.stepTimeout().isEmpty() ? null : parseDuration(annotation.stepTimeout());
+
+        SequentialBehavior sequential = new SequentialBehavior(behaviorId, repeat, timeout);
+
+        log.info("Created SEQUENTIAL behavior '{}' (repeat: {}, stepTimeout: {})",
+                behaviorId, repeat, timeout);
+        log.warn("SEQUENTIAL behavior '{}' has no child behaviors. Add them programmatically using addChildBehavior()", behaviorId);
+
+        // Note: Child behaviors should be added programmatically
+        // Example in agent code:
+        //   sequential.addChildBehavior(new OneShotBehavior(...));
+        //   sequential.addChildBehavior(new OneShotBehavior(...));
+
+        return sequential;
+    }
+
+    private Behavior createParallelBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String behaviorId = generateBehaviorId(agent, method);
+        String strategyStr = annotation.parallelStrategy().toUpperCase();
+
+        CompletionStrategy strategy;
+        try {
+            strategy = CompletionStrategy.valueOf(strategyStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid parallel strategy '{}', using ALL", strategyStr);
+            strategy = CompletionStrategy.ALL;
+        }
+
+        int required = annotation.requiredCompletions();
+
+        ParallelBehavior parallel = new ParallelBehavior(behaviorId, strategy, required);
+
+        log.info("Created PARALLEL behavior '{}' (strategy: {}, required: {})",
+                behaviorId, strategy, required);
+        log.warn("PARALLEL behavior '{}' has no child behaviors. Add them programmatically using addChildBehavior()", behaviorId);
+
+        // Note: Child behaviors should be added programmatically
+        // Example in agent code:
+        //   parallel.addChildBehavior(new OneShotBehavior(...));
+        //   parallel.addChildBehavior(new OneShotBehavior(...));
+
+        return parallel;
+    }
+
+    private Behavior createFSMBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String behaviorId = generateBehaviorId(agent, method);
+        String initialState = annotation.fsmInitialState();
+
+        if (initialState.isEmpty()) {
+            initialState = "START";
+        }
+
+        FSMBehavior fsm = new FSMBehavior(behaviorId, initialState);
+
+        log.info("Created FSM behavior '{}' (initial state: {})", behaviorId, initialState);
+        log.warn("FSM behavior '{}' has no states or transitions. Build it programmatically using FSMBehavior.builder()", behaviorId);
+
+        // Note: FSM is too complex for annotation-only definition
+        // Best created programmatically using the builder:
+        // Example:
+        //   FSMBehavior.builder("my-fsm", "IDLE")
+        //     .state("IDLE", idleBehavior)
+        //     .state("ACTIVE", activeBehavior)
+        //     .transition("IDLE", "ACTIVE", fsm -> someCondition())
+        //     .transition("ACTIVE", "IDLE", fsm -> otherCondition())
+        //     .build();
+
+        return fsm;
     }
 
     private Behavior createConditionalBehavior(Agent agent, Method method, JenticBehavior annotation) {

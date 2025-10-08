@@ -62,5 +62,20 @@ public enum BehaviorType {
     /**
      * Multi-stage pipeline processing
      */
-    PIPELINE
+    PIPELINE,
+
+    /**
+     * Execute behaviors sequentially one after another
+     */
+    SEQUENTIAL,
+
+    /**
+     * Execute multiple behaviors in parallel
+     */
+    PARALLEL,
+
+    /**
+     * Finite State Machine behavior with state transitions
+     */
+    FSM
 }

@@ -85,4 +85,30 @@ public @interface JenticBehavior {
      * @return cron expression
      */
     String cron() default "";
+
+    /**
+     * For SEQUENTIAL behaviors: whether to repeat the sequence after completion
+     */
+    boolean repeatSequence() default false;
+
+    /**
+     * For SEQUENTIAL behaviors: timeout for each step (e.g., "30s", "5m")
+     * Empty string means no timeout
+     */
+    String stepTimeout() default "";
+
+    /**
+     * For PARALLEL behaviors: completion strategy (ALL, ANY, FIRST, N_OF_M)
+     */
+    String parallelStrategy() default "ALL";
+
+    /**
+     * For PARALLEL with N_OF_M strategy: number of required completions
+     */
+    int requiredCompletions() default 0;
+
+    /**
+     * For FSM behaviors: initial state name
+     */
+    String fsmInitialState() default "START";
 }
