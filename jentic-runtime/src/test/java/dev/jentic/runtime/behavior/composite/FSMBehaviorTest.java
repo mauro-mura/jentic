@@ -219,6 +219,100 @@ class FSMBehaviorTest {
         assertThat(fsmBehavior.getStateNames()).containsExactlyInAnyOrder("IDLE", "A", "B", "C");
     }
 
+    @Test
+    @DisplayName("Should timeout slow state execution")
+    void shouldTimeoutSlowState() throws Exception {
+        // Given - FSM with 100ms state timeout
+        Duration stateTimeout = Duration.ofMillis(100);
+        FSMBehavior testFSM = new FSMBehavior("test-fsm", "FAST", stateTimeout);
+
+        testFSM.addState("FAST", createTestBehaviorWithDelay("fast-state", 30));
+        testFSM.addState("SLOW", createTestBehaviorWithDelay("slow-state", 500)); // Will timeout
+        testFSM.addTransition("FAST", "SLOW", fsm -> counter.get() >= 1);
+
+        // When - transition to SLOW state
+        counter.set(1);
+        testFSM.execute().get(1, TimeUnit.SECONDS); // Execute FAST, transition to SLOW
+
+        // Try to execute SLOW state (will timeout)
+        CompletableFuture<Void> slowFuture = testFSM.execute();
+        Thread.sleep(300); // Wait for timeout
+
+        // Then - should still be in SLOW state (timeout doesn't change state)
+        assertThat(testFSM.getCurrentState()).isEqualTo("SLOW");
+        assertThat(stateHistory).contains("fast-state");
+        // slow-state might not be in history due to timeout
+    }
+
+    @Test
+    @DisplayName("Should get and set state timeout")
+    void shouldGetAndSetStateTimeout() {
+        // Given
+        Duration initialTimeout = Duration.ofSeconds(10);
+        FSMBehavior testFSM = new FSMBehavior("test-fsm", "START", initialTimeout);
+
+        // When/Then
+        assertThat(testFSM.getStateTimeout()).isEqualTo(initialTimeout);
+
+        // Update timeout
+        Duration newTimeout = Duration.ofSeconds(30);
+        testFSM.setStateTimeout(newTimeout);
+
+        assertThat(testFSM.getStateTimeout()).isEqualTo(newTimeout);
+    }
+
+    @Test
+    @DisplayName("Should work without state timeout (null)")
+    void shouldWorkWithoutStateTimeout() throws Exception {
+        // Given - FSM without timeout
+        FSMBehavior testFSM = new FSMBehavior("test-fsm", "START", null);
+        testFSM.addState("START", createTestBehaviorWithDelay("start", 50));
+        testFSM.addState("END", createTestBehaviorWithDelay("end", 50));
+        testFSM.addTransition("START", "END", fsm -> counter.get() >= 1);
+
+        // When
+        counter.set(1);
+        testFSM.execute().get(1, TimeUnit.SECONDS);
+        testFSM.execute().get(1, TimeUnit.SECONDS);
+
+        // Then - both states should execute
+        assertThat(testFSM.getCurrentState()).isEqualTo("END");
+        assertThat(stateHistory).contains("start", "end");
+        assertThat(testFSM.getStateTimeout()).isNull();
+    }
+
+    @Test
+    @DisplayName("Should build FSM with timeout using builder")
+    void shouldBuildFSMWithTimeoutUsingBuilder() {
+        // Given/When
+        Duration timeout = Duration.ofSeconds(15);
+        FSMBehavior fsm = FSMBehavior.builder("test-fsm", "START")
+                .stateTimeout(timeout)
+                .state("START", createTestBehavior("start"))
+                .state("END", createTestBehavior("end"))
+                .transition("START", "END", f -> counter.get() > 0)
+                .build();
+
+        // Then
+        assertThat(fsm.getCurrentState()).isEqualTo("START");
+        assertThat(fsm.getStateTimeout()).isEqualTo(timeout);
+        assertThat(fsm.getStateNames()).containsExactlyInAnyOrder("START", "END");
+    }
+
+    @Test
+    @DisplayName("Should build FSM with timeout in constructor")
+    void shouldBuildFSMWithTimeoutInConstructor() {
+        // Given/When
+        Duration timeout = Duration.ofSeconds(20);
+        FSMBehavior fsm = FSMBehavior.builder("test-fsm", "INIT", timeout)
+                .state("INIT", createTestBehavior("init"))
+                .state("DONE", createTestBehavior("done"))
+                .build();
+
+        // Then
+        assertThat(fsm.getStateTimeout()).isEqualTo(timeout);
+    }
+
     // Helper methods
 
     private Behavior createTestBehavior(String name) {
@@ -227,6 +321,10 @@ class FSMBehaviorTest {
 
     private Behavior createRecordingBehavior(String name, List<String> recordList) {
         return new RecordingBehavior(name, recordList);
+    }
+
+    private Behavior createTestBehaviorWithDelay(String name, long delayMs) {
+        return new TestBehavior(name, delayMs);
     }
 
     private class TestBehavior implements Behavior {

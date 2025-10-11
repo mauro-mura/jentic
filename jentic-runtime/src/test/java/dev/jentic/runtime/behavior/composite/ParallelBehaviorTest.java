@@ -126,6 +126,84 @@ class ParallelBehaviorTest {
         assertThat(executionTimestamps).containsKeys("ok1", "ok2");
         assertThat(executionTimestamps).doesNotContainKey("fail");
     }
+
+    @Test
+    @DisplayName("Should timeout slow children with child timeout")
+    void shouldTimeoutSlowChildren() throws Exception {
+        // Given - Parallel with 100ms timeout per child
+        Duration childTimeout = Duration.ofMillis(100);
+        parallelBehavior = new ParallelBehavior("test-parallel", CompletionStrategy.ALL, 0, childTimeout);
+
+        parallelBehavior.addChildBehavior(createTestBehavior("fast1", 30));
+        parallelBehavior.addChildBehavior(createTestBehavior("fast2", 30));
+        parallelBehavior.addChildBehavior(createTestBehavior("slow", 500)); // Will timeout
+
+        // When
+        CompletableFuture<Void> future = parallelBehavior.execute();
+        future.get(2, TimeUnit.SECONDS);
+
+        // Then - fast tasks complete, slow one times out
+        assertThat(executionTimestamps).containsKeys("fast1", "fast2");
+        assertThat(executionTimestamps).doesNotContainKey("slow");
+        assertThat(parallelBehavior.getCompletedCount()).isEqualTo(2); // Only successful
+        assertThat(parallelBehavior.getFinishedCount()).isEqualTo(3);  // All finished (2 success + 1 timeout)
+    }
+
+    @Test
+    @DisplayName("Should get and set child timeout")
+    void shouldGetAndSetChildTimeout() {
+        // Given
+        Duration initialTimeout = Duration.ofSeconds(5);
+        parallelBehavior = new ParallelBehavior("test-parallel", CompletionStrategy.ALL, 0, initialTimeout);
+
+        // When/Then
+        assertThat(parallelBehavior.getChildTimeout()).isEqualTo(initialTimeout);
+
+        // Update timeout
+        Duration newTimeout = Duration.ofSeconds(10);
+        parallelBehavior.setChildTimeout(newTimeout);
+
+        assertThat(parallelBehavior.getChildTimeout()).isEqualTo(newTimeout);
+    }
+
+    @Test
+    @DisplayName("Should work without child timeout (null)")
+    void shouldWorkWithoutChildTimeout() throws Exception {
+        // Given - no timeout
+        parallelBehavior = new ParallelBehavior("test-parallel", CompletionStrategy.ALL, 0, null);
+        parallelBehavior.addChildBehavior(createTestBehavior("task1", 100));
+        parallelBehavior.addChildBehavior(createTestBehavior("task2", 100));
+
+        // When
+        parallelBehavior.execute().get(2, TimeUnit.SECONDS);
+
+        // Then - both complete
+        assertThat(executionTimestamps).hasSize(2);
+        assertThat(parallelBehavior.getChildTimeout()).isNull();
+    }
+
+    @Test
+    @DisplayName("Should handle N_OF_M with timeouts")
+    void shouldHandleNofMWithTimeouts() throws Exception {
+        // Given - require 2 out of 4, with 100ms timeout
+        parallelBehavior = new ParallelBehavior("test-parallel", CompletionStrategy.N_OF_M, 2,
+                Duration.ofMillis(100));
+        parallelBehavior.addChildBehavior(createTestBehavior("fast1", 30));
+        parallelBehavior.addChildBehavior(createTestBehavior("fast2", 30));
+        parallelBehavior.addChildBehavior(createTestBehavior("slow1", 500)); // Timeout
+        parallelBehavior.addChildBehavior(createTestBehavior("slow2", 500)); // Timeout
+
+        // When
+        long start = System.currentTimeMillis();
+        CompletableFuture<Void> future = parallelBehavior.execute();
+        future.get(2, TimeUnit.SECONDS);
+        long duration = System.currentTimeMillis() - start;
+
+        // Then - should complete after 2 fast tasks (not wait for slow ones)
+        assertThat(duration).isLessThan(200);
+        assertThat(executionTimestamps).containsKeys("fast1", "fast2");
+        assertThat(parallelBehavior.getCompletedCount()).isGreaterThanOrEqualTo(2);
+    }
     
     @Test
     @DisplayName("Should return PARALLEL type")

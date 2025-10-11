@@ -195,6 +195,32 @@ class CompositeWorkflowIntegrationTest {
     }
 
     @Test
+    @DisplayName("Should handle parallel with timeout in nested workflow")
+    void shouldHandleParallelWithTimeoutInNestedWorkflow() throws Exception {
+        // Given - Sequential containing Parallel with timeouts
+        SequentialBehavior workflow = new SequentialBehavior("workflow", false);
+
+        ParallelBehavior parallelPhase = new ParallelBehavior(
+                "parallel-phase",
+                CompletionStrategy.ALL,
+                0,
+                Duration.ofMillis(100)  // Child timeout
+        );
+        parallelPhase.addChildBehavior(createLogBehavior("fast-task", 30));
+        parallelPhase.addChildBehavior(createLogBehavior("slow-task", 500)); // Timeout
+
+        workflow.addChildBehavior(parallelPhase);
+        workflow.addChildBehavior(createLogBehavior("after-parallel", 20));
+
+        // When
+        workflow.execute().get(2, TimeUnit.SECONDS);
+
+        // Then
+        assertThat(executionLog).contains("fast-task", "after-parallel");
+        // slow-task should have timed out
+    }
+
+    @Test
     @DisplayName("Should handle FSM with composite behaviors in states")
     void shouldHandleFSMWithCompositeBehaviors() throws Exception {
         // Given

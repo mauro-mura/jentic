@@ -6,6 +6,7 @@ import dev.jentic.core.composite.CompositeBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
@@ -17,18 +18,24 @@ import java.util.function.Predicate;
 public class FSMBehavior extends CompositeBehavior {
     
     private static final Logger log = LoggerFactory.getLogger(FSMBehavior.class);
-    
+
     private final Map<String, State> states;
     private final Map<String, List<Transition>> transitions;
     private String currentState;
     private String initialState;
-    
+    private Duration stateTimeout; // Timeout for state execution
+
     public FSMBehavior(String behaviorId, String initialState) {
+        this(behaviorId, initialState, null);
+    }
+
+    public FSMBehavior(String behaviorId, String initialState, Duration stateTimeout) {
         super(behaviorId);
         this.states = new HashMap<>();
         this.transitions = new HashMap<>();
         this.currentState = initialState;
         this.initialState = initialState;
+        this.stateTimeout = stateTimeout;
     }
     
     @Override
@@ -52,15 +59,29 @@ public class FSMBehavior extends CompositeBehavior {
         }
         
         log.trace("FSM '{}' executing state: {}", behaviorId, currentState);
-        
-        // Execute state behavior
-        return state.execute()
-            .thenCompose(v -> evaluateTransitions())
-            .exceptionally(throwable -> {
-                log.error("FSM '{}' error in state '{}': {}", 
-                         behaviorId, currentState, throwable.getMessage());
-                return null;
-            });
+
+        // Execute state behavior with optional timeout
+        CompletableFuture<Void> stateFuture = state.execute();
+
+        if (stateTimeout != null) {
+            stateFuture = stateFuture.orTimeout(stateTimeout.toMillis(),
+                            java.util.concurrent.TimeUnit.MILLISECONDS)
+                    .exceptionally(throwable -> {
+                        if (throwable.getCause() instanceof java.util.concurrent.TimeoutException) {
+                            log.warn("FSM '{}' state '{}' timed out after {}",
+                                    behaviorId, currentState, stateTimeout);
+                        }
+                        throw new java.util.concurrent.CompletionException(throwable);
+                    });
+        }
+
+        return stateFuture
+                .thenCompose(v -> evaluateTransitions())
+                .exceptionally(throwable -> {
+                    log.error("FSM '{}' error in state '{}': {}",
+                            behaviorId, currentState, throwable.getMessage());
+                    return null;
+                });
     }
     
     /**
@@ -179,6 +200,21 @@ public class FSMBehavior extends CompositeBehavior {
     public Set<String> getStateNames() {
         return Collections.unmodifiableSet(states.keySet());
     }
+
+    /**
+     * Set timeout for state execution
+     */
+    public void setStateTimeout(Duration timeout) {
+        this.stateTimeout = timeout;
+        log.debug("FSM '{}' state timeout set to: {}", behaviorId, timeout);
+    }
+
+    /**
+     * Get configured state timeout
+     */
+    public Duration getStateTimeout() {
+        return stateTimeout;
+    }
     
     // Inner classes
     
@@ -218,11 +254,15 @@ public class FSMBehavior extends CompositeBehavior {
         private final String behaviorId;
         private final String initialState;
         private final FSMBehavior fsm;
-        
+
         public Builder(String behaviorId, String initialState) {
+            this(behaviorId, initialState, null);
+        }
+
+        public Builder(String behaviorId, String initialState, Duration stateTimeout) {
             this.behaviorId = behaviorId;
             this.initialState = initialState;
-            this.fsm = new FSMBehavior(behaviorId, initialState);
+            this.fsm = new FSMBehavior(behaviorId, initialState, stateTimeout);
         }
         
         public Builder state(String name, Behavior behavior) {
@@ -249,9 +289,19 @@ public class FSMBehavior extends CompositeBehavior {
             }
             return fsm;
         }
+
+        public Builder stateTimeout(Duration timeout) {
+            fsm.stateTimeout = timeout;
+            return this;
+        }
     }
     
+
     public static Builder builder(String behaviorId, String initialState) {
         return new Builder(behaviorId, initialState);
+    }
+
+    public static Builder builder(String behaviorId, String initialState, Duration stateTimeout) {
+        return new Builder(behaviorId, initialState, stateTimeout);
     }
 }

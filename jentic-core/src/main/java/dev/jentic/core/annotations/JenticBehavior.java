@@ -108,7 +108,19 @@ public @interface JenticBehavior {
     int requiredCompletions() default 0;
 
     /**
+     * For PARALLEL behaviors: timeout for each child behavior (e.g., "10s", "1m")
+     * Empty string means no timeout
+     */
+    String childTimeout() default "";
+
+    /**
      * For FSM behaviors: initial state name
      */
     String fsmInitialState() default "START";
+
+    /**
+     * For FSM behaviors: timeout for state execution (e.g., "30s", "2m")
+     * Empty string means no timeout
+     */
+    String stateTimeout() default "";
 }

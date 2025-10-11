@@ -119,6 +119,39 @@ class SequentialBehaviorTest {
     }
 
     @Test
+    @DisplayName("Should get and set step timeout")
+    void shouldGetAndSetStepTimeout() {
+        // Given
+        Duration initialTimeout = Duration.ofSeconds(10);
+        sequentialBehavior = new SequentialBehavior("test-sequential", false, initialTimeout);
+
+        // When/Then
+        assertThat(sequentialBehavior.getStepTimeout()).isEqualTo(initialTimeout);
+
+        // Update timeout
+        Duration newTimeout = Duration.ofSeconds(30);
+        sequentialBehavior.setStepTimeout(newTimeout);
+
+        assertThat(sequentialBehavior.getStepTimeout()).isEqualTo(newTimeout);
+    }
+
+    @Test
+    @DisplayName("Should work without timeout (null)")
+    void shouldWorkWithoutTimeout() throws Exception {
+        // Given - no timeout
+        sequentialBehavior = new SequentialBehavior("test-sequential", false, null);
+        sequentialBehavior.addChildBehavior(createTestBehavior("step1", 50));
+        sequentialBehavior.addChildBehavior(createTestBehavior("step2", 50));
+
+        // When
+        sequentialBehavior.execute().get(2, TimeUnit.SECONDS);
+
+        // Then - both steps should complete
+        assertThat(executionOrder).containsExactly("step1", "step2");
+        assertThat(sequentialBehavior.getStepTimeout()).isNull();
+    }
+
+    @Test
     @DisplayName("Should reset sequence to beginning")
     void shouldResetSequence() throws Exception {
         // Given

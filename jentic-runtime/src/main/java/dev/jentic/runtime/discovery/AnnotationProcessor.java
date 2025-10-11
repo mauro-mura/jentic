@@ -168,11 +168,12 @@ public class AnnotationProcessor {
         }
 
         int required = annotation.requiredCompletions();
+        Duration childTimeout = annotation.childTimeout().isEmpty() ? null : parseDuration(annotation.childTimeout());
 
-        ParallelBehavior parallel = new ParallelBehavior(behaviorId, strategy, required);
+        ParallelBehavior parallel = new ParallelBehavior(behaviorId, strategy, required, childTimeout);
 
-        log.info("Created PARALLEL behavior '{}' (strategy: {}, required: {})",
-                behaviorId, strategy, required);
+        log.info("Created PARALLEL behavior '{}' (strategy: {}, required: {}, childTimeout: {})",
+                behaviorId, strategy, required, childTimeout);
         log.warn("PARALLEL behavior '{}' has no child behaviors. Add them programmatically using addChildBehavior()", behaviorId);
 
         // Note: Child behaviors should be added programmatically
@@ -186,14 +187,16 @@ public class AnnotationProcessor {
     private Behavior createFSMBehavior(Agent agent, Method method, JenticBehavior annotation) {
         String behaviorId = generateBehaviorId(agent, method);
         String initialState = annotation.fsmInitialState();
+        Duration stateTimeout = annotation.stateTimeout().isEmpty() ? null : parseDuration(annotation.stateTimeout());
 
         if (initialState.isEmpty()) {
             initialState = "START";
         }
 
-        FSMBehavior fsm = new FSMBehavior(behaviorId, initialState);
+        FSMBehavior fsm = new FSMBehavior(behaviorId, initialState, stateTimeout);
 
-        log.info("Created FSM behavior '{}' (initial state: {})", behaviorId, initialState);
+        log.info("Created FSM behavior '{}' (initial state: {}, stateTimeout: {})",
+                behaviorId, initialState, stateTimeout);
         log.warn("FSM behavior '{}' has no states or transitions. Build it programmatically using FSMBehavior.builder()", behaviorId);
 
         // Note: FSM is too complex for annotation-only definition
