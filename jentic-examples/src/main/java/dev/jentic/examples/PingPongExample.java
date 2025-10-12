@@ -17,7 +17,6 @@ public class PingPongExample {
         
         // Create runtime
         JenticRuntime runtime = JenticRuntime.builder()
-            .scanPackage("dev.jentic.examples")
             .build();
         
         // Manually register agents (since classpath scanning is not implemented yet)
@@ -33,7 +32,14 @@ public class PingPongExample {
         log.info("Runtime started with {} agents", runtime.getAgents().size());
         runtime.getAgents().forEach(agent -> 
             log.info("  - {} ({})", agent.getAgentName(), agent.getAgentId()));
-        
+
+        runtime.getAgentDirectory().listAll().thenAccept(agents -> {
+            log.info("Agents in directory: {}", agents.size());
+            agents.forEach(descriptor ->
+                    log.info("  - {} [{}]", descriptor.agentId(), descriptor.status())
+            );
+        }).join();
+
         // Let it run for 20 seconds
         Thread.sleep(20_000);
         

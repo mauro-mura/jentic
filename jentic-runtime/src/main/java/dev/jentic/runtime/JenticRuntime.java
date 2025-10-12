@@ -132,6 +132,11 @@ public class JenticRuntime {
                     if (agent.isRunning()) {
                         CompletableFuture<Void> stopFuture = lifecycleManager
                                 .stopAgent(agent, DEFAULT_SHUTDOWN_TIMEOUT)
+                                .thenCompose(v -> {
+                                    // Unregister from directory after successful stop
+                                    log.debug("Unregistering agent {} from directory", agent.getAgentId());
+                                    return agentDirectory.unregister(agent.getAgentId());
+                                })
                                 .exceptionally(throwable -> {
                                     log.error("Failed to stop agent: {} - {}",
                                             agent.getAgentId(), throwable.getMessage());
@@ -189,7 +194,21 @@ public class JenticRuntime {
             baseAgent.setBehaviorScheduler(behaviorScheduler);
         }
 
-        log.info("Registered agent: {} ({})", agent.getAgentName(), agent.getAgentId());
+        // Create descriptor and register in directory
+        AgentDescriptor descriptor = agentFactory.createDescriptor(
+                agent.getClass(),
+                agent
+        );
+
+        agentDirectory.register(descriptor)
+                .exceptionally(throwable -> {
+                    log.error("Failed to register agent {} in directory: {}",
+                            agent.getAgentId(), throwable.getMessage());
+                    return null;
+                });
+
+        log.info("Registered agent: {} ({}) in runtime and directory",
+                agent.getAgentName(), agent.getAgentId());
     }
 
     /**
@@ -211,6 +230,27 @@ public class JenticRuntime {
         } catch (Exception e) {
             throw new RuntimeException("Failed to create agent: " + agentClass.getName(), e);
         }
+    }
+
+    /**
+     * Get the agent directory
+     */
+    public AgentDirectory getAgentDirectory() {
+        return agentDirectory;
+    }
+
+    /**
+     * Get the message service
+     */
+    public MessageService getMessageService() {
+        return messageService;
+    }
+
+    /**
+     * Get the behavior scheduler
+     */
+    public BehaviorScheduler getBehaviorScheduler() {
+        return behaviorScheduler;
     }
 
     /**
@@ -307,9 +347,22 @@ public class JenticRuntime {
                 // Use LifecycleManager for proper state tracking and timeout handling
                 CompletableFuture<Void> startFuture = lifecycleManager
                         .startAgent(agent, DEFAULT_STARTUP_TIMEOUT)
+                        .thenCompose(v -> {
+                            // Update agent status in directory after successful start
+                            log.debug("Updating agent {} status to RUNNING in directory",
+                                    agent.getAgentId());
+                            return agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.RUNNING);
+                        })
                         .exceptionally(throwable -> {
                             log.error("Failed to start agent: {} - {}",
                                     agent.getAgentId(), throwable.getMessage());
+                            // Update status to ERROR in directory
+                            agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.ERROR)
+                                    .exceptionally(ex -> {
+                                        log.warn("Could not update error status for agent {}",
+                                                agent.getAgentId());
+                                        return null;
+                                    });
                             // Don't fail entire startup for one agent
                             return null;
                         });
@@ -351,6 +404,34 @@ public class JenticRuntime {
                     String.join(", ", capabilities),
                     agent.isRunning());
         });
+    }
+
+    /**
+     * Unregister an agent from runtime and directory
+     */
+    public CompletableFuture<Void> unregisterAgent(String agentId) {
+        Agent agent = agents.remove(agentId);
+
+        if (agent == null) {
+            log.warn("Attempted to unregister non-existent agent: {}", agentId);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        log.info("Unregistering agent: {} ({})", agent.getAgentName(), agentId);
+
+        // Stop if running
+        CompletableFuture<Void> stopFuture = agent.isRunning()
+                ? agent.stop()
+                : CompletableFuture.completedFuture(null);
+
+        // Then unregister from directory
+        return stopFuture
+                .thenCompose(v -> agentDirectory.unregister(agentId))
+                .exceptionally(throwable -> {
+                    log.error("Error unregistering agent {}: {}",
+                            agentId, throwable.getMessage());
+                    return null;
+                });
     }
 
     // ========== BUILDER ==========
