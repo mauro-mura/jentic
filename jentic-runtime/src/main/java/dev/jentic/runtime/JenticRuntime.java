@@ -2,6 +2,8 @@ package dev.jentic.runtime;
 
 import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.config.ConfigurationLoader;
+import dev.jentic.core.exceptions.ConfigurationException;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
@@ -27,6 +29,7 @@ public class JenticRuntime {
 
     private static final Logger log = LoggerFactory.getLogger(JenticRuntime.class);
 
+    private final JenticConfiguration configuration;
     private final MessageService messageService;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
@@ -48,6 +51,11 @@ public class JenticRuntime {
     private volatile boolean running = false;
 
     private JenticRuntime(Builder builder) {
+        // Configuration (from file or builder)
+        this.configuration = builder.configuration;
+
+        logConfigurationInfo();
+
         // Initialize services
         this.messageService = builder.messageService != null ?
                 builder.messageService : new InMemoryMessageService();
@@ -268,6 +276,12 @@ public class JenticRuntime {
     }
 
     /**
+     * Get the current configuration
+     */
+    public JenticConfiguration getConfiguration() {
+        return configuration;
+    }
+    /**
      * Get runtime statistics
      */
     public RuntimeStats getStats() {
@@ -292,13 +306,41 @@ public class JenticRuntime {
     // ========== PRIVATE METHODS ==========
 
     /**
+     * Log configuration information
+     */
+    private void logConfigurationInfo() {
+        log.debug("Runtime Configuration:");
+        log.debug("  Name: {}", configuration.runtime().name());
+        log.debug("  Environment: {}", configuration.runtime().environment());
+
+        if (!configuration.runtime().properties().isEmpty()) {
+            log.debug("  Properties:");
+            configuration.runtime().properties().forEach((key, value) ->
+                    log.debug("    {}: {}", key, value)
+            );
+        }
+
+        log.debug("Agent Configuration:");
+        log.debug("  Auto Discovery: {}", configuration.agents().autoDiscovery());
+        log.debug("  Scan Packages: {}", configuration.agents().scanPackages());
+
+        if (!configuration.agents().properties().isEmpty()) {
+            log.debug("  Properties:");
+            configuration.agents().properties().forEach((key, value) ->
+                    log.debug("    {}: {}", key, value)
+            );
+        }
+    }
+
+    /**
      * Discover agents from configured packages and create instances
      */
     private void discoverAndCreateAgents() {
-        log.info("Starting agent discovery in {} packages", scanPackages.size());
+        List<String> packages = configuration.agents().getAllScanPackages();
+        log.info("Starting agent discovery in {} packages", packages.size());
 
         // Scan for agent classes
-        String[] packageArray = scanPackages.toArray(new String[0]);
+        String[] packageArray = packages.toArray(new String[0]);
         Set<Class<? extends Agent>> agentClasses = agentScanner.scanForAgents(packageArray);
 
         if (agentClasses.isEmpty()) {
@@ -444,11 +486,71 @@ public class JenticRuntime {
     }
 
     public static class Builder {
+        private JenticConfiguration configuration;
         private MessageService messageService;
         private AgentDirectory agentDirectory;
         private BehaviorScheduler behaviorScheduler;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
+
+        /**
+         * Load configuration from YAML/JSON file
+         *
+         * @param configPath path to configuration file
+         * @return this builder
+         * @throws ConfigurationException if loading fails
+         */
+        public Builder fromConfig(String configPath) throws ConfigurationException {
+            ConfigurationLoader loader = new ConfigurationLoader();
+            this.configuration = loader.loadFromFile(configPath);
+            loader.validate(this.configuration);
+            log.info("Loaded configuration from file: {}", configPath);
+            return this;
+        }
+
+        /**
+         * Load configuration from classpath resource
+         *
+         * @param resourcePath classpath resource path
+         * @return this builder
+         * @throws ConfigurationException if loading fails
+         */
+        public Builder fromClasspathConfig(String resourcePath) throws ConfigurationException {
+            ConfigurationLoader loader = new ConfigurationLoader();
+            this.configuration = loader.loadFromClasspath(resourcePath);
+            loader.validate(this.configuration);
+            log.info("Loaded configuration from classpath: {}", resourcePath);
+            return this;
+        }
+
+        /**
+         * Use provided configuration object
+         *
+         * @param config the configuration to use
+         * @return this builder
+         */
+        public Builder withConfiguration(JenticConfiguration config) {
+            this.configuration = config;
+            log.info("Using provided configuration: {}", config.runtime().name());
+            return this;
+        }
+
+        /**
+         * Load default configuration (jentic.yml from filesystem or classpath)
+         *
+         * @return this builder
+         */
+        public Builder withDefaultConfig() {
+            ConfigurationLoader loader = new ConfigurationLoader();
+            this.configuration = loader.loadDefault();
+            try {
+                loader.validate(this.configuration);
+            } catch (ConfigurationException e) {
+                log.warn("Default configuration validation failed: {}", e.getMessage());
+            }
+            log.info("Loaded default configuration");
+            return this;
+        }
 
         public Builder messageService(MessageService messageService) {
             this.messageService = messageService;
@@ -494,6 +596,36 @@ public class JenticRuntime {
         }
 
         public JenticRuntime build() {
+            // Use default config if none provided
+            if (this.configuration == null) {
+                log.debug("No configuration provided, using defaults");
+                this.configuration = JenticConfiguration.defaults();
+            }
+
+            // Merge builder scan packages with configuration
+            if (!scanPackages.isEmpty()) {
+                log.debug("Merging {} builder scan packages with configuration", scanPackages.size());
+
+                List<String> allPackages = new ArrayList<>(configuration.agents().getAllScanPackages());
+                allPackages.addAll(scanPackages);
+
+                JenticConfiguration.AgentsConfig updatedAgentsConfig =
+                        new JenticConfiguration.AgentsConfig(
+                                configuration.agents().autoDiscovery(),
+                                configuration.agents().basePackage(),
+                                configuration.agents().scanPaths(),
+                                allPackages,  // scanPackages
+                                configuration.agents().properties()
+                        );
+
+                this.configuration = new JenticConfiguration(
+                        configuration.runtime(),
+                        updatedAgentsConfig,
+                        configuration.messaging(),
+                        configuration.directory(),
+                        configuration.scheduler()
+                );
+            }
             return new JenticRuntime(this);
         }
     }

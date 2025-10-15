@@ -1,0 +1,9 @@
+jentic:
+  runtime:
+    name: "test-runtime"
+    environment: "development"
+
+  agents:
+    autoDiscovery: true
+    scanPackages:
+      - "dev.jentic.examples"
