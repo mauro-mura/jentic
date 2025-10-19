@@ -5,10 +5,10 @@ import dev.jentic.core.MessageHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -215,5 +215,80 @@ class InMemoryMessageServiceTest {
         
         // Handler should still be called
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void testDirectReceiverSubscription() throws ExecutionException, InterruptedException, TimeoutException {
+        InMemoryMessageService service = new InMemoryMessageService();
+
+        CompletableFuture<Message> received = new CompletableFuture<>();
+
+        // Bob subscribes
+        service.subscribeToReceiver("bob", msg -> {
+            received.complete(msg);
+            return CompletableFuture.completedFuture(null);
+        });
+
+        // Alice sends to Bob
+        Message msg = Message.builder()
+                .senderId("alice")
+                .receiverId("bob")
+                .content("Hello Bob")
+                .build();
+
+        service.send(msg).join();
+
+        // Verify delivery
+        Message receivedMsg = received.get(1, TimeUnit.SECONDS);
+        assertEquals("alice", receivedMsg.senderId());
+        assertEquals("bob", receivedMsg.receiverId());
+        assertEquals("Hello Bob", receivedMsg.content());
+    }
+
+    @Test
+    void testHybridRoutingTopicAndReceiver() throws InterruptedException {
+        InMemoryMessageService service = new InMemoryMessageService();
+
+        AtomicInteger topicCount = new AtomicInteger(0);
+        AtomicInteger receiverCount = new AtomicInteger(0);
+
+        // Subscribe to topic
+        service.subscribe("notifications", msg -> {
+            topicCount.incrementAndGet();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        // Subscribe to receiver
+        service.subscribeToReceiver("manager", msg -> {
+            receiverCount.incrementAndGet();
+            return CompletableFuture.completedFuture(null);
+        });
+
+        // Send with both topic and receiver
+        Message msg = Message.builder()
+                .receiverId("manager")
+                .topic("notifications")
+                .content("Important update")
+                .build();
+
+        service.send(msg).join();
+        Thread.sleep(100); // Wait for async delivery
+
+        // Verify delivered via both routes
+        assertEquals(1, topicCount.get());
+        assertEquals(1, receiverCount.get());
+    }
+
+    @Test
+    void testNoReceiversDoesNotThrow() {
+        InMemoryMessageService service = new InMemoryMessageService();
+
+        Message msg = Message.builder()
+                .receiverId("non-existent-agent")
+                .content("Hello")
+                .build();
+
+        // Should not throw, just log trace
+        assertDoesNotThrow(() -> service.send(msg).join());
     }
 }

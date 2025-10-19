@@ -17,6 +17,15 @@ public interface MessageService {
     CompletableFuture<Void> send(Message message);
 
     /**
+     * Subscribe to messages addressed to a specific receiver (point-to-point).
+     * This enables direct agent-to-agent communication.
+     * @param receiverId the receiver ID to subscribe to
+     * @param handler the message handler
+     * @return subscription ID for later unsubscription
+     */
+    String subscribeToReceiver(String receiverId, MessageHandler handler);
+
+    /**
      * Subscribe to messages on a topic
      * @param topic the topic to subscribe to
      * @param handler the message handler

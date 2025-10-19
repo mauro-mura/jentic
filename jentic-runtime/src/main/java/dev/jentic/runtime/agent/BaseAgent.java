@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,6 +26,8 @@ public abstract class BaseAgent implements Agent {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Map<String, Behavior> behaviors = new ConcurrentHashMap<>();
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
+
+    private String directMessageSubscriptionId;
 
     protected MessageService messageService;
     protected BehaviorScheduler behaviorScheduler;
@@ -77,7 +80,10 @@ public abstract class BaseAgent implements Agent {
                 try {
                     // Initialize services if not already set
                     initializeServices();
-                    
+
+                    // Auto-Subscribe to direct messages
+                    autoSubscribeDirectMessages();
+
                     // Register with directory
                     registerWithDirectory();
                     
@@ -115,6 +121,9 @@ public abstract class BaseAgent implements Agent {
                     
                     // Stop behaviors
                     stopBehaviors();
+
+                    // Unsubscribe from direct messages
+                    unsubscribeDirectMessages();
                     
                     // Unregister from directory
                     unregisterFromDirectory();
@@ -206,7 +215,156 @@ public abstract class BaseAgent implements Agent {
     protected void onStop() {
         // Override in subclasses
     }
-    
+
+    /**
+     * Automatically subscribe to direct messages addressed to this agent.
+     * Called during agent start.
+     */
+    private void autoSubscribeDirectMessages() {
+        if (messageService == null) {
+            log.warn("Agent '{}': Cannot auto-subscribe - no message service", agentId);
+            return;
+        }
+
+        try {
+            // Subscribe to messages with receiverId = this agent's ID
+            directMessageSubscriptionId = messageService.subscribeToReceiver(
+                    agentId,
+                    MessageHandler.sync(this::handleDirectMessage)
+            );
+
+            log.debug("Agent '{}' auto-subscribed for direct messages", agentId);
+
+        } catch (Exception e) {
+            log.error("Failed to auto-subscribe direct messages for agent '{}': {}",
+                    agentId, e.getMessage());
+        }
+    }
+
+    /**
+     * Unsubscribe from direct messages during agent shutdown.
+     */
+    private void unsubscribeDirectMessages() {
+        if (directMessageSubscriptionId != null && messageService != null) {
+            try {
+                messageService.unsubscribe(directMessageSubscriptionId);
+                directMessageSubscriptionId = null;
+                log.debug("Agent '{}' unsubscribed from direct messages", agentId);
+            } catch (Exception e) {
+                log.error("Error unsubscribing direct messages for agent '{}': {}",
+                        agentId, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Handle direct messages received by this agent.
+     * Override to customize handling, or use @JenticMessageHandler annotations.
+     */
+    protected void handleDirectMessage(Message message) {
+        log.trace("Agent '{}' received direct message from '{}': {}",
+                agentId, message.senderId(), message.content());
+
+        // Delegate to user hook
+        onDirectMessage(message);
+    }
+
+    /**
+     * Called when agent receives a direct message.
+     * Override to handle direct messages in a centralized way.
+     *
+     * Note: This is only called if no @JenticMessageHandler matches.
+     *
+     * @param message the received message
+     */
+    protected void onDirectMessage(Message message) {
+        // Default: log and ignore
+        log.trace("Agent '{}' received unhandled direct message from '{}': {}",
+                agentId, message.senderId(), message.content());
+    }
+
+    /**
+     * Send a direct message to another agent (fire-and-forget).
+     *
+     * @param receiverAgentId the target agent ID
+     * @param content the message content
+     * @return CompletableFuture that completes when sent
+     */
+    protected CompletableFuture<Void> sendTo(String receiverAgentId, Object content) {
+        Message message = Message.builder()
+                .senderId(agentId)
+                .receiverId(receiverAgentId)
+                .content(content)
+                .build();
+
+        log.trace("Agent '{}' sending to '{}': {}", agentId, receiverAgentId, content);
+
+        return messageService.send(message);
+    }
+
+    /**
+     * Send a request to another agent and wait for response.
+     * Uses the request/response pattern with correlation ID.
+     *
+     * @param receiverAgentId the target agent ID
+     * @param content the request content
+     * @return CompletableFuture with the response message
+     */
+    protected CompletableFuture<Message> requestFrom(String receiverAgentId, Object content) {
+        return requestFrom(receiverAgentId, content, 5000);
+    }
+
+    /**
+     * Send a request with custom timeout.
+     *
+     * @param receiverAgentId the target agent ID
+     * @param content the request content
+     * @param timeoutMillis timeout in milliseconds
+     * @return CompletableFuture with the response message
+     */
+    protected CompletableFuture<Message> requestFrom(String receiverAgentId,
+                                                     Object content,
+                                                     long timeoutMillis) {
+        Message request = Message.builder()
+                .senderId(agentId)
+                .receiverId(receiverAgentId)
+                .content(content)
+                .build();
+
+        log.debug("Agent '{}' requesting from '{}' (timeout: {}ms)",
+                agentId, receiverAgentId, timeoutMillis);
+
+        return messageService.sendAndWait(request, timeoutMillis)
+                .whenComplete((response, error) -> {
+                    if (error != null) {
+                        log.warn("Request from '{}' to '{}' failed: {}",
+                                agentId, receiverAgentId, error.getMessage());
+                    } else {
+                        log.debug("Agent '{}' received response from '{}'",
+                                agentId, receiverAgentId);
+                    }
+                });
+    }
+
+    /**
+     * Reply to a received message.
+     * Automatically sets correlation ID and receiver.
+     *
+     * @param originalMessage the message to reply to
+     * @param content the reply content
+     * @return CompletableFuture that completes when reply is sent
+     */
+    protected CompletableFuture<Void> replyTo(Message originalMessage, Object content) {
+        Message reply = originalMessage.reply(content)
+                .senderId(agentId)
+                .build();
+
+        log.trace("Agent '{}' replying to message {} from '{}'",
+                agentId, originalMessage.id(), originalMessage.senderId());
+
+        return messageService.send(reply);
+    }
+
     private void startBehaviors() {
         if (behaviorScheduler != null) {
             behaviors.values().forEach(behaviorScheduler::schedule);

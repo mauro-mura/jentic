@@ -26,10 +26,34 @@ public class InMemoryMessageService implements MessageService {
     private static final Logger log = LoggerFactory.getLogger(InMemoryMessageService.class);
     
     private final Map<String, List<MessageHandler>> topicSubscriptions = new ConcurrentHashMap<>();
+    private final Map<String, List<MessageHandler>> receiverSubscriptions = new ConcurrentHashMap<>();
     private final Map<String, PredicateSubscription> predicateSubscriptions = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Message>> pendingRequests = new ConcurrentHashMap<>();
+    private final Map<String, SubscriptionInfo> subscriptionRegistry = new ConcurrentHashMap<>();
+
     private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
-    
+
+    @Override
+    public String subscribeToReceiver(String receiverId, MessageHandler handler) {
+        if (receiverId == null || receiverId.trim().isEmpty()) {
+            throw new IllegalArgumentException("receiverId cannot be null or empty");
+        }
+
+        String subscriptionId = "receiver-" + receiverId + "-" + UUID.randomUUID();
+
+        receiverSubscriptions.computeIfAbsent(receiverId, k -> new CopyOnWriteArrayList<>())
+                .add(handler);
+
+        subscriptionRegistry.put(subscriptionId, new SubscriptionInfo(
+                SubscriptionType.RECEIVER, receiverId, handler
+        ));
+
+        log.debug("Subscribed receiver '{}' for direct messages (subscription: {})",
+                receiverId, subscriptionId);
+
+        return subscriptionId;
+    }
+
     @Override
     public CompletableFuture<Void> send(Message message) {
         return CompletableFuture.runAsync(() -> {
@@ -42,6 +66,11 @@ public class InMemoryMessageService implements MessageService {
                     pendingRequest.complete(message);
                     return;
                 }
+            }
+
+            // Deliver to direct receiver if specified
+            if (message.receiverId() != null && !message.receiverId().trim().isEmpty()) {
+                deliverToReceiver(message);
             }
             
             // Deliver to topic subscribers
@@ -61,7 +90,11 @@ public class InMemoryMessageService implements MessageService {
         
         topicSubscriptions.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>())
                           .add(handler);
-        
+
+        subscriptionRegistry.put(subscriptionId, new SubscriptionInfo(
+                SubscriptionType.TOPIC, topic, handler
+        ));
+
         log.debug("Subscribed to topic: {} with subscription ID: {}", topic, subscriptionId);
         return subscriptionId;
     }
@@ -78,11 +111,45 @@ public class InMemoryMessageService implements MessageService {
     
     @Override
     public void unsubscribe(String subscriptionId) {
-        // For topic subscriptions, we'd need to track subscription IDs to handlers
-        // For simplicity in MVP, we'll remove from predicate subscriptions
-        predicateSubscriptions.remove(subscriptionId);
-        
-        log.debug("Unsubscribed: {}", subscriptionId);
+        if (subscriptionId == null) {
+            return;
+        }
+
+        // Check registry first
+        SubscriptionInfo info = subscriptionRegistry.remove(subscriptionId);
+        if (info != null) {
+            switch (info.type) {
+                case TOPIC -> {
+                    List<MessageHandler> handlers = topicSubscriptions.get(info.key);
+                    if (handlers != null) {
+                        handlers.remove(info.handler);
+                        if (handlers.isEmpty()) {
+                            topicSubscriptions.remove(info.key);
+                        }
+                    }
+                }
+                case RECEIVER -> {
+                    List<MessageHandler> handlers = receiverSubscriptions.get(info.key);
+                    if (handlers != null) {
+                        handlers.remove(info.handler);
+                        if (handlers.isEmpty()) {
+                            receiverSubscriptions.remove(info.key);
+                        }
+                    }
+                }
+            }
+            log.debug("Unsubscribed: {} (type: {}, key: {})",
+                    subscriptionId, info.type, info.key);
+            return;
+        }
+
+        // Fallback: try predicate subscriptions
+        if (predicateSubscriptions.remove(subscriptionId) != null) {
+            log.debug("Unsubscribed from predicate: {}", subscriptionId);
+            return;
+        }
+
+        log.trace("Subscription not found: {}", subscriptionId);
     }
     
     @Override
@@ -106,7 +173,34 @@ public class InMemoryMessageService implements MessageService {
         
         return replyFuture;
     }
-    
+
+    /**
+     * Deliver message directly to the specified receiver.
+     * This is the key method for point-to-point communication.
+     */
+    private void deliverToReceiver(Message message) {
+        String receiverId = message.receiverId();
+        List<MessageHandler> handlers = receiverSubscriptions.get(receiverId);
+
+        if (handlers != null && !handlers.isEmpty()) {
+            log.trace("Delivering to receiver '{}' ({} handlers)", receiverId, handlers.size());
+
+            for (MessageHandler handler : handlers) {
+                // Use virtual thread for each handler (same as original)
+                Thread.startVirtualThread(() -> {
+                    try {
+                        handler.handle(message).join();
+                    } catch (Exception e) {
+                        log.error("Error handling direct message for receiver '{}': {}",
+                                receiverId, e.getMessage(), e);
+                    }
+                });
+            }
+        } else {
+            log.trace("No handlers found for receiver: {}", receiverId);
+        }
+    }
+
     private void deliverToTopicSubscribers(Message message) {
         List<MessageHandler> handlers = topicSubscriptions.get(message.topic());
         if (handlers != null && !handlers.isEmpty()) {
@@ -137,6 +231,35 @@ public class InMemoryMessageService implements MessageService {
             }
         }
     }
-    
+
+    /**
+     * Get statistics about subscriptions (useful for debugging and testing)
+     */
+    public Map<String, Object> getStatistics() {
+        return Map.of(
+                "topicSubscriptions", topicSubscriptions.size(),
+                "receiverSubscriptions", receiverSubscriptions.size(),
+                "predicateSubscriptions", predicateSubscriptions.size(),
+                "pendingRequests", pendingRequests.size()
+        );
+    }
+
     private record PredicateSubscription(Predicate<Message> filter, MessageHandler handler) {}
+
+    /**
+     * Subscription type enum
+     */
+    private enum SubscriptionType {
+        TOPIC,
+        RECEIVER
+    }
+
+    /**
+     * Subscription information for tracking and unsubscribe
+     */
+    private record SubscriptionInfo(
+            SubscriptionType type,
+            String key,  // topic name or receiverId
+            MessageHandler handler
+    ) {}
 }
