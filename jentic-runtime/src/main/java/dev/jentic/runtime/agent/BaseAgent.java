@@ -6,11 +6,13 @@ import dev.jentic.runtime.messaging.InMemoryMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -28,6 +30,10 @@ public abstract class BaseAgent implements Agent {
     private volatile AgentStatus currentStatus = AgentStatus.STOPPED;
 
     private String directMessageSubscriptionId;
+
+    // Lifecycle hooks - thread-safe collections
+    private final List<Runnable> startHooks = new CopyOnWriteArrayList<>();
+    private final List<Runnable> stopHooks = new CopyOnWriteArrayList<>();
 
     protected MessageService messageService;
     protected BehaviorScheduler behaviorScheduler;
@@ -93,6 +99,9 @@ public abstract class BaseAgent implements Agent {
                     // Call lifecycle hook
                     onStart();
 
+                    // Execute registered start hooks (e.g., for persistence)
+                    executeStartHooks();
+
                     currentStatus = AgentStatus.RUNNING;
                     log.info("Agent started successfully: {} ({})", agentName, agentId);
                     
@@ -116,6 +125,9 @@ public abstract class BaseAgent implements Agent {
             
             return CompletableFuture.runAsync(() -> {
                 try {
+                    // Execute registered stop hooks FIRST (e.g., for persistence)
+                    executeStopHooks();
+
                     // Call lifecycle hook
                     onStop();
                     
@@ -192,7 +204,117 @@ public abstract class BaseAgent implements Agent {
     public void setAgentDirectory(AgentDirectory agentDirectory) {
         this.agentDirectory = agentDirectory;
     }
-    
+
+    // =========================================================================
+    // LIFECYCLE HOOKS API
+    // =========================================================================
+
+    /**
+     * Register a hook to be executed when the agent starts.
+     * Hooks are executed AFTER onStart() is called.
+     *
+     * This is useful for external components (like PersistenceManager) to
+     * perform actions during agent startup.
+     *
+     * @param hook the runnable to execute on start
+     */
+    public void onStartHook(Runnable hook) {
+        if (hook != null) {
+            startHooks.add(hook);
+            log.trace("Registered start hook for agent {}", agentId);
+        }
+    }
+
+    /**
+     * Register a hook to be executed when the agent stops.
+     * Hooks are executed BEFORE onStop() is called.
+     *
+     * This is critical for persistence - it ensures state is saved
+     * before the agent shuts down completely.
+     *
+     * @param hook the runnable to execute on stop
+     */
+    public void onStopHook(Runnable hook) {
+        if (hook != null) {
+            stopHooks.add(hook);
+            log.trace("Registered stop hook for agent {}", agentId);
+        }
+    }
+
+    /**
+     * Remove a previously registered start hook
+     *
+     * @param hook the hook to remove
+     * @return true if the hook was found and removed
+     */
+    public boolean removeStartHook(Runnable hook) {
+        return startHooks.remove(hook);
+    }
+
+    /**
+     * Remove a previously registered stop hook
+     *
+     * @param hook the hook to remove
+     * @return true if the hook was found and removed
+     */
+    public boolean removeStopHook(Runnable hook) {
+        return stopHooks.remove(hook);
+    }
+
+    /**
+     * Clear all registered start hooks
+     */
+    public void clearStartHooks() {
+        startHooks.clear();
+    }
+
+    /**
+     * Clear all registered stop hooks
+     */
+    public void clearStopHooks() {
+        stopHooks.clear();
+    }
+
+    /**
+     * Execute all registered start hooks
+     */
+    private void executeStartHooks() {
+        if (startHooks.isEmpty()) {
+            return;
+        }
+
+        log.debug("Executing {} start hooks for agent {}", startHooks.size(), agentId);
+
+        for (Runnable hook : startHooks) {
+            try {
+                hook.run();
+            } catch (Exception e) {
+                log.error("Error executing start hook for agent {}", agentId, e);
+                // Continue with other hooks even if one fails
+            }
+        }
+    }
+
+    /**
+     * Execute all registered stop hooks
+     */
+    private void executeStopHooks() {
+        if (stopHooks.isEmpty()) {
+            return;
+        }
+
+        log.debug("Executing {} stop hooks for agent {}", stopHooks.size(), agentId);
+
+        for (Runnable hook : stopHooks) {
+            try {
+                hook.run();
+            } catch (Exception e) {
+                log.error("Error executing stop hook for agent {}", agentId, e);
+                // Continue with other hooks even if one fails
+            }
+        }
+    }
+
     /**
      * Initialize services with defaults if not set
      */
