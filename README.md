@@ -29,7 +29,7 @@ Jentic reimagines multi-agent systems with modern Java practices:
 ### Installation
 
 ```bash
-git clone https://github.com/yourusername/jentic.git
+git clone https://github.com/mauro-mura/jentic.git
 cd jentic
 mvn clean install
 ```
@@ -153,8 +153,13 @@ Enterprise-grade implementations (coming in future releases).
 - [x] Agent lifecycle management
 - [x] In-memory message passing
 - [x] Local agent directory
-- [x] Annotation-based configuration
-- [x] Cyclic, One-shot, and Event-driven behaviors
+- [x] Annotation-based configuration (agents, behaviors, handlers)
+- [x] Behavior types: Cyclic, One-shot, Event-driven, Waker
+- [x] Composite behaviors: Sequential, Parallel, FSM
+- [x] Advanced behaviors: Conditional, Throttled
+- [x] Message filtering (topic, header, predicate, composite)
+- [x] Rate limiting (token bucket, sliding window)
+- [x] File-based persistence utilities
 - [x] YAML configuration support
 
 ### Planned (V1.1)
@@ -175,10 +180,15 @@ Enterprise-grade implementations (coming in future releases).
 
 Check out the `jentic-examples` module for complete examples:
 
-- **Ping-Pong Agents**: Basic message exchange
-- **Weather Station**: Cyclic data collection and broadcasting
-- **Task Manager**: Event-driven task processing
-- **Chat Room**: Multi-agent communication patterns
+- Ping-Pong: `dev.jentic.examples.PingPongExample`
+- Simple bootstrap: `dev.jentic.examples.SimpleExample`
+- Weather Station: `dev.jentic.examples.WeatherStationExample`
+- Task Manager: `dev.jentic.examples.TaskManagerExample`
+- Advanced - Conditional Behavior: `dev.jentic.examples.advanced.conditional.ConditionalBehaviorExample`
+- Advanced - Throttled Behavior: `dev.jentic.examples.advanced.throttled.ThrottledExample`
+- Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
+- Discovery pattern: `dev.jentic.examples.DiscoveryExample`
+- E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`
 
 ## 🤝 Contributing
 
@@ -188,7 +198,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ```bash
 # Clone and setup
-git clone https://github.com/yourusername/jentic.git
+git clone https://github.com/mauro-mura/jentic.git
 cd jentic
 
 # Build and test
@@ -204,7 +214,6 @@ mvn exec:java -Dexec.mainClass="dev.jentic.examples.PingPongExample"
 - [Architecture Guide](docs/architecture.md)
 - [Agent Development Guide](docs/agent-development.md)
 - [Configuration Reference](docs/configuration.md)
-- [Migration from JADE](docs/migration-from-jade.md)
 
 ## 🗓️ Roadmap
 
@@ -241,7 +250,7 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 
 ## 🙋 Support
 
-- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic)
+- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
 
 ## 🏆 Acknowledgments
 

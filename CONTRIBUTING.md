@@ -15,9 +15,11 @@ Thank you for your interest in contributing to Jentic! This document provides gu
 
 1. **Fork and Clone**
 ```bash
-git fork https://github.com/yourusername/jentic.git
+# Fork the repo on GitHub first (via UI), then:
 git clone https://github.com/yourusername/jentic.git
 cd jentic
+# Add upstream to keep your fork in sync
+git remote add upstream https://github.com/mauro-mura/jentic.git
 ```
 
 2. **Build and Verify**
@@ -28,7 +30,6 @@ mvn clean install
 
 3. **IDE Setup**
 - Import as Maven project
-- Enable Java 21 preview features
 - Configure code style (see `.editorconfig`)
 
 ## 🎯 How to Contribute
@@ -368,6 +369,6 @@ We appreciate all contributions and will:
 
 - **Project Lead**: [Your Name](mailto:your.email@example.com)
 - **Community Discord**: [Jentic Community](https://discord.gg/jentic)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/jentic/issues)
+- **Issues**: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
 
 Thank you for helping make Jentic better! 🚀

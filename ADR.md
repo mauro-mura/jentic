@@ -202,13 +202,11 @@ graph TD
 
 ### Internal Documentation
 
-- [Architecture Overview](../docs/architecture.md)
-- [Development Guide](../docs/development.md)
-- [Migration from JADE](../docs/migration-from-jade.md)
+- [Architecture Overview](docs/architecture.md)
+- [Agent Development Guide](docs/agent-development.md)
+- [Configuration Reference](docs/configuration.md)
 
 ---
-
-**Last Updated**: 2025-09-16  
 
 
 > 💡 **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated. Always check the status and date of each ADR to ensure you're working with current architectural decisions.
