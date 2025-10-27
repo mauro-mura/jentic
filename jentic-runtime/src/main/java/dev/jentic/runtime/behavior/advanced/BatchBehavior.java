@@ -450,7 +450,7 @@ public abstract class BatchBehavior<T> extends BaseBehavior {
      */
     public static <T> BatchBehavior<T> simple(String behaviorId, int maxBatchSize, 
                                               BatchProcessor<T> processor) {
-        return new BatchBehavior<T>(behaviorId, maxBatchSize) {
+        return new BatchBehavior<>(behaviorId, maxBatchSize) {
             @Override
             protected void processBatch(List<T> batch) {
                 processor.process(batch);
@@ -470,7 +470,7 @@ public abstract class BatchBehavior<T> extends BaseBehavior {
      */
     public static <T> BatchBehavior<T> withTimeout(String behaviorId, int maxBatchSize,
                                                     Duration maxWaitTime, BatchProcessor<T> processor) {
-        return new BatchBehavior<T>(behaviorId, maxBatchSize, maxWaitTime) {
+        return new BatchBehavior<>(behaviorId, maxBatchSize, maxWaitTime) {
             @Override
             protected void processBatch(List<T> batch) {
                 processor.process(batch);

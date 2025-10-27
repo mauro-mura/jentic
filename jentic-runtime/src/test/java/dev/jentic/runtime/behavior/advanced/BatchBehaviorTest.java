@@ -186,7 +186,7 @@ class BatchBehaviorTest {
         CountDownLatch latch = new CountDownLatch(1);
         List<String> processedItems = new ArrayList<>();
         
-        BatchBehavior<String> batch = new BatchBehavior<String>("test-batch", 10, null, true) {
+        BatchBehavior<String> batch = new BatchBehavior<>("test-batch", 10, null, true) {
             @Override
             protected void processBatch(List<String> items) {
                 processedItems.addAll(items);
@@ -217,7 +217,7 @@ class BatchBehaviorTest {
     void testNoFlushOnStop() throws Exception {
         AtomicInteger processCount = new AtomicInteger(0);
         
-        BatchBehavior<String> batch = new BatchBehavior<String>("test-batch", 10, null, false) {
+        BatchBehavior<String> batch = new BatchBehavior<>("test-batch", 10, null, false) {
             @Override
             protected void processBatch(List<String> items) {
                 processCount.incrementAndGet();
@@ -281,12 +281,12 @@ class BatchBehaviorTest {
         CountDownLatch errorLatch = new CountDownLatch(1);
         AtomicInteger errorCount = new AtomicInteger(0);
         
-        BatchBehavior<String> batch = new BatchBehavior<String>("test-batch", 3) {
+        BatchBehavior<String> batch = new BatchBehavior<>("test-batch", 3) {
             @Override
             protected void processBatch(List<String> items) {
                 throw new RuntimeException("Simulated processing error");
             }
-            
+
             @Override
             protected void onBatchError(List<String> failedBatch, Exception error) {
                 errorCount.incrementAndGet();
@@ -456,9 +456,10 @@ class BatchBehaviorTest {
     void testGetters() {
         Duration maxWait = Duration.ofSeconds(5);
         
-        BatchBehavior<String> batch = new BatchBehavior<String>("test-batch", 10, maxWait, true) {
+        BatchBehavior<String> batch = new BatchBehavior<>("test-batch", 10, maxWait, true) {
             @Override
-            protected void processBatch(List<String> items) {}
+            protected void processBatch(List<String> items) {
+            }
         };
         
         assertThat(batch.getBehaviorId()).isEqualTo("test-batch");

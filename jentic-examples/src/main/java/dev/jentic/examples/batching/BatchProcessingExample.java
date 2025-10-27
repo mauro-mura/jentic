@@ -1,6 +1,5 @@
 package dev.jentic.examples.batching;
 
-import dev.jentic.core.Agent;
 import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
