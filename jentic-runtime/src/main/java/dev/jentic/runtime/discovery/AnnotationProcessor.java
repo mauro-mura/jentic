@@ -115,6 +115,7 @@ public class AnnotationProcessor {
             case EVENT_DRIVEN -> createEventDrivenBehavior(agent, method, annotation);
             case CONDITIONAL -> createConditionalBehavior(agent, method, annotation);
             case THROTTLED -> createThrottledBehavior(agent, method, annotation);
+            case BATCH -> createBatchBehavior(agent, method, annotation);
             case CUSTOM -> createCustomBehavior(agent, method, annotation);
             case SEQUENTIAL -> createSequentialBehavior(agent, method, annotation);
             case PARALLEL -> createParallelBehavior(agent, method, annotation);
@@ -251,6 +252,31 @@ public class AnnotationProcessor {
             @Override
             protected void throttledAction() {
                 invokeMethod(agent, method);
+            }
+        };
+    }
+
+    private Behavior createBatchBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String behaviorId = generateBehaviorId(agent, method);
+        int batchSize = annotation.batchSize();
+        Duration maxWaitTime = annotation.maxWaitTime().isEmpty() ? null : parseDuration(annotation.maxWaitTime());
+
+        if (batchSize <= 0) {
+            log.warn("BATCH behavior '{}' has invalid batchSize: {}, using default 10", behaviorId, batchSize);
+            batchSize = 10;
+        }
+
+        log.info("Created BATCH behavior '{}' (batchSize: {}, maxWaitTime: {})",
+                behaviorId, batchSize, maxWaitTime);
+        log.warn("BATCH behavior '{}' created via annotation. Use programmatically for full control.", behaviorId);
+
+        // Note: Batch behaviors should typically be created programmatically in onStart()
+        // This creates a placeholder that logs a warning
+        final int finalBatchSize = batchSize;
+        return new dev.jentic.runtime.behavior.advanced.BatchBehavior<Object>(behaviorId, finalBatchSize, maxWaitTime) {
+            @Override
+            protected void processBatch(List<Object> batch) {
+                log.warn("BatchBehavior '{}' processBatch() not implemented - create behavior programmatically", behaviorId);
             }
         };
     }
