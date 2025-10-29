@@ -116,6 +116,7 @@ public class AnnotationProcessor {
             case CONDITIONAL -> createConditionalBehavior(agent, method, annotation);
             case THROTTLED -> createThrottledBehavior(agent, method, annotation);
             case BATCH -> createBatchBehavior(agent, method, annotation);
+            case RETRY -> createRetryBehavior(agent, method, annotation);
             case CUSTOM -> createCustomBehavior(agent, method, annotation);
             case SEQUENTIAL -> createSequentialBehavior(agent, method, annotation);
             case PARALLEL -> createParallelBehavior(agent, method, annotation);
@@ -277,6 +278,44 @@ public class AnnotationProcessor {
             @Override
             protected void processBatch(List<Object> batch) {
                 log.warn("BatchBehavior '{}' processBatch() not implemented - create behavior programmatically", behaviorId);
+            }
+        };
+    }
+
+    private Behavior createRetryBehavior(Agent agent, Method method, JenticBehavior annotation) {
+        String behaviorId = generateBehaviorId(agent, method);
+        int maxRetries = annotation.maxRetries();
+        String backoffStr = annotation.backoff().toUpperCase();
+        Duration initialDelay = annotation.initialDelay().isEmpty() ?
+                Duration.ofSeconds(1) : parseDuration(annotation.initialDelay());
+
+        // Parse backoff strategy
+        dev.jentic.runtime.behavior.advanced.RetryBehavior.BackoffStrategy backoffStrategy;
+        try {
+            backoffStrategy = dev.jentic.runtime.behavior.advanced.RetryBehavior.BackoffStrategy.valueOf(backoffStr);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid backoff strategy '{}', using EXPONENTIAL", backoffStr);
+            backoffStrategy = dev.jentic.runtime.behavior.advanced.RetryBehavior.BackoffStrategy.EXPONENTIAL;
+        }
+
+        if (maxRetries < 0) {
+            log.warn("RETRY behavior '{}' has invalid maxRetries: {}, using default 3", behaviorId, maxRetries);
+            maxRetries = 3;
+        }
+
+        log.info("Created RETRY behavior '{}' (maxRetries: {}, backoff: {}, initialDelay: {})",
+                behaviorId, maxRetries, backoffStrategy, initialDelay);
+        log.warn("RETRY behavior '{}' created via annotation. Use programmatically for full control.", behaviorId);
+
+        // Note: Retry behaviors should typically be created programmatically in onStart()
+        // This creates a placeholder that logs a warning
+        final int finalMaxRetries = maxRetries;
+        return new dev.jentic.runtime.behavior.advanced.RetryBehavior<Object>(
+                behaviorId, finalMaxRetries, backoffStrategy, initialDelay) {
+            @Override
+            protected Object attemptAction() throws Exception {
+                invokeMethod(agent, method);
+                return null;
             }
         };
     }
