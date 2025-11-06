@@ -1,4 +1,4 @@
-package dev.jentic.examples.advanced.conditional;
+package dev.jentic.examples.behaviors;
 
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.Message;

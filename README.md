@@ -184,8 +184,8 @@ Check out the `jentic-examples` module for complete examples:
 - Simple bootstrap: `dev.jentic.examples.SimpleExample`
 - Weather Station: `dev.jentic.examples.WeatherStationExample`
 - Task Manager: `dev.jentic.examples.TaskManagerExample`
-- Advanced - Conditional Behavior: `dev.jentic.examples.advanced.conditional.ConditionalBehaviorExample`
-- Advanced - Throttled Behavior: `dev.jentic.examples.advanced.throttled.ThrottledExample`
+- Advanced - Conditional Behavior: `dev.jentic.examples.behaviors.ConditionalBehaviorExample`
+- Advanced - Throttled Behavior: `dev.jentic.examples.behaviors.ThrottledExample`
 - Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
 - Discovery pattern: `dev.jentic.examples.DiscoveryExample`
 - E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`

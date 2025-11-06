@@ -1,4 +1,4 @@
-package dev.jentic.examples.advanced.throttled;
+package dev.jentic.examples.behaviors;
 
 import dev.jentic.core.BehaviorType;
 import dev.jentic.core.Message;

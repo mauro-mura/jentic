@@ -1,6 +1,5 @@
-package dev.jentic.examples.scheduling;
+package dev.jentic.examples.behaviors.scheduling;
 
-import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
@@ -38,7 +37,7 @@ public class ScheduledExample {
         
         // Create runtime
         JenticRuntime runtime = JenticRuntime.builder()
-            .scanPackage("dev.jentic.examples.scheduling")
+            .scanPackage("dev.jentic.examples.behaviors.scheduling")
             .build();
         
         runtime.start().join();

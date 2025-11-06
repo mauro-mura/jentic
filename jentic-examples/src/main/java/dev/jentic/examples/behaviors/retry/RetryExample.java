@@ -1,9 +1,6 @@
-package dev.jentic.examples.retry;
+package dev.jentic.examples.behaviors.retry;
 
-import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticBehavior;
-import dev.jentic.core.annotations.JenticMessageHandler;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.advanced.RetryBehavior;
@@ -11,15 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static dev.jentic.core.BehaviorType.CYCLIC;
 
 /**
  * Comprehensive example demonstrating RetryBehavior usage in real-world scenarios.
@@ -53,7 +45,7 @@ public class RetryExample {
 
         // Create and start runtime
         JenticRuntime runtime = JenticRuntime.builder()
-                .scanPackage("dev.jentic.examples.retry")
+                .scanPackage("dev.jentic.examples.behaviors.retry")
                 .build();
 
         log.info("🚀 Starting Jentic Runtime...\n");

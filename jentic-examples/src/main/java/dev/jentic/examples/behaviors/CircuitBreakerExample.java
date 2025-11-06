@@ -1,4 +1,4 @@
-package dev.jentic.examples.circuitbreaker;
+package dev.jentic.examples.behaviors;
 
 import dev.jentic.runtime.behavior.advanced.CircuitBreakerBehavior;
 import org.slf4j.Logger;

@@ -1,4 +1,4 @@
-package dev.jentic.examples.batching;
+package dev.jentic.examples.behaviors;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.annotations.JenticAgent;
