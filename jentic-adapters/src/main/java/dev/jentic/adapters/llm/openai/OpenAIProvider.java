@@ -11,6 +11,7 @@ import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -30,12 +31,18 @@ public class OpenAIProvider implements LLMProvider {
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
+                .timeout(builder.timeout)
+                .logRequests(builder.logRequests)
+                .logResponses(builder.logResponses)
                 .build();
         this.streamingModel = OpenAiStreamingChatModel.builder()
                 .apiKey(builder.apiKey)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
+                .timeout(builder.timeout)
+                .logRequests(builder.logRequests)
+                .logResponses(builder.logResponses)
                 .build();
     }
 
@@ -252,8 +259,11 @@ public class OpenAIProvider implements LLMProvider {
     public static class Builder {
         private String apiKey;
         private String modelName = "gpt-4o";
-        private Double temperature = Double.valueOf(0.7);
-        private Integer maxTokens = Integer.valueOf(2000);
+        private Double temperature = 0.7;
+        private Integer maxTokens = 2000;
+        private Duration timeout = Duration.ofSeconds(60);
+        private boolean logRequests = false;
+        private boolean logResponses = false;
 
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
@@ -272,6 +282,21 @@ public class OpenAIProvider implements LLMProvider {
 
         public Builder maxTokens(Integer maxTokens) {
             this.maxTokens = maxTokens;
+            return this;
+        }
+
+        public Builder timeout(Duration timeout) {
+            this.timeout = timeout;
+            return this;
+        }
+
+        public Builder logRequests(boolean logRequests) {
+            this.logRequests = logRequests;
+            return this;
+        }
+
+        public Builder logResponses(boolean logResponses) {
+            this.logResponses = logResponses;
             return this;
         }
 
