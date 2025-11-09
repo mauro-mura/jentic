@@ -20,5 +20,10 @@
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-runtime</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>dev.jentic</groupId>
+            <artifactId>jentic-adapters</artifactId>
+        </dependency>
     </dependencies>
 </project>

@@ -15,12 +15,50 @@
     <name>Jentic Adapters</name>
     <description>Advanced adapters for external integrations</description>
 
+    <properties>
+        <langchain4j.version>1.8.0</langchain4j.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-bom</artifactId>
+                <version>${langchain4j.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-core</artifactId>
         </dependency>
-        
+
+        <!-- LangChain4j Core -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+        </dependency>
+
+        <!-- Top 3 Providers: OpenAI, Anthropic, Ollama -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>dev.langchain4j</groupId>-->
+<!--            <artifactId>langchain4j-anthropic</artifactId>-->
+<!--        </dependency>-->
+
+<!--        <dependency>-->
+<!--            <groupId>dev.langchain4j</groupId>-->
+<!--            <artifactId>langchain4j-ollama</artifactId>-->
+<!--        </dependency>-->
+
         <!-- Future: Kafka, JMS, etc. -->
         <!-- For now, keep empty or add optional dependencies -->
     </dependencies>
