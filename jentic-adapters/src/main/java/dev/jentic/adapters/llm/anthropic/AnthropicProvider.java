@@ -1,33 +1,30 @@
-package dev.jentic.adapters.llm.openai;
+package dev.jentic.adapters.llm.anthropic;
 
 import dev.jentic.adapters.llm.ToolConversionUtils;
 import dev.jentic.core.llm.*;
-import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.model.anthropic.AnthropicChatModel;
+import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
 import dev.langchain4j.data.message.*;
+import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.request.json.JsonObjectSchema;
-import dev.langchain4j.model.chat.request.json.JsonSchemaElement;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-public class OpenAIProvider implements LLMProvider {
-
-    private final OpenAiChatModel chatModel;
-    private final OpenAiStreamingChatModel streamingModel;
+public class AnthropicProvider implements LLMProvider {
+    
+    private final AnthropicChatModel chatModel;
+    private final AnthropicStreamingChatModel streamingModel;
     private final String modelName;
-
-    private OpenAIProvider(Builder builder) {
+    
+    private AnthropicProvider(Builder builder) {
         this.modelName = builder.modelName;
-        this.chatModel = OpenAiChatModel.builder()
+        this.chatModel = AnthropicChatModel.builder()
                 .apiKey(builder.apiKey)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
@@ -36,20 +33,20 @@ public class OpenAIProvider implements LLMProvider {
                 .logRequests(builder.logRequests)
                 .logResponses(builder.logResponses)
                 .build();
-        this.streamingModel = OpenAiStreamingChatModel.builder()
+        
+        this.streamingModel = AnthropicStreamingChatModel.builder()
                 .apiKey(builder.apiKey)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
                 .timeout(builder.timeout)
-                .logRequests(builder.logRequests)
-                .logResponses(builder.logResponses)
                 .build();
     }
-
+    
     @Override
     public CompletableFuture<LLMResponse> chat(LLMRequest request) {
         return CompletableFuture.supplyAsync(() -> {
+
             ChatRequest.Builder chatRequestBuilder = ChatRequest.builder()
                     .messages(convertMessages(request));
 
@@ -96,9 +93,10 @@ public class OpenAIProvider implements LLMProvider {
             Map<String, Object> metadata = new HashMap<>();
             builder.metadata(metadata);
             return builder.build();
+
         });
     }
-
+    
     @Override
     public CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> handler) {
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -140,21 +138,23 @@ public class OpenAIProvider implements LLMProvider {
         );
         return future;
     }
-
+    
     @Override
     public CompletableFuture<List<String>> getAvailableModels() {
-        return CompletableFuture.completedFuture(
-                List.of("gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"));
+        return CompletableFuture.completedFuture(List.of(
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+            "claude-3-7-sonnet-20250219"
+        ));
     }
-
+    
     @Override
     public String getProviderName() {
-        return "OpenAI";
+        return "Anthropic";
     }
-
-    // ========================================================================
-    // Conversion Methods
-    // ========================================================================
 
     private List<ChatMessage> convertMessages(LLMRequest request) {
         return request.messages().stream().map(msg -> {
@@ -167,143 +167,65 @@ public class OpenAIProvider implements LLMProvider {
         }).collect(Collectors.toList());
     }
 
-    /**
-     * Convert Jentic FunctionDefinition to LangChain4j ToolSpecification.
-     */
-    private List<ToolSpecification> convertFunctionsToToolSpecs(List<FunctionDefinition> functions) {
-        return functions.stream()
-                .map(this::convertFunctionToToolSpec)
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Convert single FunctionDefinition to ToolSpecification.
-     */
-    private ToolSpecification convertFunctionToToolSpec(FunctionDefinition func) {
-        ToolSpecification.Builder builder = ToolSpecification.builder()
-                .name(func.name())
-                .description(func.description());
-
-        // Convert parameters from Jentic format to LangChain4j JsonObjectSchema
-        if (func.parameters() != null && !func.parameters().isEmpty()) {
-            JsonObjectSchema.Builder schemaBuilder = JsonObjectSchema.builder();
-
-            Map<String, Object> params = func.parameters();
-
-            // Extract properties
-            if (params.containsKey("properties")) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> properties = (Map<String, Object>) params.get("properties");
-
-                Map<String, JsonSchemaElement> convertedProps = new HashMap<>();
-                properties.forEach((propName, propDef) -> {
-                    JsonSchemaElement element = convertPropertyToJsonSchema(propDef);
-                    convertedProps.put(propName, element);
-                });
-
-                schemaBuilder.addProperties(convertedProps);
-            }
-
-            // Extract required fields
-            if (params.containsKey("required")) {
-                @SuppressWarnings("unchecked")
-                List<String> required = (List<String>) params.get("required");
-                required.forEach(schemaBuilder::required);
-            }
-
-            builder.parameters(schemaBuilder.build());
-        }
-
-        return builder.build();
-    }
-
-    /**
-     * Convert property definition to JsonSchemaElement.
-     */
-    private JsonSchemaElement convertPropertyToJsonSchema(Object propDef) {
-        if (!(propDef instanceof Map)) {
-            return dev.langchain4j.model.chat.request.json.JsonStringSchema.builder().build();
-        }
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> prop = (Map<String, Object>) propDef;
-        String type = (String) prop.getOrDefault("type", "string");
-        String description = (String) prop.get("description");
-
-        return switch (type) {
-            case "string" -> dev.langchain4j.model.chat.request.json.JsonStringSchema.builder()
-                    .description(description)
-                    .build();
-            case "integer", "number" -> dev.langchain4j.model.chat.request.json.JsonIntegerSchema.builder()
-                    .description(description)
-                    .build();
-            case "boolean" -> dev.langchain4j.model.chat.request.json.JsonBooleanSchema.builder()
-                    .description(description)
-                    .build();
-            case "array" -> dev.langchain4j.model.chat.request.json.JsonArraySchema.builder()
-                    .description(description)
-                    .build();
-            default -> dev.langchain4j.model.chat.request.json.JsonStringSchema.builder()
-                    .description(description)
-                    .build();
-        };
-    }
-
-    // ========================================================================
-    // Builder
-    // ========================================================================
-
+    
     public static Builder builder() {
         return new Builder();
     }
-
+    
     public static class Builder {
         private String apiKey;
-        private String modelName = "gpt-4o";
+        private String modelName = "claude-3-5-sonnet-20241022";
         private Double temperature = 0.7;
-        private Integer maxTokens = 2000;
+        private Integer maxTokens = 4096;
         private Duration timeout = Duration.ofSeconds(60);
         private boolean logRequests = false;
         private boolean logResponses = false;
-
+        
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
             return this;
         }
-
+        
+        public Builder modelName(String modelName) {
+            this.modelName = modelName;
+            return this;
+        }
+        
         public Builder model(String modelName) {
             this.modelName = modelName;
             return this;
         }
-
+        
         public Builder temperature(Double temperature) {
             this.temperature = temperature;
             return this;
         }
-
+        
         public Builder maxTokens(Integer maxTokens) {
             this.maxTokens = maxTokens;
             return this;
         }
-
+        
         public Builder timeout(Duration timeout) {
             this.timeout = timeout;
             return this;
         }
-
+        
         public Builder logRequests(boolean logRequests) {
             this.logRequests = logRequests;
             return this;
         }
-
+        
         public Builder logResponses(boolean logResponses) {
             this.logResponses = logResponses;
             return this;
         }
-
-        public OpenAIProvider build() {
-            if (apiKey == null) throw new IllegalStateException("API key required");
-            return new OpenAIProvider(this);
+        
+        public AnthropicProvider build() {
+            if (apiKey == null || apiKey.isBlank()) {
+                throw new IllegalArgumentException("API key is required");
+            }
+            return new AnthropicProvider(this);
         }
     }
 }
