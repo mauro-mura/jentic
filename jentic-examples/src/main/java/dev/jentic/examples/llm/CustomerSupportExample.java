@@ -1,7 +1,6 @@
 package dev.jentic.examples.llm;
 
 import dev.jentic.adapters.llm.LLMProviderFactory;
-import dev.jentic.adapters.llm.openai.OpenAIProvider;
 import dev.jentic.core.*;
 import dev.jentic.core.llm.*;
 import dev.jentic.runtime.JenticRuntime;

@@ -1,16 +1,24 @@
 package dev.jentic.runtime.persistence;
 
-import dev.jentic.core.Agent;
-import dev.jentic.core.AgentStatus;
-import dev.jentic.core.persistence.*;
-import dev.jentic.core.annotations.JenticPersistenceConfig;
-import dev.jentic.runtime.agent.BaseAgent;
+import java.time.Duration;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.*;
+import dev.jentic.core.Agent;
+import dev.jentic.core.annotations.JenticPersistenceConfig;
+import dev.jentic.core.persistence.AgentState;
+import dev.jentic.core.persistence.PersistenceService;
+import dev.jentic.core.persistence.PersistenceStrategy;
+import dev.jentic.core.persistence.Stateful;
+import dev.jentic.runtime.agent.BaseAgent;
 
 /**
  * Manages automatic persistence for agents based on their configuration.

@@ -2,7 +2,6 @@ package dev.jentic.examples.ecommerce;
 
 import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
 import dev.jentic.runtime.agent.BaseAgent;
 import org.slf4j.Logger;

@@ -1,17 +1,16 @@
 package dev.jentic.runtime.behavior.advanced;
 
-import dev.jentic.core.BehaviorType;
-import dev.jentic.runtime.behavior.BaseBehavior;
-
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import dev.jentic.core.BehaviorType;
+import dev.jentic.runtime.behavior.BaseBehavior;
 
 /**
  * Pipeline behavior that processes data through multiple stages sequentially.

@@ -1,11 +1,5 @@
 package dev.jentic.runtime.scheduler;
 
-import dev.jentic.core.Behavior;
-import dev.jentic.core.BehaviorScheduler;
-import dev.jentic.core.BehaviorType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -13,6 +7,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Behavior;
+import dev.jentic.core.BehaviorScheduler;
 
 /**
  * Simple implementation of BehaviorScheduler using ScheduledExecutorService.

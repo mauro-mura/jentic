@@ -1,23 +1,22 @@
 package dev.jentic.examples;
 
-import dev.jentic.core.Message;
-import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticBehavior;
-import dev.jentic.core.annotations.JenticMessageHandler;
-import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.runtime.JenticRuntime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static dev.jentic.core.BehaviorType.CYCLIC;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Queue;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static dev.jentic.core.BehaviorType.CYCLIC;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Message;
+import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.annotations.JenticBehavior;
+import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.agent.BaseAgent;
 
 /**
  * Task management example with task creator, task processor, and task monitor agents.

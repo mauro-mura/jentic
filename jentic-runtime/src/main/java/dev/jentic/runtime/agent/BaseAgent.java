@@ -1,19 +1,26 @@
 package dev.jentic.runtime.agent;
 
-import dev.jentic.core.*;
-import dev.jentic.core.exceptions.AgentException;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Agent;
+import dev.jentic.core.AgentDescriptor;
+import dev.jentic.core.AgentDirectory;
+import dev.jentic.core.AgentStatus;
+import dev.jentic.core.Behavior;
+import dev.jentic.core.BehaviorScheduler;
+import dev.jentic.core.Message;
+import dev.jentic.core.MessageHandler;
+import dev.jentic.core.MessageService;
+import dev.jentic.runtime.messaging.InMemoryMessageService;
 
 /**
  * Base implementation of Agent interface.

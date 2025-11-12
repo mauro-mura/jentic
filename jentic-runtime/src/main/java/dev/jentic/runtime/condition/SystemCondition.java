@@ -1,6 +1,5 @@
 package dev.jentic.runtime.condition;
 
-import dev.jentic.core.Agent;
 import dev.jentic.core.condition.Condition;
 import dev.jentic.core.condition.SystemMetrics;
 

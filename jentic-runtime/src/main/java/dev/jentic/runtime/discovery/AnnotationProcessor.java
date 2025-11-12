@@ -1,23 +1,29 @@
 package dev.jentic.runtime.discovery;
 
-import dev.jentic.core.*;
-import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticBehavior;
-import dev.jentic.core.annotations.JenticMessageHandler;
-import dev.jentic.core.composite.CompletionStrategy;
-import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.runtime.behavior.*;
-import dev.jentic.runtime.behavior.composite.FSMBehavior;
-import dev.jentic.runtime.behavior.composite.ParallelBehavior;
-import dev.jentic.runtime.behavior.composite.SequentialBehavior;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Agent;
+import dev.jentic.core.Behavior;
+import dev.jentic.core.Message;
+import dev.jentic.core.MessageHandler;
+import dev.jentic.core.MessageService;
+import dev.jentic.core.annotations.JenticBehavior;
+import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.core.composite.CompletionStrategy;
+import dev.jentic.runtime.behavior.BaseBehavior;
+import dev.jentic.runtime.behavior.CyclicBehavior;
+import dev.jentic.runtime.behavior.EventDrivenBehavior;
+import dev.jentic.runtime.behavior.OneShotBehavior;
+import dev.jentic.runtime.behavior.WakerBehavior;
+import dev.jentic.runtime.behavior.composite.FSMBehavior;
+import dev.jentic.runtime.behavior.composite.ParallelBehavior;
+import dev.jentic.runtime.behavior.composite.SequentialBehavior;
 
 /**
  * Processor for handling annotations on agent classes.

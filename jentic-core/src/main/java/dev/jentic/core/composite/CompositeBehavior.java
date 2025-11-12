@@ -2,13 +2,10 @@ package dev.jentic.core.composite;
 
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
-import dev.jentic.core.BehaviorType;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Base class for behaviors that coordinate other behaviors

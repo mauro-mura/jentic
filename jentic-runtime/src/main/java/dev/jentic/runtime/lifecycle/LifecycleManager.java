@@ -1,11 +1,5 @@
 package dev.jentic.runtime.lifecycle;
 
-import dev.jentic.core.Agent;
-import dev.jentic.core.AgentStatus;
-import dev.jentic.runtime.agent.BaseAgent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Agent;
+import dev.jentic.core.AgentStatus;
 
 /**
  * Manager for agent lifecycle operations with timeout and error handling.

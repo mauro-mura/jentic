@@ -12,8 +12,6 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-
 import static dev.jentic.core.BehaviorType.CYCLIC;
 
 /**

@@ -1,11 +1,10 @@
 package dev.jentic.runtime.condition;
 
-import dev.jentic.core.Agent;
-import dev.jentic.core.condition.Condition;
-
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+
+import dev.jentic.core.condition.Condition;
 
 /**
  * Pre-built conditions for time-based checks

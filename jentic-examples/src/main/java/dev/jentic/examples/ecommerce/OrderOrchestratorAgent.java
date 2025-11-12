@@ -4,7 +4,6 @@ import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.annotations.JenticBehavior;
 import dev.jentic.core.annotations.JenticMessageHandler;
-import dev.jentic.core.composite.CompletionStrategy;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.behavior.OneShotBehavior;
 import dev.jentic.runtime.behavior.composite.*;

@@ -1,17 +1,17 @@
 package dev.jentic.runtime.behavior.advanced;
 
-import dev.jentic.core.BehaviorType;
-import dev.jentic.runtime.behavior.BaseBehavior;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.Duration;
 import java.time.Instant;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.BehaviorType;
+import dev.jentic.runtime.behavior.BaseBehavior;
 
 /**
  * CircuitBreakerBehavior - Advanced behavior implementing the Circuit Breaker pattern

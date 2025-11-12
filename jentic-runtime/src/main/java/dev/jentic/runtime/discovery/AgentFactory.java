@@ -1,17 +1,22 @@
 package dev.jentic.runtime.discovery;
 
-import dev.jentic.core.*;
-import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.exceptions.AgentException;
-import dev.jentic.runtime.agent.BaseAgent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Agent;
+import dev.jentic.core.AgentDescriptor;
+import dev.jentic.core.AgentDirectory;
+import dev.jentic.core.AgentStatus;
+import dev.jentic.core.BehaviorScheduler;
+import dev.jentic.core.MessageService;
+import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.exceptions.AgentException;
+import dev.jentic.runtime.agent.BaseAgent;
 
 /**
  * Factory for creating agent instances from annotated classes.
