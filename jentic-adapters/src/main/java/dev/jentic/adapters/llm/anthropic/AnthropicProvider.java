@@ -26,6 +26,7 @@ public class AnthropicProvider implements LLMProvider {
         this.modelName = builder.modelName;
         this.chatModel = AnthropicChatModel.builder()
                 .apiKey(builder.apiKey)
+                .baseUrl(builder.baseUrl)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
@@ -36,6 +37,7 @@ public class AnthropicProvider implements LLMProvider {
         
         this.streamingModel = AnthropicStreamingChatModel.builder()
                 .apiKey(builder.apiKey)
+                .baseUrl(builder.baseUrl)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
@@ -174,6 +176,7 @@ public class AnthropicProvider implements LLMProvider {
     
     public static class Builder {
         private String apiKey;
+        private String baseUrl;
         private String modelName = "claude-3-5-sonnet-20241022";
         private Double temperature = 0.7;
         private Integer maxTokens = 4096;
@@ -183,6 +186,11 @@ public class AnthropicProvider implements LLMProvider {
         
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
+            return this;
+        }
+
+        public Builder baseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
             return this;
         }
         

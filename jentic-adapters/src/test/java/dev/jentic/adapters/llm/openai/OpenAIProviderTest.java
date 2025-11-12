@@ -251,6 +251,32 @@ class OpenAIProviderTest {
 
         @Test
         @Disabled("Requires valid API key")
+        @DisplayName("should make real API call to custom url")
+        void chat_withRealApiKeyAndCustomUrl_shouldSucceed() throws ExecutionException, InterruptedException {
+            String apiKey = System.getenv("GROQ_API_KEY");
+            assumeTrue(apiKey != null && !apiKey.isEmpty(), "GROQ_API_KEY not set");
+
+            OpenAIProvider provider = OpenAIProvider.builder()
+                    .apiKey(apiKey)
+                    .baseUrl("https://api.groq.com/openai/v1")
+                    .model("openai/gpt-oss-20b")
+                    .maxTokens(100)
+                    .build();
+
+            LLMRequest request = LLMRequest.builder("integration-test")
+                    .addMessage(LLMMessage.user("Say 'Hello' and nothing else"))
+                    .build();
+
+            CompletableFuture<LLMResponse> responseFuture = provider.chat(request);
+            LLMResponse response = responseFuture.get();
+
+            assertNotNull(response);
+            assertNotNull(response.content());
+            assertFalse(response.content().isEmpty());
+        }
+
+        @Test
+        @Disabled("Requires valid API key")
         @DisplayName("should handle streaming response")
         void chatStream_withRealApiKey_shouldSucceed() {
             String apiKey = System.getenv("OPENAI_API_KEY");

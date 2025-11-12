@@ -28,6 +28,7 @@ public class OpenAIProvider implements LLMProvider {
         this.modelName = builder.modelName;
         this.chatModel = OpenAiChatModel.builder()
                 .apiKey(builder.apiKey)
+                .baseUrl(builder.baseUrl)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
@@ -37,6 +38,7 @@ public class OpenAIProvider implements LLMProvider {
                 .build();
         this.streamingModel = OpenAiStreamingChatModel.builder()
                 .apiKey(builder.apiKey)
+                .baseUrl(builder.baseUrl)
                 .modelName(builder.modelName)
                 .temperature(builder.temperature)
                 .maxTokens(builder.maxTokens)
@@ -258,6 +260,7 @@ public class OpenAIProvider implements LLMProvider {
 
     public static class Builder {
         private String apiKey;
+        private String baseUrl;
         private String modelName = "gpt-4o";
         private Double temperature = 0.7;
         private Integer maxTokens = 2000;
@@ -267,6 +270,11 @@ public class OpenAIProvider implements LLMProvider {
 
         public Builder apiKey(String apiKey) {
             this.apiKey = apiKey;
+            return this;
+        }
+
+        public Builder baseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
             return this;
         }
 
