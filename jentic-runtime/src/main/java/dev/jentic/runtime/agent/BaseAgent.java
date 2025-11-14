@@ -46,6 +46,8 @@ public abstract class BaseAgent implements Agent {
     protected BehaviorScheduler behaviorScheduler;
     protected AgentDirectory agentDirectory;
     
+    protected AgentDescriptor agentDescriptor;
+    
     /**
      * Create an agent with auto-generated ID
      */
@@ -66,6 +68,8 @@ public abstract class BaseAgent implements Agent {
     protected BaseAgent(String agentId, String agentName) {
         this.agentId = agentId;
         this.agentName = agentName;
+        
+        this.agentDescriptor = createDefaultDescriptor();
     }
     
     @Override
@@ -210,6 +214,15 @@ public abstract class BaseAgent implements Agent {
      */
     public void setAgentDirectory(AgentDirectory agentDirectory) {
         this.agentDirectory = agentDirectory;
+    }
+    
+    /**
+     * Method for AgentFactory to set descriptor
+     */
+    public void setAgentDescriptor(AgentDescriptor descriptor) {
+        this.agentDescriptor = descriptor;
+        log.debug("Agent descriptor set: type={}, capabilities={}", 
+                 descriptor.agentType(), descriptor.capabilities());
     }
 
     // =========================================================================
@@ -506,11 +519,14 @@ public abstract class BaseAgent implements Agent {
     
     private void registerWithDirectory() {
         if (agentDirectory != null) {
-            var descriptor = AgentDescriptor.builder(agentId)
-                .agentName(agentName)
-                .agentType(getClass().getSimpleName())
-                .status(AgentStatus.RUNNING)
-                .build();
+            var descriptor = AgentDescriptor.builder(agentDescriptor.agentId())
+                    .agentName(agentDescriptor.agentName())
+                    .agentType(agentDescriptor.agentType())  // From annotation
+                    .capabilities(agentDescriptor.capabilities())  // From annotation
+                    .metadata(agentDescriptor.metadata())  // From annotation
+                    .status(AgentStatus.RUNNING)  // Update current status
+                    .registeredAt(agentDescriptor.registeredAt())
+                    .build();
                 
             agentDirectory.register(descriptor);
         }
@@ -520,5 +536,13 @@ public abstract class BaseAgent implements Agent {
         if (agentDirectory != null) {
             agentDirectory.unregister(agentId);
         }
+    }
+    
+    private AgentDescriptor createDefaultDescriptor() {
+        return AgentDescriptor.builder(agentId)
+            .agentName(agentName)
+            .agentType(getClass().getSimpleName())  // Fallback only
+            .status(AgentStatus.STOPPED)
+            .build();
     }
 }

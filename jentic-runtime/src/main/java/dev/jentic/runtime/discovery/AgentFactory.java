@@ -90,6 +90,10 @@ public class AgentFactory {
             // Configure agent services if it's a BaseAgent
             if (agent instanceof BaseAgent baseAgent) {
                 configureBaseAgent(baseAgent);
+                
+                // Set descriptor with annotation metadata
+                AgentDescriptor descriptor = createDescriptor(agentClass, agent);
+                baseAgent.setAgentDescriptor(descriptor);
             }
 
             return agent;
@@ -185,7 +189,7 @@ public class AgentFactory {
             // Minimal descriptor for non-annotated agents
             return AgentDescriptor.builder(agent.getAgentId())
                     .agentName(agent.getAgentName())
-                    .agentType("unknown")
+                    .agentType(getClass().getSimpleName())
                     .status(AgentStatus.STOPPED)
                     .build();
         }
