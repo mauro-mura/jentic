@@ -83,7 +83,7 @@ public class ResearchTeamDynamicExample {
         Thread.sleep(2000);
         
         sendResearchRequest(coordinator, "Neural Network Hardware Acceleration");
-        Thread.sleep(15000);
+        Thread.sleep(20000);
         
         // Shutdown
         System.out.println("\n=== Shutting Down ===");
@@ -406,12 +406,21 @@ class DynamicTechnicalResearcher extends BaseAgent {
         
         llm.chat(request).thenAccept(response -> {
             log.info("✅ Technical analysis complete");
-            
+
+            Map<String, Object> replyContent = new java.util.HashMap<>();
+            if (requestId != null) {
+                replyContent.put("requestId", requestId);
+            }
+            String findings = response.content() != null
+                    ? response.content()
+                    : "No content returned by the model.";
+            replyContent.put("findings", findings);
+
             Message reply = Message.builder()
                 .topic("research.findings.technical")
                 .senderId(getAgentId())
                 .receiverId(message.senderId())
-                .content(Map.of("requestId", requestId, "findings", response.content()))
+                .content(Map.copyOf(replyContent))
                 .correlationId(message.id())
                 .build();
             
@@ -486,12 +495,21 @@ class DynamicMarketResearcher extends BaseAgent {
         
         llm.chat(request).thenAccept(response -> {
             log.info("✅ Market analysis complete");
+
+            Map<String, Object> replyContent = new java.util.HashMap<>();
+            if (requestId != null) {
+                replyContent.put("requestId", requestId);
+            }
+            String findings = response.content() != null
+                    ? response.content()
+                    : "No content returned by the model.";
+            replyContent.put("findings", findings);
             
             Message reply = Message.builder()
                 .topic("research.findings.market")
                 .senderId(getAgentId())
                 .receiverId(message.senderId())
-                .content(Map.of("requestId", requestId, "findings", response.content()))
+                .content(Map.copyOf(replyContent))
                 .correlationId(message.id())
                 .build();
             
@@ -566,12 +584,21 @@ class DynamicCompetitorResearcher extends BaseAgent {
         
         llm.chat(request).thenAccept(response -> {
             log.info("✅ Competitive analysis complete");
-            
+
+            Map<String, Object> replyContent = new java.util.HashMap<>();
+            if (requestId != null) {
+                replyContent.put("requestId", requestId);
+            }
+            String findings = response.content() != null
+                    ? response.content()
+                    : "No content returned by the model.";
+            replyContent.put("findings", findings);
+
             Message reply = Message.builder()
                 .topic("research.findings.competitor")
                 .senderId(getAgentId())
                 .receiverId(message.senderId())
-                .content(Map.of("requestId", requestId, "findings", response.content()))
+                .content(Map.copyOf(replyContent))
                 .correlationId(message.id())
                 .build();
             
