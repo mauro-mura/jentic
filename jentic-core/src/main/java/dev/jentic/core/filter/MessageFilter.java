@@ -1,12 +1,53 @@
 package dev.jentic.core.filter;
 
 import dev.jentic.core.Message;
+import dev.jentic.core.MessageService;
 
 import java.util.function.Predicate;
 
 /**
- * Interface for filtering messages based on various criteria.
- * Filters can be composed using AND, OR, NOT operations.
+ * Defines criteria for filtering messages during routing and subscription.
+ *
+ * <p>Message filters provide a powerful and flexible way to specify which messages
+ * should be delivered to specific handlers. Filters can match based on message
+ * topics, headers, content, or custom predicates. Multiple filter criteria
+ * can be combined using logical operators.
+ *
+ * <p>Filters are evaluated efficiently during message routing to minimize
+ * overhead. Simple filters (topic, header matching) use optimized implementations,
+ * while complex predicate-based filters provide maximum flexibility.
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * // Simple topic filter
+ * MessageFilter orderFilter = MessageFilter.builder()
+ *     .topicStartsWith("order.")
+ *     .build();
+ *
+ * // Complex filter with multiple criteria
+ * MessageFilter priorityFilter = MessageFilter.builder()
+ *     .topicMatches("order\\..*")
+ *     .headerEquals("priority", "HIGH")
+ *     .headerExists("customer-id")
+ *     .contentPredicate(content -> content instanceof OrderData order && order.amount() > 1000)
+ *     .build();
+ *
+ * // Combine filters
+ * MessageFilter combined = orderFilter.and(priorityFilter);
+ * }</pre>
+ *
+ * <p>Performance Considerations:
+ * <ul>
+ * <li>Topic-based filters are fastest (O(1) lookup)</li>
+ * <li>Header filters are fast (O(1) map lookup)</li>
+ * <li>Content predicates are slower but most flexible</li>
+ * <li>Composite filters short-circuit on the first false condition</li>
+ * </ul>
+ *
+ * @since 0.2.0
+ * @see MessageService
+ * @see MessageFilterBuilder
+ * @see Message
  */
 @FunctionalInterface
 public interface MessageFilter extends Predicate<Message> {

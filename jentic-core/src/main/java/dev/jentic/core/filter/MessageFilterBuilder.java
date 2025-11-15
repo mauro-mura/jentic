@@ -9,8 +9,34 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
- * Fluent builder for creating complex message filters.
- * Supports chaining multiple filter criteria with AND/OR logic.
+ * Builder for creating complex message filters with fluent API.
+ *
+ * <p>The filter builder provides a convenient fluent interface for constructing
+ * message filters with multiple criteria. Filters built this way are optimized
+ * for performance and support efficient evaluation during message routing.
+ *
+ * <p>Builder instances are not thread-safe and should not be shared between threads.
+ * However, the filters they build are thread-safe and can be used concurrently.
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * MessageFilter filter = MessageFilter.builder()
+ *     .topicStartsWith("order.")
+ *     .headerEquals("priority", "HIGH")
+ *     .headerMatches("region", "us-.*")
+ *     .headerExists("customer-id")
+ *     .contentType(OrderData.class)
+ *     .contentPredicate(order -> order.amount() > 1000)
+ *     .build();
+ * }</pre>
+ *
+ * <p>The builder supports method chaining and creates efficient filter implementations
+ * based on the specified criteria. Simple criteria (topic, header matching) use
+ * optimized implementations, while complex predicates provide maximum flexibility.
+ *
+ * @since 0.2.0
+ * @see MessageFilter
+ * @see Message
  */
 public class MessageFilterBuilder {
     
