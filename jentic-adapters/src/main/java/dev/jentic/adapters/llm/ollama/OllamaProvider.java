@@ -81,62 +81,65 @@ public class OllamaProvider implements LLMProvider {
 
     @Override
     public CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> chunkHandler) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                List<ChatMessage> messages = convertMessages(request.messages());
-                final String streamId = UUID.randomUUID().toString();
-                final int[] chunkIndex = {0};
+        CompletableFuture<Void> result = new CompletableFuture<>();
 
-                ChatRequest.Builder requestBuilder = ChatRequest.builder()
-                        .messages(messages);
+        try {
+            List<ChatMessage> messages = convertMessages(request.messages());
+            final String streamId = UUID.randomUUID().toString();
+            final int[] chunkIndex = {0};
 
-                if (request.temperature() != null) {
-                    requestBuilder.temperature(request.temperature());
-                }
-                if (request.maxTokens() != null) {
-                    requestBuilder.maxOutputTokens(request.maxTokens());
-                }
+            ChatRequest.Builder requestBuilder = ChatRequest.builder()
+                    .messages(messages);
 
-                streamingModel.chat(requestBuilder.build(), new StreamingChatResponseHandler() {
-                    @Override
-                    public void onPartialResponse(String partialResponse) {
-                        StreamingChunk chunk = StreamingChunk.of(
-                                streamId,
-                                modelName != null ? modelName : request.model(),
-                                partialResponse,
-                                chunkIndex[0]++
-                        );
-                        chunkHandler.accept(chunk);
-                    }
-
-                    @Override
-                    public void onCompleteResponse(ChatResponse completeResponse) {
-                        String finishReason = null;
-                        if (completeResponse != null && completeResponse.metadata() != null
-                                && completeResponse.metadata().finishReason() != null) {
-                            finishReason = mapFinishReason(completeResponse.metadata().finishReason());
-                        }
-
-                        StreamingChunk finalChunk = StreamingChunk.of(
-                                streamId,
-                                modelName != null ? modelName : request.model(),
-                                "",
-                                finishReason,
-                                chunkIndex[0]
-                        );
-                        chunkHandler.accept(finalChunk);
-                    }
-
-                    @Override
-                    public void onError(Throwable error) {
-                        throw new RuntimeException(new LLMException("Ollama streaming failed", error));
-                    }
-                });
-
-            } catch (Exception e) {
-                throw new RuntimeException(new LLMException("Ollama streaming request failed", e));
+            if (request.temperature() != null) {
+                requestBuilder.temperature(request.temperature());
             }
-        });
+            if (request.maxTokens() != null) {
+                requestBuilder.maxOutputTokens(request.maxTokens());
+            }
+
+            streamingModel.chat(requestBuilder.build(), new StreamingChatResponseHandler() {
+                @Override
+                public void onPartialResponse(String partialResponse) {
+                    StreamingChunk chunk = StreamingChunk.of(
+                            streamId,
+                            modelName != null ? modelName : request.model(),
+                            partialResponse,
+                            chunkIndex[0]++
+                    );
+                    chunkHandler.accept(chunk);
+                }
+
+                @Override
+                public void onCompleteResponse(ChatResponse completeResponse) {
+                    String finishReason = null;
+                    if (completeResponse != null && completeResponse.metadata() != null
+                            && completeResponse.metadata().finishReason() != null) {
+                        finishReason = mapFinishReason(completeResponse.metadata().finishReason());
+                    }
+
+                    StreamingChunk finalChunk = StreamingChunk.of(
+                            streamId,
+                            modelName != null ? modelName : request.model(),
+                            "",
+                            finishReason,
+                            chunkIndex[0]
+                    );
+                    chunkHandler.accept(finalChunk);
+                    result.complete(null);
+                }
+
+                @Override
+                public void onError(Throwable error) {
+                    result.completeExceptionally(new LLMException("Ollama streaming failed", error));
+                }
+            });
+
+        } catch (Exception e) {
+            result.completeExceptionally(new LLMException("Ollama streaming request failed", e));
+        }
+
+        return result;
     }
 
     @Override
