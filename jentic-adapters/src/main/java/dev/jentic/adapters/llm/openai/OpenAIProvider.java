@@ -159,11 +159,11 @@ public class OpenAIProvider implements LLMProvider {
 
     private List<ChatMessage> convertMessages(LLMRequest request) {
         return request.messages().stream().map(msg -> {
+            String content = msg.content() == null ? "" : msg.content();
             return switch (msg.role()) {
-                case SYSTEM -> (ChatMessage) SystemMessage.from(msg.content());
-                case USER -> (ChatMessage) UserMessage.from(msg.content());
-                case ASSISTANT -> (ChatMessage) AiMessage.from(msg.content());
-                default -> (ChatMessage) UserMessage.from(msg.content());
+                case SYSTEM -> (ChatMessage) SystemMessage.from(content);
+                case ASSISTANT -> (ChatMessage) AiMessage.from(content);
+                default -> (ChatMessage) UserMessage.from(content);
             };
         }).collect(Collectors.toList());
     }
