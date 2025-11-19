@@ -1,20 +1,28 @@
 package dev.jentic.examples.llm.tools;
 
-import dev.jentic.adapters.llm.LLMProviderFactory;
-import dev.jentic.core.Message;
-import dev.jentic.core.annotations.JenticAgent;
-import dev.jentic.core.annotations.JenticMessageHandler;
-import dev.jentic.core.llm.*;
-import dev.jentic.runtime.agent.BaseAgent;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.jentic.core.Message;
+import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.annotations.JenticMessageHandler;
+import dev.jentic.core.llm.FunctionCall;
+import dev.jentic.core.llm.FunctionDefinition;
+import dev.jentic.core.llm.LLMMessage;
+import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.llm.LLMRequest;
+import dev.jentic.core.llm.LLMResponse;
+import dev.jentic.runtime.agent.BaseAgent;
 
 /**
  * AI Assistant Agent with LLM function calling capabilities.
@@ -32,7 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
     value = "ai-assistant", 
     type = "ai",
     capabilities = {"llm-reasoning", "function-calling", "tool-execution"},
-    autoStart = false
+    autoStart = true
 )
 public class AIAssistantAgent extends BaseAgent {
     
@@ -57,30 +65,7 @@ public class AIAssistantAgent extends BaseAgent {
         // Register available tools
         registerTools();
     }
-    
-    /**
-     * Default constructor using OpenAI provider.
-     * Uses environment variable OPENAI_API_KEY for API key.
-     */
-    public AIAssistantAgent() {
-        this(createDefaultProvider());
-    }
-    
-    private static LLMProvider createDefaultProvider() {
-        String apiKey = System.getenv("OPENAI_API_KEY");
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalStateException(
-                "OPENAI_API_KEY environment variable must be set for AIAssistantAgent"
-            );
-        }
         
-        return LLMProviderFactory.openai()
-            .apiKey(apiKey)
-            .model("gpt-4o")
-            .temperature(0.7)
-            .build();
-    }
-    
     @Override
     protected void onStart() {
         log.info("AI Assistant Agent started with {} registered tools", toolRegistry.getToolCount());
@@ -442,7 +427,6 @@ public class AIAssistantAgent extends BaseAgent {
         }
     }
     
-    @SuppressWarnings("unchecked")
     private Map<String, Object> parseJsonArguments(String jsonArgs) {
         // Simple JSON parsing - in production use proper JSON library
         if (jsonArgs == null || jsonArgs.trim().isEmpty()) {

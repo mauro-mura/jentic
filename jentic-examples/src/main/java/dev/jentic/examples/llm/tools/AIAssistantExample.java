@@ -1,20 +1,19 @@
 package dev.jentic.examples.llm.tools;
 
-import dev.jentic.adapters.llm.LLMProviderFactory;
-import dev.jentic.core.Message;
-import dev.jentic.adapters.llm.openai.OpenAIProvider;
-import dev.jentic.core.llm.LLMProvider;
-import dev.jentic.runtime.JenticRuntime;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Map;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.adapters.llm.LLMProviderFactory;
+import dev.jentic.core.Message;
+import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.runtime.JenticRuntime;
 
 /**
  * Example demonstrating how to use the AIAssistantAgent in a Jentic application.
@@ -49,14 +48,14 @@ public class AIAssistantExample {
         // Create AI Assistant with OpenAI provider
         LLMProvider llmProvider = LLMProviderFactory.openai()
                 .apiKey(System.getenv("OPENAI_API_KEY"))
-                .model("gpt-4o")
+                .model("gpt-4")
                 .temperature(0.7)
                 .maxTokens(1500)
                 .build();
 
         // Create and configure Jentic runtime
         JenticRuntime runtime = JenticRuntime.builder()
-            .scanPackages("dev.jentic.examples.llm.tools")  // Scan for @JenticAgent annotations
+            .scanPackages("dev.jentic.examples.llm.tools")
             .service(LLMProvider.class, llmProvider)
             .build();
 
