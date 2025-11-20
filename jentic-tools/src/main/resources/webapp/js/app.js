@@ -109,8 +109,8 @@ function renderAgents() {
                 </h3>
                 <div class="agent-meta">
                     <span>ID: ${agent.id}</span>
-                    <span>Behaviors: ${agent.behaviorCount || 0}</span>
-                    <span>Subscriptions: ${agent.subscriptionCount || 0}</span>
+                    <span>Type: ${agent.type || 'Agent'}</span>
+                    <span>Status: ${agent.running ? 'Running' : 'Stopped'}</span>
                 </div>
             </div>
             <div class="agent-actions">
@@ -118,7 +118,6 @@ function renderAgents() {
                     ? `<button class="btn btn-danger" onclick="stopAgent('${agent.id}')">Stop</button>`
                     : `<button class="btn btn-success" onclick="startAgent('${agent.id}')">Start</button>`
                 }
-                <button class="btn btn-secondary" onclick="viewAgent('${agent.id}')">Details</button>
             </div>
         </div>
     `).join('');
@@ -177,13 +176,6 @@ async function stopAgent(agentId) {
     } catch (error) {
         addEvent('error', `Failed to stop agent ${agentId}: ${error.message}`);
     }
-}
-
-/**
- * View agent details (navigate to agent page).
- */
-function viewAgent(agentId) {
-    window.location.href = `/agent.html?id=${agentId}`;
 }
 
 /**
