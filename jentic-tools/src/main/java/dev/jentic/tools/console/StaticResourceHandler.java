@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.Serial;
 
 /**
  * Serves static resources (HTML, CSS, JS) from classpath.
@@ -18,7 +18,10 @@ import java.nio.charset.StandardCharsets;
  */
 public class StaticResourceHandler extends HttpServlet {
     
-    private static final Logger logger = LoggerFactory.getLogger(StaticResourceHandler.class);
+	@Serial
+    private static final long serialVersionUID = -268207312584070204L;
+
+	private static final Logger logger = LoggerFactory.getLogger(StaticResourceHandler.class);
     
     private static final String RESOURCE_BASE = "/webapp";
     

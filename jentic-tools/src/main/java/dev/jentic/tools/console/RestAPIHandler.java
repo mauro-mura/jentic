@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.Serial;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,7 +30,10 @@ import java.util.stream.Collectors;
  */
 public class RestAPIHandler extends HttpServlet {
     
-    private static final Logger logger = LoggerFactory.getLogger(RestAPIHandler.class);
+	@Serial
+    private static final long serialVersionUID = 7777219348406725261L;
+
+	private static final Logger logger = LoggerFactory.getLogger(RestAPIHandler.class);
     
     private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;

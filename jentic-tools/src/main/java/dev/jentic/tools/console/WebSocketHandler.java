@@ -2,6 +2,8 @@ package dev.jentic.tools.console;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import dev.jentic.core.console.ConsoleEventListener;
 import dev.jentic.runtime.JenticRuntime;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -26,22 +29,40 @@ import java.util.concurrent.ConcurrentHashMap;
  * - behavior.executed
  * - error.occurred
  */
-public class WebSocketHandler implements JettyWebSocketCreator {
+public class WebSocketHandler implements JettyWebSocketCreator, ConsoleEventListener {
     
     private static final Logger logger = LoggerFactory.getLogger(WebSocketHandler.class);
     
-    private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;
     private final Set<Session> sessions = ConcurrentHashMap.newKeySet();
     
-    public WebSocketHandler(JenticRuntime runtime, ObjectMapper objectMapper) {
-        this.runtime = runtime;
+    public WebSocketHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
     
     @Override
     public Object createWebSocket(JettyServerUpgradeRequest req, JettyServerUpgradeResponse resp) {
         return new WebSocketConnection();
+    }
+    
+    @Override
+    public void onAgentStarted(String agentId, String agentName) {
+        broadcast("agent.started", Map.of("agentId", agentId, "agentName", agentName));
+    }
+    
+    @Override
+    public void onAgentStopped(String agentId, String agentName) {
+        broadcast("agent.stopped", Map.of("agentId", agentId, "agentName", agentName));
+    }
+    
+    @Override
+    public void onMessageSent(String messageId, String topic, String senderId) {
+        broadcast("message.sent", Map.of("messageId", messageId, "topic", topic, "senderId", senderId));
+    }
+    
+    @Override
+    public void onError(String source, String message) {
+        broadcast("error", Map.of("source", source, "message", message));
     }
     
     /**

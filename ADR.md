@@ -13,6 +13,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-005](docs/adr/ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records | Accepted | 2025-09-16 |
 | [ADR-006](docs/adr/ADR-006-annotation-based-agent-configuration.md) | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
 | [ADR-007](docs/adr/ADR-007-llm-core.md)                             | LLMProvider as Core Interface | Accepted | 2025-11-04  |
+| [ADR-008](docs/adr/ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design | Accepted | 2025-11-26  |
 
 ---
 
@@ -102,42 +103,42 @@ When creating new ADRs, use this template:
 
 These architectural decisions are under consideration for future ADRs:
 
-### ADR-008: Error Handling Strategy
+### ADR-009: Error Handling Strategy
 **Topic**: Standardized error handling across the framework  
 **Considerations**: Exception types, error propagation, retry mechanisms  
 **Status**: Under Discussion
 
-### ADR-009: Configuration Management
+### ADR-010: Configuration Management
 **Topic**: External configuration system design  
 **Considerations**: YAML vs Properties, environment-specific config, secrets management  
 **Status**: Proposed
 
-### ADR-010: Logging and Observability
+### ADR-011: Logging and Observability
 **Topic**: Logging strategy and metrics collection  
 **Considerations**: Structured logging, distributed tracing, performance metrics  
 **Status**: Research Phase
 
-### ADR-011: Testing Strategy  
+### ADR-012: Testing Strategy  
 **Topic**: Testing approaches for multi-agent systems  
 **Considerations**: Unit vs integration tests, agent lifecycle testing, message flow testing  
 **Status**: Proposed
 
-### ADR-012: Plugin Architecture
+### ADR-013: Plugin Architecture
 **Topic**: Extensibility mechanism for third-party components  
 **Considerations**: SPI, dependency injection, plugin lifecycle  
 **Status**: Future
 
-### ADR-013: Security Model
+### ADR-014: Security Model
 **Topic**: Authentication, authorization, and secure communication  
 **Considerations**: Agent identity, message encryption, access control  
 **Status**: Future
 
-### ADR-014: Performance Monitoring
+### ADR-015: Performance Monitoring
 **Topic**: Built-in performance monitoring and profiling  
 **Considerations**: JVM metrics, agent-specific metrics, alerting  
 **Status**: Future
 
-### ADR-015: Deployment Strategies
+### ADR-016: Deployment Strategies
 **Topic**: Recommended deployment patterns  
 **Considerations**: Single JVM, distributed, containerized, cloud-native  
 **Status**: Future
@@ -148,17 +149,17 @@ These architectural decisions are under consideration for future ADRs:
 
 ### Major Architectural Phases
 
-**Phase 1 - Foundation (ADR-001 to ADR-006)**
+**Phase 1 - Foundation**
 - Established core technology choices
 - Defined modular architecture
 - Set development principles
 
-**Phase 2 - Implementation (ADR-007 to ADR-010) - Planned**
+**Phase 2 - Implementation - Planned**
 - Define implementation standards
 - Establish quality practices
 - Set operational guidelines
 
-**Phase 3 - Enterprise (ADR-011 to ADR-014) - Future**
+**Phase 3 - Enterprise - Future**
 - Advanced features and extensibility
 - Production-ready capabilities
 - Enterprise integration patterns

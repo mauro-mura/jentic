@@ -1,10 +1,12 @@
 package dev.jentic.examples.console;
 
-import dev.jentic.runtime.JenticRuntime;
-import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.tools.console.WebConsoleServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.console.WebConsole;
+import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.tools.console.JettyWebConsole;
 
 public class WebConsoleExample {
 
@@ -20,16 +22,29 @@ public class WebConsoleExample {
         runtime.registerAgent(inventoryManager);
 
         // Start web console
-        WebConsoleServer console = WebConsoleServer.builder()
+        WebConsole console = JettyWebConsole.builder()
                 .port(8080)
                 .runtime(runtime)
                 .build();
 
-        console.start();
+        console.start().join();
+        runtime.start().join();
 
-        logger.info("Web console started at http://localhost:8080");
+        logger.info("Console: {}", console.getBaseUrl());
+        logger.info("API: {}", console.getApiUrl());
+        logger.info("WebSocket: {}", console.getWebSocketUrl());
         logger.info("Press CTRL+C to stop");
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                console.stop().join();
+                runtime.stop().join();
+            } catch (Exception e) {
+                logger.error("Shutdown error", e);
+            }
+        }));
+        
+        
         // Keep running
         Thread.currentThread().join();
     }
