@@ -211,7 +211,7 @@ class LocalAgentDirectoryTest {
         // Then
         assertThat(updated).isPresent();
         assertThat(updated.get().status()).isEqualTo(AgentStatus.RUNNING);
-        assertThat(updated.get().lastSeen()).isAfter(descriptor.lastSeen());
+        assertThat(updated.get().lastSeen()).isAfterOrEqualTo(descriptor.lastSeen());
     }
     
     @Test

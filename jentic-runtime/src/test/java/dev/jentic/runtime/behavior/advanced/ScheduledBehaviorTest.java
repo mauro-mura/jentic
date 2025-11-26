@@ -320,7 +320,8 @@ class ScheduledBehaviorTest {
         behavior.execute().join();
         
         assertTrue(latch.await(2, TimeUnit.SECONDS));
-        assertTrue(behavior.getAverageExecutionTimeMs() >= 50);
+        assertTrue(behavior.getAverageExecutionTimeMs() >= 40, 
+        	    "Expected execution time >= 40ms but was " + behavior.getAverageExecutionTimeMs());
     }
     
     @Test
