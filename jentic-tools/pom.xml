@@ -17,6 +17,7 @@
 
     <properties>
         <jetty.version>11.0.26</jetty.version>
+        <picocli.version>4.7.7</picocli.version>
     </properties>
 
     <dependencies>
@@ -24,6 +25,13 @@
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-runtime</artifactId>
+        </dependency>
+        
+        <!-- CLI Framework -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>${picocli.version}</version>
         </dependency>
 
         <!-- Jetty Web Server for Web Console -->
@@ -53,11 +61,37 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- CLI Framework (future) -->
-        <!-- <dependency>
-            <groupId>info.picocli</groupId>
-            <artifactId>picocli</artifactId>
-            <version>4.7.5</version>
-        </dependency> -->
     </dependencies>
+    
+    <build>
+        <plugins>
+            <!-- Enable picocli annotation processing -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>info.picocli</groupId>
+                            <artifactId>picocli-codegen</artifactId>
+                            <version>${picocli.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            
+            <!-- Create executable JAR for CLI -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>dev.jentic.tools.cli.JenticCLI</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>
