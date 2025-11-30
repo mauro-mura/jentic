@@ -62,8 +62,26 @@ public class StatusCommand extends BaseCommand {
         }
 
         // Uptime
-        String uptime = stats.path("uptime").asText("-");
-        System.out.printf("Uptime:     %s%n", uptime);
+        long uptime = stats.path("uptime").asLong(0);
+        System.out.printf("Uptime:     %s%n", formatUptime(uptime));
+    }
+
+    private String formatUptime(long millis) {
+        long seconds = millis / 1000;
+
+        if (seconds < 60) {
+            return seconds + "s";
+        } else if (seconds < 3600) {
+            return (seconds / 60) + "m " + (seconds % 60) + "s";
+        } else if (seconds < 86400) {
+            long hours = seconds / 3600;
+            long mins = (seconds % 3600) / 60;
+            return hours + "h " + mins + "m";
+        } else {
+            long days = seconds / 86400;
+            long hours = (seconds % 86400) / 3600;
+            return days + "d " + hours + "h";
+        }
     }
 
     private void showAgentStatus(String id) throws Exception {
