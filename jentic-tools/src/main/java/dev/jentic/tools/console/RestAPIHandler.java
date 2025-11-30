@@ -37,7 +37,9 @@ public class RestAPIHandler extends HttpServlet {
     
     private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;
-    
+
+    private long startTime = System.currentTimeMillis();
+
     public RestAPIHandler(JenticRuntime runtime, ObjectMapper objectMapper) {
         this.runtime = runtime;
         this.objectMapper = objectMapper;
@@ -258,8 +260,7 @@ public class RestAPIHandler extends HttpServlet {
     }
     
     private long getUptime() {
-        // Simple uptime calculation (would need to track start time in production)
-        return System.currentTimeMillis();
+        return System.currentTimeMillis() - startTime;
     }
     
     private void sendSuccess(HttpServletResponse resp, Object data) throws IOException {
