@@ -43,6 +43,7 @@ replay_pid*
 .project
 .classpath
 .settings/
+.factorypath
 
 # VS Code
 .vscode/
