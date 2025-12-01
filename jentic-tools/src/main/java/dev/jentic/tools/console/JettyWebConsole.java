@@ -18,16 +18,10 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Jetty-based implementation of WebConsole.
- * 
- * <p>Example:
- * <pre>{@code
- * JettyWebConsole console = JettyWebConsole.builder()
- *     .port(8080)
- *     .runtime(runtime)
- *     .build();
- * console.start().join();
- * }</pre>
+ * Jetty-based web console for Jentic runtime management.
+ *
+ * <p>Provides REST API, WebSocket events, and static resource serving
+ * for monitoring and managing agents at runtime.
  *
  * @since 0.4.0
  */
@@ -38,6 +32,8 @@ public class JettyWebConsole implements WebConsole {
     private final int port;
     private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;
+    private final MessageHistoryService messageHistory;
+    private final int messageHistorySize;
     
     private Server server;
     private volatile boolean running;
@@ -45,6 +41,8 @@ public class JettyWebConsole implements WebConsole {
     private JettyWebConsole(Builder builder) {
         this.port = builder.port;
         this.runtime = Objects.requireNonNull(builder.runtime, "runtime required");
+        this.messageHistorySize = builder.messageHistorySize;
+        this.messageHistory = new MessageHistoryService(messageHistorySize);
         this.objectMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT)
             .registerModule(new JavaTimeModule())
@@ -73,8 +71,8 @@ public class JettyWebConsole implements WebConsole {
                 context.setContextPath("/");
                 server.setHandler(context);
                 
-                // REST API
-                RestAPIHandler restServlet = new RestAPIHandler(runtime, objectMapper);
+                // REST API with message history
+                RestAPIHandler restServlet = new RestAPIHandler(runtime, objectMapper, messageHistory);
                 context.addServlet(new ServletHolder("rest-api", restServlet), "/api/*");
                 
                 // Static resources
@@ -92,6 +90,7 @@ public class JettyWebConsole implements WebConsole {
                 running = true;
                 
                 logger.info("Console started: {}", getBaseUrl());
+                logger.info("Message history enabled with capacity: {}", messageHistorySize);
                 
             } catch (Exception e) {
                 logger.error("Failed to start console", e);
@@ -128,9 +127,17 @@ public class JettyWebConsole implements WebConsole {
     public int getPort() {
         return port;
     }
-    
+
+    public String getBaseUrl() {
+        return "http://localhost:" + port;
+    }
+
     public JenticRuntime getRuntime() {
         return runtime;
+    }
+
+    public MessageHistoryService getMessageHistory() {
+        return messageHistory;
     }
     
     public static Builder builder() {
@@ -140,6 +147,7 @@ public class JettyWebConsole implements WebConsole {
     public static class Builder {
         private int port = 8080;
         private JenticRuntime runtime;
+        private int messageHistorySize = MessageHistoryService.DEFAULT_MAX_SIZE;
         
         public Builder port(int port) {
             if (port < 1 || port > 65535) {
@@ -151,6 +159,11 @@ public class JettyWebConsole implements WebConsole {
         
         public Builder runtime(JenticRuntime runtime) {
             this.runtime = runtime;
+            return this;
+        }
+
+        public Builder messageHistorySize(int size) {
+            this.messageHistorySize = size;
             return this;
         }
         

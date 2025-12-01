@@ -24,25 +24,45 @@ import java.util.stream.Collectors;
  * - GET  /api/agents/{id}     - Get agent details
  * - POST /api/agents/{id}/start - Start agent
  * - POST /api/agents/{id}/stop  - Stop agent
- * - GET  /api/messages        - Get recent messages
+ * - GET  /api/messages        - Get recent messages (with optional filters)
  * - GET  /api/stats           - Get runtime statistics
  * - GET  /api/health          - Health check
  */
 public class RestAPIHandler extends HttpServlet {
     
-	@Serial
+    @Serial
     private static final long serialVersionUID = 7777219348406725261L;
 
-	private static final Logger logger = LoggerFactory.getLogger(RestAPIHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(RestAPIHandler.class);
     
     private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;
+    private final MessageHistoryService messageHistory;
 
     private long startTime = System.currentTimeMillis();
 
+    /**
+     * Creates a RestAPIHandler without message history support.
+     * 
+     * @deprecated Use {@link #RestAPIHandler(JenticRuntime, ObjectMapper, MessageHistoryService)}
+     */
+    @Deprecated
     public RestAPIHandler(JenticRuntime runtime, ObjectMapper objectMapper) {
+        this(runtime, objectMapper, null);
+    }
+
+    /**
+     * Creates a RestAPIHandler with full message history support.
+     *
+     * @param runtime the Jentic runtime
+     * @param objectMapper JSON mapper
+     * @param messageHistory message history service, may be null
+     */
+    public RestAPIHandler(JenticRuntime runtime, ObjectMapper objectMapper, 
+                          MessageHistoryService messageHistory) {
         this.runtime = runtime;
         this.objectMapper = objectMapper;
+        this.messageHistory = messageHistory;
     }
     
     @Override
@@ -120,11 +140,6 @@ public class RestAPIHandler extends HttpServlet {
         }
         
         Map<String, Object> agentData = agentToMap(agent.get());
-        
-        // Note: Detailed behavior and subscription information would require
-        // additional methods in the Agent interface or runtime inspection.
-        // For now, we return basic agent information.
-        
         sendSuccess(resp, agentData);
     }
     
@@ -178,24 +193,66 @@ public class RestAPIHandler extends HttpServlet {
         }
     }
     
+    /**
+     * Handles GET /api/messages with optional query parameters.
+     *
+     * <p>Query parameters:
+     * <ul>
+     *   <li>limit - max messages to return (default: 100)</li>
+     *   <li>topic - filter by exact topic match</li>
+     *   <li>topicPattern - filter by topic pattern (supports * and ?)</li>
+     *   <li>senderId - filter by sender ID</li>
+     * </ul>
+     */
     private void handleGetMessages(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        // Get limit parameter (default: 100)
+        // Parse limit parameter
         int limit = 100;
         String limitParam = req.getParameter("limit");
         if (limitParam != null) {
             try {
                 limit = Integer.parseInt(limitParam);
+                if (limit <= 0 || limit > 1000) {
+                    sendError(resp, HttpServletResponse.SC_BAD_REQUEST, 
+                            "limit must be between 1 and 1000");
+                    return;
+                }
             } catch (NumberFormatException e) {
                 sendError(resp, HttpServletResponse.SC_BAD_REQUEST, "Invalid limit parameter");
                 return;
             }
         }
+
+        // Check if message history is available
+        if (messageHistory == null) {
+            sendSuccess(resp, List.of());
+            return;
+        }
+
+        // Get filter parameters
+        String topic = req.getParameter("topic");
+        String topicPattern = req.getParameter("topicPattern");
+        String senderId = req.getParameter("senderId");
+
+        // Apply filters
+        List<MessageHistoryService.StoredMessage> messages;
+
+        if (topic != null && !topic.isEmpty()) {
+            messages = messageHistory.getByTopic(topic);
+        } else if (topicPattern != null && !topicPattern.isEmpty()) {
+            messages = messageHistory.getByTopicPattern(topicPattern);
+        } else if (senderId != null && !senderId.isEmpty()) {
+            messages = messageHistory.getBySender(senderId);
+        } else {
+            messages = messageHistory.getRecent(limit);
+        }
+
+        // Apply limit and convert to maps
+        List<Map<String, Object>> result = messages.stream()
+                .limit(limit)
+                .map(MessageHistoryService.StoredMessage::toMap)
+                .collect(Collectors.toList());
         
-        // TODO: Implement message history storage
-        // For now, return empty list
-        List<Map<String, Object>> messages = List.of();
-        
-        sendSuccess(resp, messages);
+        sendSuccess(resp, result);
     }
     
     private void handleGetStats(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -217,6 +274,14 @@ public class RestAPIHandler extends HttpServlet {
         
         stats.put("runtime", runtimeInfo);
         stats.put("uptime", getUptime());
+
+        // Message history stats
+        if (messageHistory != null) {
+            Map<String, Object> messageStats = new HashMap<>();
+            messageStats.put("storedMessages", messageHistory.size());
+            messageStats.put("maxCapacity", messageHistory.getMaxSize());
+            stats.put("messageHistory", messageStats);
+        }
         
         sendSuccess(resp, stats);
     }
@@ -251,7 +316,6 @@ public class RestAPIHandler extends HttpServlet {
     }
     
     private String extractAgentId(String path) {
-        // Extract agent ID from path like /agents/{id} or /agents/{id}/start
         String[] parts = path.split("/");
         if (parts.length >= 3) {
             return parts[2];
