@@ -2,6 +2,9 @@ package dev.jentic.examples.cli;
 
 import java.util.concurrent.CountDownLatch;
 
+import dev.jentic.runtime.messaging.InMemoryMessageService;
+import dev.jentic.tools.console.MessageHistoryService;
+import dev.jentic.tools.console.StoringMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,8 +91,17 @@ public class CLIExample {
     public static void main(String[] args) throws Exception {
         log.info("Starting Jentic CLI Example...");
 
+        // Create message history service
+        MessageHistoryService messageHistory = new MessageHistoryService(500);
+
+        // Create base message service and wrap with storing decorator
+        InMemoryMessageService baseMessageService = new InMemoryMessageService();
+        StoringMessageService storingMessageService = new StoringMessageService(baseMessageService, messageHistory);
+
+
         // Build runtime with sample agents
         JenticRuntime runtime = JenticRuntime.builder()
+                .messageService(storingMessageService)
 //                .scanPackages("dev.jentic.examples.cli")
                 .build();
 
@@ -100,14 +112,18 @@ public class CLIExample {
         log.info("Registered {} agents", runtime.getAgents().size());
         
         // Start web console on port 8080
-        WebConsole console = JettyWebConsole.builder()
+        JettyWebConsole console = JettyWebConsole.builder()
                 .runtime(runtime)
+                .messageHistory(messageHistory)
                 .port(8080)
                 .build();
 
         // Start everything
         runtime.start().join();
         console.start().join();
+
+        //    This enables live streaming via "jentic logs -f"
+        storingMessageService.setEventListener(console.getWebSocketHandler());
 
         log.info("=".repeat(60));
         log.info("Runtime started successfully!");

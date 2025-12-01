@@ -36,13 +36,19 @@ public class JettyWebConsole implements WebConsole {
     private final int messageHistorySize;
     
     private Server server;
+    private WebSocketHandler webSocketHandler;
     private volatile boolean running;
     
     private JettyWebConsole(Builder builder) {
         this.port = builder.port;
         this.runtime = Objects.requireNonNull(builder.runtime, "runtime required");
         this.messageHistorySize = builder.messageHistorySize;
-        this.messageHistory = new MessageHistoryService(messageHistorySize);
+        // Use external MessageHistoryService if provided, otherwise create new one
+        if (builder.messageHistory != null) {
+            this.messageHistory = builder.messageHistory;
+        } else {
+            this.messageHistory = new MessageHistoryService(builder.messageHistorySize);
+        }
         this.objectMapper = new ObjectMapper()
             .enable(SerializationFeature.INDENT_OUTPUT)
             .registerModule(new JavaTimeModule())
@@ -78,12 +84,13 @@ public class JettyWebConsole implements WebConsole {
                 // Static resources
                 StaticResourceHandler staticHandler = new StaticResourceHandler();
                 context.addServlet(new ServletHolder("static", staticHandler), "/*");
-                
+
                 // WebSocket
+                webSocketHandler = new WebSocketHandler(objectMapper);
                 JettyWebSocketServletContainerInitializer.configure(context, (servletContext, wsContainer) -> {
                     wsContainer.setMaxTextMessageSize(65536);
                     wsContainer.setIdleTimeout(Duration.ofMinutes(10));
-                    wsContainer.addMapping("/ws", new WebSocketHandler(objectMapper));
+                    wsContainer.addMapping("/ws", webSocketHandler);
                 });
                 
                 server.start();
@@ -139,7 +146,21 @@ public class JettyWebConsole implements WebConsole {
     public MessageHistoryService getMessageHistory() {
         return messageHistory;
     }
-    
+
+    /**
+     * Gets the WebSocket handler for event notifications.
+     *
+     * <p>Use this to wire up StoringMessageService for live message streaming:
+     * <pre>{@code
+     * storingMessageService.setEventListener(console.getWebSocketHandler());
+     * }</pre>
+     *
+     * @return the WebSocket handler, or null if console not started
+     */
+    public WebSocketHandler getWebSocketHandler() {
+        return webSocketHandler;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -148,7 +169,8 @@ public class JettyWebConsole implements WebConsole {
         private int port = 8080;
         private JenticRuntime runtime;
         private int messageHistorySize = MessageHistoryService.DEFAULT_MAX_SIZE;
-        
+        private MessageHistoryService messageHistory;
+
         public Builder port(int port) {
             if (port < 1 || port > 65535) {
                 throw new IllegalArgumentException("Invalid port: " + port);
@@ -164,6 +186,15 @@ public class JettyWebConsole implements WebConsole {
 
         public Builder messageHistorySize(int size) {
             this.messageHistorySize = size;
+            return this;
+        }
+
+        /**
+         * Sets an external MessageHistoryService instance.
+         * Use this when you need to share the same instance with StoringMessageService.
+         */
+        public Builder messageHistory(MessageHistoryService messageHistory) {
+            this.messageHistory = messageHistory;
             return this;
         }
         
