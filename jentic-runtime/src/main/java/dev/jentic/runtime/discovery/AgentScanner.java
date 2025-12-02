@@ -77,22 +77,40 @@ public class AgentScanner {
         Set<Class<?>> classes = new HashSet<>();
         String packagePath = packageName.replace('.', '/');
         
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        Enumeration<URL> resources = classLoader.getResources(packagePath);
+        // Try multiple classloaders
+        ClassLoader[] loaders = {
+            Thread.currentThread().getContextClassLoader(),
+            getClass().getClassLoader(),
+            ClassLoader.getSystemClassLoader()
+        };
         
-        while (resources.hasMoreElements()) {
-            URL resource = resources.nextElement();
-            String protocol = resource.getProtocol();
-            
-            if ("file".equals(protocol)) {
-                // File system scanning
-                classes.addAll(scanFileSystem(resource, packageName));
-            } else if ("jar".equals(protocol)) {
-                // JAR file scanning
-                classes.addAll(scanJarFile(resource, packagePath));
-            } else {
-                log.warn("Unsupported resource protocol for package scanning: {}", protocol);
+        for (ClassLoader classLoader : loaders) {
+        	if (classLoader == null) continue;
+        	
+        	Enumeration<URL> resources = classLoader.getResources(packagePath);
+        	
+        	if (!resources.hasMoreElements()) {
+                log.debug("No resources found for package {} with classloader {}", 
+                          packageName, classLoader.getClass().getName());
+                continue;
             }
+        	
+        	while (resources.hasMoreElements()) {
+                URL resource = resources.nextElement();
+                String protocol = resource.getProtocol();
+                
+                if ("file".equals(protocol)) {
+                    // File system scanning
+                    classes.addAll(scanFileSystem(resource, packageName));
+                } else if ("jar".equals(protocol)) {
+                    // JAR file scanning
+                    classes.addAll(scanJarFile(resource, packagePath));
+                } else {
+                    log.warn("Unsupported resource protocol for package scanning: {}", protocol);
+                }
+            }
+        	
+        	if (!classes.isEmpty()) break; // Found classes, stop trying
         }
         
         return classes;

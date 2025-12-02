@@ -101,13 +101,12 @@ public class CLIExample {
 
         // Build runtime with sample agents
         JenticRuntime runtime = JenticRuntime.builder()
-                .messageService(storingMessageService)
-//                .scanPackages("dev.jentic.examples.cli")
+                .scanPackages("dev.jentic.examples.cli")
                 .build();
 
-        runtime.registerAgent(new TemperatureSensorAgent());
-        runtime.registerAgent(new AlertHandlerAgent());
-        runtime.registerAgent(new SystemLoggerAgent());
+//        runtime.registerAgent(new TemperatureSensorAgent());
+//        runtime.registerAgent(new AlertHandlerAgent());
+//        runtime.registerAgent(new SystemLoggerAgent());
         
         log.info("Registered {} agents", runtime.getAgents().size());
         
