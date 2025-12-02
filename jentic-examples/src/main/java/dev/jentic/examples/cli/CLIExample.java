@@ -3,7 +3,7 @@ package dev.jentic.examples.cli;
 import java.util.concurrent.CountDownLatch;
 
 import dev.jentic.runtime.messaging.InMemoryMessageService;
-import dev.jentic.tools.console.MessageHistoryService;
+import dev.jentic.runtime.messaging.MessageHistoryService;
 import dev.jentic.tools.console.StoringMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +102,7 @@ public class CLIExample {
         // Build runtime with sample agents
         JenticRuntime runtime = JenticRuntime.builder()
                 .scanPackages("dev.jentic.examples.cli")
+                .enableMessageHistory(500)
                 .build();
 
 //        runtime.registerAgent(new TemperatureSensorAgent());

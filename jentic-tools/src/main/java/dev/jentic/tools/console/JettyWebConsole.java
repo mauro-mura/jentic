@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jentic.core.console.WebConsole;
 import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.messaging.MessageHistoryService;  // CHANGED: from package-local
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -26,35 +27,47 @@ import java.util.concurrent.CompletableFuture;
  * @since 0.4.0
  */
 public class JettyWebConsole implements WebConsole {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(JettyWebConsole.class);
-    
+
     private final int port;
     private final JenticRuntime runtime;
     private final ObjectMapper objectMapper;
     private final MessageHistoryService messageHistory;
     private final int messageHistorySize;
-    
+    private final boolean ownedHistory;  // Track if we created the history
+
     private Server server;
     private WebSocketHandler webSocketHandler;
     private volatile boolean running;
-    
+
     private JettyWebConsole(Builder builder) {
         this.port = builder.port;
         this.runtime = Objects.requireNonNull(builder.runtime, "runtime required");
         this.messageHistorySize = builder.messageHistorySize;
-        // Use external MessageHistoryService if provided, otherwise create new one
+
+        // Priority order for MessageHistoryService:
+        // 1) Explicit instance from builder
+        // 2) From runtime (if enabled via enableMessageHistory())
+        // 3) Create new and attach to MessageService
         if (builder.messageHistory != null) {
             this.messageHistory = builder.messageHistory;
+            this.ownedHistory = false;
+        } else if (runtime.getMessageHistory().isPresent()) {
+            this.messageHistory = runtime.getMessageHistory().get();
+            this.ownedHistory = false;
         } else {
-            this.messageHistory = new MessageHistoryService(builder.messageHistorySize);
+            this.messageHistory = new MessageHistoryService(messageHistorySize);
+            this.messageHistory.attachTo(runtime.getMessageService());
+            this.ownedHistory = true;
         }
+
         this.objectMapper = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT)
-            .registerModule(new JavaTimeModule())
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+                .enable(SerializationFeature.INDENT_OUTPUT)
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
-    
+
     @Override
     public CompletableFuture<Void> start() {
         return CompletableFuture.runAsync(() -> {
@@ -62,25 +75,25 @@ public class JettyWebConsole implements WebConsole {
                 logger.warn("Console already running on port {}", port);
                 return;
             }
-            
+
             try {
                 logger.info("Starting Jetty console on port {}", port);
-                
+
                 server = new Server();
-                
+
                 ServerConnector connector = new ServerConnector(server);
                 connector.setPort(port);
                 connector.setIdleTimeout(Duration.ofMinutes(5).toMillis());
                 server.addConnector(connector);
-                
+
                 ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
                 context.setContextPath("/");
                 server.setHandler(context);
-                
+
                 // REST API with message history
                 RestAPIHandler restServlet = new RestAPIHandler(runtime, objectMapper, messageHistory);
                 context.addServlet(new ServletHolder("rest-api", restServlet), "/api/*");
-                
+
                 // Static resources
                 StaticResourceHandler staticHandler = new StaticResourceHandler();
                 context.addServlet(new ServletHolder("static", staticHandler), "/*");
@@ -92,27 +105,35 @@ public class JettyWebConsole implements WebConsole {
                     wsContainer.setIdleTimeout(Duration.ofMinutes(10));
                     wsContainer.addMapping("/ws", webSocketHandler);
                 });
-                
+
                 server.start();
                 running = true;
-                
+
                 logger.info("Console started: {}", getBaseUrl());
-                logger.info("Message history enabled with capacity: {}", messageHistorySize);
-                
+                logger.info("Message history {} with capacity: {}",
+                        ownedHistory ? "created" : "reused", messageHistory.getMaxSize());
+
             } catch (Exception e) {
                 logger.error("Failed to start console", e);
                 throw new RuntimeException("Console start failed", e);
             }
         });
     }
-    
+
     @Override
     public CompletableFuture<Void> stop() {
         return CompletableFuture.runAsync(() -> {
             if (!running) return;
-            
+
             try {
                 logger.info("Stopping console");
+
+                // Detach history only if we created it
+                if (ownedHistory && messageHistory != null) {
+                    messageHistory.detachFrom(runtime.getMessageService());
+                    logger.debug("Detached owned message history");
+                }
+
                 if (server != null) {
                     server.stop();
                     server = null;
@@ -124,12 +145,12 @@ public class JettyWebConsole implements WebConsole {
             }
         });
     }
-    
+
     @Override
     public boolean isRunning() {
         return running;
     }
-    
+
     @Override
     public int getPort() {
         return port;
@@ -164,7 +185,7 @@ public class JettyWebConsole implements WebConsole {
     public static Builder builder() {
         return new Builder();
     }
-    
+
     public static class Builder {
         private int port = 8080;
         private JenticRuntime runtime;
@@ -178,7 +199,7 @@ public class JettyWebConsole implements WebConsole {
             this.port = port;
             return this;
         }
-        
+
         public Builder runtime(JenticRuntime runtime) {
             this.runtime = runtime;
             return this;
@@ -191,13 +212,22 @@ public class JettyWebConsole implements WebConsole {
 
         /**
          * Sets an external MessageHistoryService instance.
-         * Use this when you need to share the same instance with StoringMessageService.
+         *
+         * <p>Priority order:
+         * <ol>
+         *   <li>This explicit instance (if set)</li>
+         *   <li>Runtime's history (if enabled via {@code enableMessageHistory()})</li>
+         *   <li>Auto-created and attached to MessageService</li>
+         * </ol>
+         *
+         * @param messageHistory the history service to use
+         * @return this builder
          */
         public Builder messageHistory(MessageHistoryService messageHistory) {
             this.messageHistory = messageHistory;
             return this;
         }
-        
+
         public JettyWebConsole build() {
             return new JettyWebConsole(this);
         }

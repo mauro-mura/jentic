@@ -13,6 +13,7 @@ import dev.jentic.runtime.lifecycle.LifecycleListener;
 import dev.jentic.runtime.lifecycle.LifecycleManager;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
+import dev.jentic.runtime.messaging.MessageHistoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,6 +34,7 @@ public class JenticRuntime {
     private final MessageService messageService;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
+    private final MessageHistoryService messageHistory;
 
     // Discovery components
     private final AgentScanner agentScanner;
@@ -69,6 +71,15 @@ public class JenticRuntime {
         this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler);
         this.annotationProcessor = new AnnotationProcessor(messageService);
         this.lifecycleManager = new LifecycleManager();
+
+        // Initialize message history if enabled
+        if (builder.messageHistorySize > 0) {
+            this.messageHistory = new MessageHistoryService(builder.messageHistorySize);
+            this.messageHistory.attachTo(this.messageService);
+            log.info("Message history enabled with maxSize={}", builder.messageHistorySize);
+        } else {
+            this.messageHistory = null;
+        }
 
         // Add default lifecycle listener
         this.lifecycleManager.addLifecycleListener(LifecycleListener.logging());
@@ -156,6 +167,11 @@ public class JenticRuntime {
 
                 // Wait for all agents to stop
                 CompletableFuture.allOf(stopFutures.toArray(new CompletableFuture[0])).join();
+
+                // Detach message history
+                if (messageHistory != null) {
+                    messageHistory.detachFrom(messageService);
+                }
 
                 // Stop core services
                 behaviorScheduler.stop().join();
@@ -255,6 +271,16 @@ public class JenticRuntime {
     }
 
     /**
+     * Get the message history service (if enabled).
+     *
+     * @return optional containing the message history service,
+     *         empty if history is not enabled
+     */
+    public Optional<MessageHistoryService> getMessageHistory() {
+        return Optional.ofNullable(messageHistory);
+    }
+
+    /**
      * Get the behavior scheduler
      */
     public BehaviorScheduler getBehaviorScheduler() {
@@ -285,13 +311,15 @@ public class JenticRuntime {
      * Get runtime statistics
      */
     public RuntimeStats getStats() {
-        long runningAgents = agents.values().stream().mapToLong(agent -> agent.isRunning() ? 1 : 0).sum();
+        long runningAgents = agents.values().stream()
+                .mapToLong(agent -> agent.isRunning() ? 1 : 0).sum();
 
         return new RuntimeStats(
                 agents.size(),
                 (int) runningAgents,
                 scanPackages.size(),
-                serviceInstances.size()
+                serviceInstances.size(),
+                messageHistory != null ? messageHistory.size() : 0  // ADD THIS
         );
     }
 
@@ -492,6 +520,7 @@ public class JenticRuntime {
         private BehaviorScheduler behaviorScheduler;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
+        private int messageHistorySize = 0;
 
         /**
          * Load configuration from YAML/JSON file
@@ -595,6 +624,36 @@ public class JenticRuntime {
             return this;
         }
 
+        /**
+         * Enable message history with default size.
+         *
+         * <p>When enabled, all messages sent through the MessageService
+         * will be stored in a ring buffer for later retrieval.
+         *
+         * @return this builder
+         */
+        public Builder enableMessageHistory() {
+            return enableMessageHistory(MessageHistoryService.DEFAULT_MAX_SIZE);
+        }
+
+        /**
+         * Enable message history with specified max size.
+         *
+         * @param maxSize maximum number of messages to store
+         * @return this builder
+         * @throws IllegalArgumentException if maxSize is out of valid range
+         */
+        public Builder enableMessageHistory(int maxSize) {
+            if (maxSize < MessageHistoryService.MIN_SIZE ||
+                    maxSize > MessageHistoryService.MAX_SIZE) {
+                throw new IllegalArgumentException(
+                        "maxSize must be between " + MessageHistoryService.MIN_SIZE +
+                                " and " + MessageHistoryService.MAX_SIZE);
+            }
+            this.messageHistorySize = maxSize;
+            return this;
+        }
+
         public JenticRuntime build() {
             // Use default config if none provided
             if (this.configuration == null) {
@@ -639,7 +698,8 @@ public class JenticRuntime {
             int totalAgents,
             int runningAgents,
             int scannedPackages,
-            int registeredServices
+            int registeredServices,
+            int messageHistorySize
     ) {
         @Override
         public String toString() {

@@ -3,6 +3,7 @@ package dev.jentic.tools.console;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.MessageService;
+import dev.jentic.runtime.messaging.MessageHistoryService;
 import dev.jentic.core.console.ConsoleEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

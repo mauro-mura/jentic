@@ -1,41 +1,32 @@
 package dev.jentic.tools.console;
 
 import dev.jentic.core.Message;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Thread-safe service for storing and querying recent message history.
  *
- * <p>Uses a ring buffer implementation with configurable max size.
- * When the buffer is full, oldest messages are automatically evicted.
- *
- * <p>All operations are thread-safe and can be called concurrently.
- *
+ * @deprecated Use {@link dev.jentic.runtime.messaging.MessageHistoryService} instead.
+ *             This class will be removed in version 0.5.0.
  * @since 0.4.0
  */
+@Deprecated(since = "0.4.0", forRemoval = true)
 public class MessageHistoryService {
 
-    private static final Logger log = LoggerFactory.getLogger(MessageHistoryService.class);
+    private final dev.jentic.runtime.messaging.MessageHistoryService delegate;
 
-    public static final int DEFAULT_MAX_SIZE = 1000;
-    public static final int MIN_SIZE = 10;
-    public static final int MAX_SIZE = 100_000;
-
-    private final ConcurrentLinkedDeque<StoredMessage> messages;
-    private final int maxSize;
-    private final AtomicInteger currentSize;
+    public static final int DEFAULT_MAX_SIZE =
+            dev.jentic.runtime.messaging.MessageHistoryService.DEFAULT_MAX_SIZE;
+    public static final int MIN_SIZE =
+            dev.jentic.runtime.messaging.MessageHistoryService.MIN_SIZE;
+    public static final int MAX_SIZE =
+            dev.jentic.runtime.messaging.MessageHistoryService.MAX_SIZE;
 
     /**
-     * Stored message wrapper with additional metadata.
+     * Stored message wrapper - delegates to runtime implementation.
      */
     public record StoredMessage(
             String id,
@@ -48,9 +39,6 @@ public class MessageHistoryService {
             Instant timestamp,
             Instant storedAt
     ) {
-        /**
-         * Creates a StoredMessage from a Message.
-         */
         public static StoredMessage from(Message message) {
             return new StoredMessage(
                     message.id(),
@@ -65,9 +53,6 @@ public class MessageHistoryService {
             );
         }
 
-        /**
-         * Converts to a Map for JSON serialization.
-         */
         public Map<String, Object> toMap() {
             var map = new LinkedHashMap<String, Object>();
             map.put("id", id);
@@ -81,212 +66,93 @@ public class MessageHistoryService {
             map.put("storedAt", storedAt != null ? storedAt.toString() : null);
             return map;
         }
+
+        // Convert from runtime StoredMessage
+        static StoredMessage fromRuntime(
+                dev.jentic.runtime.messaging.MessageHistoryService.StoredMessage msg) {
+            return new StoredMessage(
+                    msg.id(), msg.topic(), msg.senderId(), msg.receiverId(),
+                    msg.correlationId(), msg.payload(), msg.headers(),
+                    msg.timestamp(), msg.storedAt()
+            );
+        }
     }
 
-    /**
-     * Creates a MessageHistoryService with default max size.
-     */
     public MessageHistoryService() {
-        this(DEFAULT_MAX_SIZE);
+        this.delegate = new dev.jentic.runtime.messaging.MessageHistoryService();
     }
 
-    /**
-     * Creates a MessageHistoryService with specified max size.
-     *
-     * @param maxSize maximum number of messages to store
-     * @throws IllegalArgumentException if maxSize is out of valid range
-     */
     public MessageHistoryService(int maxSize) {
-        if (maxSize < MIN_SIZE || maxSize > MAX_SIZE) {
-            throw new IllegalArgumentException(
-                    "maxSize must be between " + MIN_SIZE + " and " + MAX_SIZE + ", got: " + maxSize);
-        }
-        this.maxSize = maxSize;
-        this.messages = new ConcurrentLinkedDeque<>();
-        this.currentSize = new AtomicInteger(0);
-        log.info("MessageHistoryService initialized with maxSize={}", maxSize);
+        this.delegate = new dev.jentic.runtime.messaging.MessageHistoryService(maxSize);
     }
 
-    /**
-     * Stores a message in the history buffer.
-     *
-     * <p>If the buffer is full, the oldest message is evicted.
-     *
-     * @param message the message to store, must not be null
-     * @throws NullPointerException if message is null
-     */
     public void store(Message message) {
-        Objects.requireNonNull(message, "message cannot be null");
-
-        var stored = StoredMessage.from(message);
-        messages.addFirst(stored);
-
-        int size = currentSize.incrementAndGet();
-        while (size > maxSize) {
-            var removed = messages.pollLast();
-            if (removed != null) {
-                size = currentSize.decrementAndGet();
-                log.trace("Evicted oldest message: {}", removed.id());
-            } else {
-                break;
-            }
-        }
-
-        log.debug("Stored message: id={}, topic={}, size={}", message.id(), message.topic(), size);
+        delegate.store(message);
     }
 
-    /**
-     * Gets the most recent messages.
-     *
-     * @param limit maximum number of messages to return
-     * @return list of recent messages, newest first
-     */
     public List<StoredMessage> getRecent(int limit) {
-        if (limit <= 0) {
-            return List.of();
-        }
-        return messages.stream()
-                .limit(limit)
-                .collect(Collectors.toList());
+        return delegate.getRecent(limit).stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets messages filtered by exact topic match.
-     *
-     * @param topic the topic to filter by
-     * @return list of messages matching the topic, newest first
-     */
     public List<StoredMessage> getByTopic(String topic) {
-        if (topic == null || topic.isEmpty()) {
-            return List.of();
-        }
-        return messages.stream()
-                .filter(m -> topic.equals(m.topic()))
-                .collect(Collectors.toList());
+        return delegate.getByTopic(topic).stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets messages filtered by topic pattern (supports wildcards).
-     *
-     * <p>Pattern syntax:
-     * <ul>
-     *   <li>{@code *} matches any sequence of characters</li>
-     *   <li>{@code ?} matches any single character</li>
-     * </ul>
-     *
-     * @param topicPattern the topic pattern (e.g., "orders.*", "events.?.created")
-     * @return list of messages matching the pattern, newest first
-     */
     public List<StoredMessage> getByTopicPattern(String topicPattern) {
-        if (topicPattern == null || topicPattern.isEmpty()) {
-            return List.of();
-        }
-
-        var regex = topicPattern
-                .replace(".", "\\.")
-                .replace("*", ".*")
-                .replace("?", ".");
-        var pattern = Pattern.compile("^" + regex + "$");
-
-        return messages.stream()
-                .filter(m -> m.topic() != null && pattern.matcher(m.topic()).matches())
-                .collect(Collectors.toList());
+        return delegate.getByTopicPattern(topicPattern).stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets messages filtered by sender ID.
-     *
-     * @param senderId the sender ID to filter by
-     * @return list of messages from the sender, newest first
-     */
     public List<StoredMessage> getBySender(String senderId) {
-        if (senderId == null || senderId.isEmpty()) {
-            return List.of();
-        }
-        return messages.stream()
-                .filter(m -> senderId.equals(m.senderId()))
-                .collect(Collectors.toList());
+        return delegate.getBySender(senderId).stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets messages within a time range.
-     *
-     * @param from start of range (inclusive), null for no lower bound
-     * @param to end of range (inclusive), null for no upper bound
-     * @return list of messages in the time range, newest first
-     */
     public List<StoredMessage> getByTimeRange(Instant from, Instant to) {
-        return messages.stream()
-                .filter(m -> {
-                    if (m.timestamp() == null) return false;
-                    if (from != null && m.timestamp().isBefore(from)) return false;
-                    if (to != null && m.timestamp().isAfter(to)) return false;
-                    return true;
-                })
-                .collect(Collectors.toList());
+        return delegate.getByTimeRange(from, to).stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets messages matching a custom predicate.
-     *
-     * @param predicate the filter predicate
-     * @return list of matching messages, newest first
-     */
     public List<StoredMessage> getByFilter(Predicate<StoredMessage> predicate) {
-        Objects.requireNonNull(predicate, "predicate cannot be null");
-        return messages.stream()
-                .filter(predicate)
-                .collect(Collectors.toList());
+        // Note: predicate operates on tools.StoredMessage, need to adapt
+        return delegate.getByFilter(msg -> predicate.test(StoredMessage.fromRuntime(msg)))
+                .stream()
+                .map(StoredMessage::fromRuntime)
+                .toList();
     }
 
-    /**
-     * Gets a specific message by ID.
-     *
-     * @param messageId the message ID
-     * @return the message if found, empty otherwise
-     */
     public Optional<StoredMessage> getById(String messageId) {
-        if (messageId == null || messageId.isEmpty()) {
-            return Optional.empty();
-        }
-        return messages.stream()
-                .filter(m -> messageId.equals(m.id()))
-                .findFirst();
+        return delegate.getById(messageId).map(StoredMessage::fromRuntime);
     }
 
-    /**
-     * Clears all stored messages.
-     */
     public void clear() {
-        messages.clear();
-        currentSize.set(0);
-        log.info("Message history cleared");
+        delegate.clear();
     }
 
-    /**
-     * Returns the current number of stored messages.
-     *
-     * @return the current size
-     */
     public int size() {
-        return currentSize.get();
+        return delegate.size();
     }
 
-    /**
-     * Returns the maximum capacity.
-     *
-     * @return the max size
-     */
     public int getMaxSize() {
-        return maxSize;
+        return delegate.getMaxSize();
+    }
+
+    public boolean isEmpty() {
+        return delegate.isEmpty();
     }
 
     /**
-     * Checks if the buffer is empty.
-     *
-     * @return true if no messages are stored
+     * Get the underlying runtime service.
+     * Use this for direct access to the new API.
      */
-    public boolean isEmpty() {
-        return messages.isEmpty();
+    public dev.jentic.runtime.messaging.MessageHistoryService getRuntimeService() {
+        return delegate;
     }
 }
