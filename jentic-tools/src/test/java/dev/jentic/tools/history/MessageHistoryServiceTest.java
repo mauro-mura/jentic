@@ -1,23 +1,24 @@
-package dev.jentic.tools.console;
+package dev.jentic.tools.history;
 
-import dev.jentic.core.Message;
-import dev.jentic.tools.console.MessageHistoryService.StoredMessage;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import dev.jentic.core.Message;
+
 
 @DisplayName("MessageHistoryService")
 class MessageHistoryServiceTest {
@@ -198,7 +199,7 @@ class MessageHistoryServiceTest {
             service.store(createMessage("orders.deleted", "3"));
             service.store(createMessage("payments.created", "4"));
 
-            var result = service.getByTopicPattern("orders.*");
+            var result = service.findByTopicPattern("orders.*");
 
             assertEquals(3, result.size());
         }
@@ -210,7 +211,7 @@ class MessageHistoryServiceTest {
             service.store(createMessage("events.b.created", "2"));
             service.store(createMessage("events.ab.created", "3"));
 
-            var result = service.getByTopicPattern("events.?.created");
+            var result = service.findByTopicPattern("events.?.created");
 
             assertEquals(2, result.size());
         }

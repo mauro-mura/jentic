@@ -1,4 +1,4 @@
-package dev.jentic.tools.console;
+package dev.jentic.tools.history;
 
 import dev.jentic.core.Message;
 import org.slf4j.Logger;
@@ -177,7 +177,7 @@ public class MessageHistoryService {
      * @param topicPattern the topic pattern (e.g., "orders.*", "events.?.created")
      * @return list of messages matching the pattern, newest first
      */
-    public List<StoredMessage> getByTopicPattern(String topicPattern) {
+    public List<StoredMessage> findByTopicPattern(String topicPattern) {
         if (topicPattern == null || topicPattern.isEmpty()) {
             return List.of();
         }
@@ -199,7 +199,7 @@ public class MessageHistoryService {
      * @param senderId the sender ID to filter by
      * @return list of messages from the sender, newest first
      */
-    public List<StoredMessage> getBySender(String senderId) {
+    public List<StoredMessage> findBySender(String senderId) {
         if (senderId == null || senderId.isEmpty()) {
             return List.of();
         }
@@ -215,7 +215,7 @@ public class MessageHistoryService {
      * @param to end of range (inclusive), null for no upper bound
      * @return list of messages in the time range, newest first
      */
-    public List<StoredMessage> getByTimeRange(Instant from, Instant to) {
+    public List<StoredMessage> findByTimeRange(Instant from, Instant to) {
         return messages.stream()
                 .filter(m -> {
                     if (m.timestamp() == null) return false;
@@ -232,7 +232,7 @@ public class MessageHistoryService {
      * @param predicate the filter predicate
      * @return list of matching messages, newest first
      */
-    public List<StoredMessage> getByFilter(Predicate<StoredMessage> predicate) {
+    public List<StoredMessage> findByFilter(Predicate<StoredMessage> predicate) {
         Objects.requireNonNull(predicate, "predicate cannot be null");
         return messages.stream()
                 .filter(predicate)
@@ -245,7 +245,7 @@ public class MessageHistoryService {
      * @param messageId the message ID
      * @return the message if found, empty otherwise
      */
-    public Optional<StoredMessage> getById(String messageId) {
+    public Optional<StoredMessage> findById(String messageId) {
         if (messageId == null || messageId.isEmpty()) {
             return Optional.empty();
         }
@@ -265,8 +265,6 @@ public class MessageHistoryService {
 
     /**
      * Returns the current number of stored messages.
-     *
-     * @return the current size
      */
     public int size() {
         return currentSize.get();
@@ -274,19 +272,15 @@ public class MessageHistoryService {
 
     /**
      * Returns the maximum capacity.
-     *
-     * @return the max size
      */
     public int getMaxSize() {
         return maxSize;
     }
 
     /**
-     * Checks if the buffer is empty.
-     *
-     * @return true if no messages are stored
+     * Checks if the history is empty.
      */
     public boolean isEmpty() {
-        return messages.isEmpty();
+        return currentSize.get() == 0;
     }
 }

@@ -2,15 +2,14 @@ package dev.jentic.examples.cli;
 
 import java.util.concurrent.CountDownLatch;
 
-import dev.jentic.runtime.messaging.InMemoryMessageService;
-import dev.jentic.tools.console.MessageHistoryService;
-import dev.jentic.tools.console.StoringMessageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import dev.jentic.core.console.WebConsole;
+import dev.jentic.core.filter.MessageFilter;
 import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.tools.agents.MessageSnifferAgent;
 import dev.jentic.tools.console.JettyWebConsole;
+import dev.jentic.tools.history.MessageHistoryService;
 
 /**
  * Example demonstrating CLI usage with a running Jentic runtime.
@@ -94,19 +93,19 @@ public class CLIExample {
         // Create message history service
         MessageHistoryService messageHistory = new MessageHistoryService(500);
 
-        // Create base message service and wrap with storing decorator
-        InMemoryMessageService baseMessageService = new InMemoryMessageService();
-        StoringMessageService storingMessageService = new StoringMessageService(baseMessageService, messageHistory);
-
+        // Create sniffer agent with shared history
+        MessageSnifferAgent sniffer = new MessageSnifferAgent(
+            MessageFilter.acceptAll(),
+            messageHistory
+        );
 
         // Build runtime with sample agents
         JenticRuntime runtime = JenticRuntime.builder()
                 .scanPackages("dev.jentic.examples.cli")
                 .build();
-
-//        runtime.registerAgent(new TemperatureSensorAgent());
-//        runtime.registerAgent(new AlertHandlerAgent());
-//        runtime.registerAgent(new SystemLoggerAgent());
+        
+        // Register sniffer as system agent
+        runtime.registerAgent(sniffer);
         
         log.info("Registered {} agents", runtime.getAgents().size());
         
@@ -121,8 +120,8 @@ public class CLIExample {
         runtime.start().join();
         console.start().join();
 
-        //    This enables live streaming via "jentic logs -f"
-        storingMessageService.setEventListener(console.getWebSocketHandler());
+        // Wire sniffer to WebSocket for live streaming (jentic logs -f)
+        sniffer.setEventListener(console.getWebSocketHandler());
 
         log.info("=".repeat(60));
         log.info("Runtime started successfully!");

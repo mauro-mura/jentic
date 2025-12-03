@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import dev.jentic.core.Agent;
 import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.tools.history.MessageHistoryService;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -239,9 +240,9 @@ public class RestAPIHandler extends HttpServlet {
         if (topic != null && !topic.isEmpty()) {
             messages = messageHistory.getByTopic(topic);
         } else if (topicPattern != null && !topicPattern.isEmpty()) {
-            messages = messageHistory.getByTopicPattern(topicPattern);
+            messages = messageHistory.findByTopicPattern(topicPattern);
         } else if (senderId != null && !senderId.isEmpty()) {
-            messages = messageHistory.getBySender(senderId);
+            messages = messageHistory.findBySender(senderId);
         } else {
             messages = messageHistory.getRecent(limit);
         }
