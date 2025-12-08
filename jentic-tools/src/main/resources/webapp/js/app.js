@@ -288,3 +288,12 @@ wsClient.on('message.sent', (event) => {
 wsClient.on('error.occurred', (event) => {
     addEvent('error', `Error: ${event.data.message}`);
 });
+
+wsClient.on('behavior.executed', (event) => {
+    const { agentId, behaviorId, durationMs, success, error } = event.data;
+    if (success) {
+        addEvent('info', `[${agentId}] ${behaviorId} completed in ${durationMs}ms`);
+    } else {
+        addEvent('error', `[${agentId}] ${behaviorId} failed: ${error}`);
+    }
+});

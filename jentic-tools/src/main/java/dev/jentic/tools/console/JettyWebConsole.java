@@ -3,8 +3,10 @@ package dev.jentic.tools.console;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.console.WebConsole;
 import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import dev.jentic.tools.history.MessageHistoryService;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -93,6 +95,9 @@ public class JettyWebConsole implements WebConsole {
                     wsContainer.setIdleTimeout(Duration.ofMinutes(10));
                     wsContainer.addMapping("/ws", webSocketHandler);
                 });
+
+                // Wire behavior events to WebSocket
+                wireBehaviorEvents();
                 
                 server.start();
                 running = true;
@@ -105,6 +110,19 @@ public class JettyWebConsole implements WebConsole {
                 throw new RuntimeException("Console start failed", e);
             }
         });
+    }
+
+    /**
+     * Wires the behavior scheduler to broadcast execution events via WebSocket.
+     */
+    private void wireBehaviorEvents() {
+        BehaviorScheduler scheduler = runtime.getBehaviorScheduler();
+        if (scheduler instanceof SimpleBehaviorScheduler sbs) {
+            sbs.setEventListener(webSocketHandler);
+            logger.info("Behavior execution events wired to WebSocket");
+        } else {
+            logger.debug("Scheduler is not SimpleBehaviorScheduler, behavior events not wired");
+        }
     }
     
     @Override

@@ -1,7 +1,5 @@
 package dev.jentic.runtime.scheduler;
 
-import dev.jentic.core.Behavior;
-import dev.jentic.core.BehaviorType;
 import dev.jentic.runtime.behavior.CyclicBehavior;
 import dev.jentic.runtime.behavior.OneShotBehavior;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;

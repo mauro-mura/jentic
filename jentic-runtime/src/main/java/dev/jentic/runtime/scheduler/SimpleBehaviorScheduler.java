@@ -8,6 +8,8 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.jentic.core.Agent;
+import dev.jentic.core.console.ConsoleEventListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +27,7 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     private final ScheduledExecutorService scheduler;
     private final ConcurrentHashMap<String, ScheduledFuture<?>> scheduledBehaviors = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private volatile ConsoleEventListener eventListener = ConsoleEventListener.noOp();
     
     public SimpleBehaviorScheduler() {
         this(4); // Default thread pool size
@@ -33,7 +36,16 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     public SimpleBehaviorScheduler(int threadPoolSize) {
         this.scheduler = new ScheduledThreadPoolExecutor(threadPoolSize);
     }
-    
+
+    /**
+     * Sets the event listener for behavior execution notifications.
+     *
+     * @param listener the listener, or null to use no-op
+     */
+    public void setEventListener(ConsoleEventListener listener) {
+        this.eventListener = listener != null ? listener : ConsoleEventListener.noOp();
+    }
+
     @Override
     public CompletableFuture<Void> schedule(Behavior behavior) {
         return CompletableFuture.runAsync(() -> {
@@ -163,10 +175,22 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
     }
     
     private void executeBehavior(Behavior behavior) {
+        long startTime = System.currentTimeMillis();
+        boolean success = true;
+        String error = null;
+
         try {
-            behavior.execute().join();  // ← Sincrono, eccezioni catturate
+            behavior.execute().join();
         } catch (Exception e) {
+            success = false;
+            error = e.getMessage();
             log.error("Error executing behavior: {}", behavior.getBehaviorId(), e);
+        } finally {
+            long durationMs = System.currentTimeMillis() - startTime;
+            Agent agent = behavior.getAgent();
+            String agentId = agent != null ? agent.getAgentId() : "unknown";
+            eventListener.onBehaviorExecuted(agentId, behavior.getBehaviorId(),
+                    durationMs, success, error);
         }
     }
 }

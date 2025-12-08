@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,6 +64,20 @@ public class WebSocketHandler implements JettyWebSocketCreator, ConsoleEventList
     @Override
     public void onError(String source, String message) {
         broadcast("error", Map.of("source", source, "message", message));
+    }
+
+    @Override
+    public void onBehaviorExecuted(String agentId, String behaviorId,
+                                   long durationMs, boolean success, String error) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("agentId", agentId);
+        data.put("behaviorId", behaviorId);
+        data.put("durationMs", durationMs);
+        data.put("success", success);
+        if (error != null) {
+            data.put("error", error);
+        }
+        broadcast("behavior.executed", data);
     }
     
     /**

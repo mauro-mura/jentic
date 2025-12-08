@@ -298,5 +298,8 @@ class MessageSnifferAgentTest {
         
         @Override
         public void onError(String source, String message) {}
+
+        @Override
+        public void onBehaviorExecuted(String agentId, String behaviorId, long durationMs, boolean success, String error) {}
     }
 }

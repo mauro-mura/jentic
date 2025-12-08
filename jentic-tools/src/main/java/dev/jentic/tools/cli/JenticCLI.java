@@ -1,12 +1,6 @@
 package dev.jentic.tools.cli;
 
-import dev.jentic.tools.cli.commands.ConfigCommand;
-import dev.jentic.tools.cli.commands.HealthCommand;
-import dev.jentic.tools.cli.commands.ListCommand;
-import dev.jentic.tools.cli.commands.LogsCommand;
-import dev.jentic.tools.cli.commands.StartCommand;
-import dev.jentic.tools.cli.commands.StatusCommand;
-import dev.jentic.tools.cli.commands.StopCommand;
+import dev.jentic.tools.cli.commands.*;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
@@ -18,7 +12,7 @@ import picocli.CommandLine.Command;
 @Command(
     name = "jentic",
     description = "Jentic Multi-Agent Framework CLI",
-    version = "0.4.0-SNAPSHOT",
+    version = "0.4.0",
     mixinStandardHelpOptions = true,
     subcommands = {
         ListCommand.class,
@@ -27,7 +21,8 @@ import picocli.CommandLine.Command;
         StopCommand.class,
         LogsCommand.class,
         ConfigCommand.class,
-        HealthCommand.class
+        HealthCommand.class,
+        WatchCommand.class
     }
 )
 public class JenticCLI implements Runnable {

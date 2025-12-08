@@ -1,5 +1,7 @@
 package dev.jentic.examples.console;
 
+import dev.jentic.core.BehaviorType;
+import dev.jentic.core.annotations.JenticBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,6 +9,8 @@ import dev.jentic.core.console.WebConsole;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.tools.console.JettyWebConsole;
+
+import java.util.Random;
 
 public class WebConsoleExample {
 
@@ -50,8 +54,30 @@ public class WebConsoleExample {
     }
 
     public static class OrderProcessor extends BaseAgent {
+
+        private final Random random = new Random();
+        private int ordersProcessed = 0;
+
         public OrderProcessor() {
             super("order-processor", "Order Processor");
+        }
+
+        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "3s")
+        public void processOrders() {
+            // Simulate processing time
+            try {
+                Thread.sleep(50 + random.nextInt(100));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            // Simulate occasional failure (10% chance)
+            if (random.nextInt(10) == 0) {
+                throw new RuntimeException("Database connection timeout");
+            }
+
+            ordersProcessed++;
+            log.debug("Processed order #{}", ordersProcessed);
         }
 
         @Override
@@ -66,8 +92,37 @@ public class WebConsoleExample {
     }
 
     public static class InventoryManager extends BaseAgent {
+
+        private final Random random = new Random();
+
         public InventoryManager() {
             super("inventory-manager", "Inventory Manager");
+        }
+
+        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "5s")
+        public void checkStock() {
+            try {
+                Thread.sleep(20 + random.nextInt(50));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            log.debug("Stock levels checked");
+        }
+
+        @JenticBehavior(type = BehaviorType.CYCLIC, interval = "10s")
+        public void warehouseSync() {
+            try {
+                Thread.sleep(100 + random.nextInt(200));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+
+            // Simulate occasional failure (20% chance)
+            if (random.nextInt(5) == 0) {
+                throw new RuntimeException("Warehouse API unavailable");
+            }
+
+            log.debug("Warehouse sync completed");
         }
 
         @Override
