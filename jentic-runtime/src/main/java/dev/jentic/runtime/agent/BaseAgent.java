@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.jentic.runtime.behavior.BaseBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -509,7 +510,13 @@ public abstract class BaseAgent implements Agent {
 
     private void startBehaviors() {
         if (behaviorScheduler != null) {
-            behaviors.values().forEach(behaviorScheduler::schedule);
+            behaviors.values().forEach(behavior -> {
+                // Reactivate behavior if it was stopped (e.g., after agent restart)
+                if (behavior instanceof BaseBehavior baseBehavior) {
+                    baseBehavior.activate();
+                }
+                behaviorScheduler.schedule(behavior);
+            });
         }
     }
     

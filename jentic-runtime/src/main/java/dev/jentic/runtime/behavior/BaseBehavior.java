@@ -73,6 +73,23 @@ public abstract class BaseBehavior implements Behavior {
         }
     }
 
+    /**
+     * Reactivates a stopped behavior, allowing it to be scheduled again.
+     *
+     * <p>This method is called by the agent when restarting after a stop.
+     * It resets the active flag to true, enabling the behavior to execute.
+     *
+     * @return true if the behavior was reactivated, false if already active
+     * @since 0.4.0
+     */
+    public boolean activate() {
+        if (active.compareAndSet(false, true)) {
+            log.debug("Behavior activated: {}", behaviorId);
+            return true;
+        }
+        return false;
+    }
+
     @Override
     public CompletableFuture<Void> execute() {
         if (!active.get()) {
