@@ -145,7 +145,27 @@ Basic implementations for getting started quickly.
 ```
 
 ### jentic-adapters
+Basic implementations for LLMs (OpenAI, Anthropic, Ollama).
 Enterprise-grade implementations (coming in future releases).
+
+```xml
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-adapters</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+</dependency>
+```
+
+### jentic-tools
+Web Console and CLI tools.
+
+```xml
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-tools</artifactId>
+    <version>0.5.0-SNAPSHOT</version>
+</dependency>
+```
 
 ## 🚀 Features
 
@@ -161,15 +181,15 @@ Enterprise-grade implementations (coming in future releases).
 - [x] Rate limiting (token bucket, sliding window)
 - [x] File-based persistence utilities
 - [x] YAML configuration support
+- [x] Web management console
+- [x] CLI tools
 
-### Planned (V1.1)
+### Planned (V1.0)
 - [ ] JMS message integration
 - [ ] Database-backed agent directory
-- [ ] Web management console
-- [ ] CLI tools
 - [ ] Docker containerization
 
-### Future (V1.2+)
+### Future
 - [ ] Kafka message streaming
 - [ ] Consul service discovery
 - [ ] Agent migration
