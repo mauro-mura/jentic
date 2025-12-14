@@ -17,6 +17,7 @@
 
     <properties>
         <langchain4j.version>1.8.0</langchain4j.version>
+        <a2a.sdk.version>0.3.2.Final</a2a.sdk.version>
     </properties>
 
     <dependencyManagement>
@@ -57,6 +58,19 @@
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-ollama</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-client</artifactId>
+            <version>${a2a.sdk.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.github.a2asdk</groupId>
+            <artifactId>a2a-java-sdk-server-common</artifactId>
+            <version>${a2a.sdk.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- Future: Kafka, JMS, etc. -->
