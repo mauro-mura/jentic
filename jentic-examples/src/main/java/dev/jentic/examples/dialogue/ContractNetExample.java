@@ -3,9 +3,12 @@ package dev.jentic.examples.dialogue;
 import dev.jentic.core.Agent;
 import dev.jentic.core.Behavior;
 import dev.jentic.core.MessageService;
+import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
+import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.dialogue.DialogueCapability;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 
@@ -31,28 +34,30 @@ public class ContractNetExample {
         System.out.println("╔══════════════════════════════════════════════════════════╗");
         System.out.println("║    CONTRACT-NET PROTOCOL EXAMPLE - Task Allocation       ║");
         System.out.println("╚══════════════════════════════════════════════════════════╝\n");
-        
-        // Shared message service
-        InMemoryMessageService messageService = new InMemoryMessageService();
-        
+
         // Create manager
-        Manager manager = new Manager(messageService);
+        Manager manager = new Manager();
         
         // Create workers with different efficiencies
-        Worker w1 = new Worker("worker-1", 0.6, messageService);
-        Worker w2 = new Worker("worker-2", 0.9, messageService);
-        Worker w3 = new Worker("worker-3", 0.4, messageService);
-        
+        Worker w1 = new Worker("worker-1", 0.6);
+        Worker w2 = new Worker("worker-2", 0.9);
+        Worker w3 = new Worker("worker-3", 0.4);
+
+        JenticRuntime runtime = JenticRuntime.builder()
+                .build();
+
+        runtime.registerAgent(manager);
+        runtime.registerAgent(w1);
+        runtime.registerAgent(w2);
+        runtime.registerAgent(w3);
+
         // Start all
-        manager.start().join();
-        w1.start().join();
-        w2.start().join();
-        w3.start().join();
+        runtime.start().join();
         Thread.sleep(200);
         
         // Allocate task
         System.out.println("┌─────────────────────────────────────────────────────────┐");
-        System.out.println("│ Task: data-processing (complexity: 100)                │");
+        System.out.println("│ Task: data-processing (complexity: 100)                 │");
         System.out.println("└─────────────────────────────────────────────────────────┘\n");
         
         Task task = new Task("data-processing", 100);
@@ -68,10 +73,7 @@ public class ContractNetExample {
         Thread.sleep(1500);
         
         // Cleanup
-        w1.stop().join();
-        w2.stop().join();
-        w3.stop().join();
-        manager.stop().join();
+        runtime.stop().join();
         
         System.out.println("\n╔══════════════════════════════════════════════════════════╗");
         System.out.println("║                    EXAMPLE COMPLETE                      ║");
@@ -81,37 +83,29 @@ public class ContractNetExample {
     // =========================================================================
     // MANAGER AGENT (Initiator)
     // =========================================================================
-    
-    static class Manager implements Agent {
-        
-        private final MessageService messageService;
+
+    @JenticAgent("manager")
+    static class Manager extends BaseAgent {
+
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private boolean running;
-        
-        Manager(MessageService ms) { this.messageService = ms; }
-        
+
         @Override public String getAgentId() { return "manager"; }
         @Override public String getAgentName() { return "Manager"; }
-        @Override public boolean isRunning() { return running; }
-        @Override public void addBehavior(Behavior b) {}
-        @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return messageService; }
-        
+
         @Override
-        public CompletableFuture<Void> start() {
-            return CompletableFuture.runAsync(() -> {
-                dialogue.initialize(messageService);
-                running = true;
-                System.out.println("[Manager] Started");
-            });
+        protected void onStart() {
+            super.onStart();
+            dialogue.initialize(messageService);
+            running = true;
+            System.out.println("[Manager] Started");
         }
-        
+
         @Override
-        public CompletableFuture<Void> stop() {
-            return CompletableFuture.runAsync(() -> {
-                dialogue.shutdown(messageService);
-                running = false;
-            });
+        protected void onStop() {
+            super.onStop();
+            dialogue.shutdown(messageService);
+            running = false;
         }
         
         CompletableFuture<String> allocateTask(Task task, List<String> workerIds) {
@@ -159,46 +153,39 @@ public class ContractNetExample {
     // =========================================================================
     // WORKER AGENT (Participant)
     // =========================================================================
-    
-    static class Worker implements Agent {
+
+    @JenticAgent("worker")
+    static class Worker extends BaseAgent {
         
         private final String id;
         private final double efficiency;
-        private final MessageService messageService;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private final Random random = new Random();
         private boolean running;
         
-        Worker(String id, double efficiency, MessageService ms) {
+        Worker(String id, double efficiency) {
             this.id = id;
             this.efficiency = efficiency;
-            this.messageService = ms;
         }
         
         @Override public String getAgentId() { return id; }
         @Override public String getAgentName() { return "Worker " + id; }
-        @Override public boolean isRunning() { return running; }
-        @Override public void addBehavior(Behavior b) {}
-        @Override public void removeBehavior(String id) {}
-        @Override public MessageService getMessageService() { return messageService; }
-        
+
         @Override
-        public CompletableFuture<Void> start() {
-            return CompletableFuture.runAsync(() -> {
-                dialogue.initialize(messageService);
-                running = true;
-                System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
-            });
+        protected void onStart() {
+            super.onStart();
+            dialogue.initialize(messageService);
+            running = true;
+            System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
         }
-        
+
         @Override
-        public CompletableFuture<Void> stop() {
-            return CompletableFuture.runAsync(() -> {
-                dialogue.shutdown(messageService);
-                running = false;
-            });
+        protected void onStop() {
+            super.onStop();
+            dialogue.shutdown(messageService);
+            running = false;
         }
-        
+
         @DialogueHandler(performatives = Performative.CFP)
         public void handleCFP(DialogueMessage msg) {
             System.out.println("[" + id + "] Received CFP");
