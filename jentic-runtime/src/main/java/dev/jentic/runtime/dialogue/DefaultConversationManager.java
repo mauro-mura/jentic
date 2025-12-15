@@ -84,7 +84,7 @@ public class DefaultConversationManager implements ConversationManager {
         var conversationId = UUID.randomUUID().toString();
         var protocol = protocolRegistry.get("contract-net").orElse(null);
         var responses = new ConcurrentHashMap<String, DialogueMessage>();
-        var futures = new java.util.ArrayList<CompletableFuture<Void>>();
+        var responseFutures = new java.util.ArrayList<CompletableFuture<DialogueMessage>>();
         
         for (String participant : participants) {
             var conversation = new DefaultConversation(
@@ -107,21 +107,20 @@ public class DefaultConversationManager implements ConversationManager {
             
             conversation.addMessage(message);
             
-            var future = new CompletableFuture<Void>();
-            pendingResponses.put(message.id(), future.thenApply(v -> {
-                var conv = conversations.get(conversation.getId());
-                return conv.getLastMessage().orElse(null);
-            }).thenAccept(response -> {
-                if (response != null) {
-                    responses.put(participant, response);
-                }
-            }).thenApply(v -> (DialogueMessage) null));
+            // Store ROOT future in pendingResponses - handleIncoming will complete it
+            var responseFuture = new CompletableFuture<DialogueMessage>();
+            pendingResponses.put(message.id(), responseFuture);
             
-            futures.add(future);
+            // Chain to collect responses
+            responseFutures.add(responseFuture.thenApply(response -> {
+                responses.put(participant, response);
+                return response;
+            }));
+            
             sendMessage(message);
         }
         
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+        return CompletableFuture.allOf(responseFutures.toArray(new CompletableFuture[0]))
             .orTimeout(deadline.toMillis(), TimeUnit.MILLISECONDS)
             .handle((v, ex) -> List.copyOf(responses.values()));
     }

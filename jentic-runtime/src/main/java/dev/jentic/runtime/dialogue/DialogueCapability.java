@@ -74,8 +74,8 @@ public class DialogueCapability {
         // Scan agent for @DialogueHandler annotations
         handlerRegistry.scan(agent);
         
-        // Subscribe to direct messages for this agent using sync wrapper
-        subscriptionId = messageService.subscribe(
+        // Subscribe to direct messages for this agent
+        subscriptionId = messageService.subscribeToReceiver(
             agent.getAgentId(),
             MessageHandler.sync(this::handleIncomingMessage)
         );

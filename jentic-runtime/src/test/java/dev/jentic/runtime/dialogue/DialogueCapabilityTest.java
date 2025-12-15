@@ -31,8 +31,8 @@ class DialogueCapabilityTest {
         agent = new TestDialogueAgent("test-agent");
         messageService = mock(MessageService.class);
         
-        // Capture the message handler when subscribe is called
-        when(messageService.subscribe(eq("test-agent"), any(MessageHandler.class)))
+        // Capture the message handler when subscribeToReceiver is called
+        when(messageService.subscribeToReceiver(eq("test-agent"), any(MessageHandler.class)))
             .thenAnswer(invocation -> {
                 messageHandler = invocation.getArgument(1);
                 return "sub-1";
@@ -48,7 +48,7 @@ class DialogueCapabilityTest {
     void shouldInitializeAndScanHandlers() {
         capability.initialize(messageService);
         
-        verify(messageService).subscribe(eq("test-agent"), any());
+        verify(messageService).subscribeToReceiver(eq("test-agent"), any());
     }
     
     @Test
@@ -65,6 +65,8 @@ class DialogueCapabilityTest {
             .header("performative", "REQUEST")
             .build();
         
+        // Handler should have been captured during initialize
+        assertThat(messageHandler).isNotNull();
         messageHandler.handle(incomingMsg);
         
         assertThat(agent.lastRequest.get()).isNotNull();
