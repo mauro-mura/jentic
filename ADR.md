@@ -4,16 +4,17 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 
 ## ADR Index
 
-| #                                                                   | Title | Status | Date       |
-|---------------------------------------------------------------------|-------|---------|------------|
-| [ADR-001](docs/adr/ADR-001-use-java-21-with-virtual-threads.md)     | Use Java 21 with Virtual Threads | Accepted | 2025-09-16 |
-| [ADR-002](docs/adr/ADR-002-interface-first-architecture.md)         | Interface-First Architecture | Accepted | 2025-09-16 |
-| [ADR-003](docs/adr/ADR-003-maven-multi-module-structure.md)         | Maven Multi-Module Structure | Accepted | 2025-09-16 |
-| [ADR-004](docs/adr/ADR-004-progressive-complexity-strategy.md)      | Progressive Complexity Strategy | Accepted | 2025-09-16 |
-| [ADR-005](docs/adr/ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records | Accepted | 2025-09-16 |
+| #                                                                   | Title                                | Status | Date       |
+|---------------------------------------------------------------------|--------------------------------------|---------|------------|
+| [ADR-001](docs/adr/ADR-001-use-java-21-with-virtual-threads.md)     | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
+| [ADR-002](docs/adr/ADR-002-interface-first-architecture.md)         | Interface-First Architecture         | Accepted | 2025-09-16 |
+| [ADR-003](docs/adr/ADR-003-maven-multi-module-structure.md)         | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
+| [ADR-004](docs/adr/ADR-004-progressive-complexity-strategy.md)      | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
+| [ADR-005](docs/adr/ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records     | Accepted | 2025-09-16 |
 | [ADR-006](docs/adr/ADR-006-annotation-based-agent-configuration.md) | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
-| [ADR-007](docs/adr/ADR-007-llm-core.md)                             | LLMProvider as Core Interface | Accepted | 2025-11-04  |
-| [ADR-008](docs/adr/ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design | Accepted | 2025-11-26  |
+| [ADR-007](docs/adr/ADR-007-llm-core.md)                             | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
+| [ADR-008](docs/adr/ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
+| [ADR-009](docs/adr/ADR-009-agent-dialogue-protocol.md)              | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
 
 ---
 
@@ -103,42 +104,42 @@ When creating new ADRs, use this template:
 
 These architectural decisions are under consideration for future ADRs:
 
-### ADR-009: Error Handling Strategy
+### ADR-010: Error Handling Strategy
 **Topic**: Standardized error handling across the framework  
 **Considerations**: Exception types, error propagation, retry mechanisms  
 **Status**: Under Discussion
 
-### ADR-010: Configuration Management
+### ADR-011: Configuration Management
 **Topic**: External configuration system design  
 **Considerations**: YAML vs Properties, environment-specific config, secrets management  
 **Status**: Proposed
 
-### ADR-011: Logging and Observability
+### ADR-012: Logging and Observability
 **Topic**: Logging strategy and metrics collection  
 **Considerations**: Structured logging, distributed tracing, performance metrics  
 **Status**: Research Phase
 
-### ADR-012: Testing Strategy  
+### ADR-013: Testing Strategy  
 **Topic**: Testing approaches for multi-agent systems  
 **Considerations**: Unit vs integration tests, agent lifecycle testing, message flow testing  
 **Status**: Proposed
 
-### ADR-013: Plugin Architecture
+### ADR-014: Plugin Architecture
 **Topic**: Extensibility mechanism for third-party components  
 **Considerations**: SPI, dependency injection, plugin lifecycle  
 **Status**: Future
 
-### ADR-014: Security Model
+### ADR-015: Security Model
 **Topic**: Authentication, authorization, and secure communication  
 **Considerations**: Agent identity, message encryption, access control  
 **Status**: Future
 
-### ADR-015: Performance Monitoring
+### ADR-016: Performance Monitoring
 **Topic**: Built-in performance monitoring and profiling  
 **Considerations**: JVM metrics, agent-specific metrics, alerting  
 **Status**: Future
 
-### ADR-016: Deployment Strategies
+### ADR-017: Deployment Strategies
 **Topic**: Recommended deployment patterns  
 **Considerations**: Single JVM, distributed, containerized, cloud-native  
 **Status**: Future
