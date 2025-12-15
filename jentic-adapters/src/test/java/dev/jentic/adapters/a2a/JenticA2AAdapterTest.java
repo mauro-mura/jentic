@@ -155,20 +155,22 @@ class JenticA2AAdapterTest {
     
     @Test
     void shouldPrioritizeInternalOverUrl() {
-        // Mock URL-like agent as registered internally
+    	// Mock URL-like agent as registered internally
         var descriptor = mock(AgentDescriptor.class);
         when(agentDirectory.findById("https://local-agent.com"))
             .thenReturn(CompletableFuture.completedFuture(Optional.of(descriptor)));
         
         var responseMsg = Message.builder()
+            .senderId("https://local-agent.com")
+            .receiverId("local-agent")
             .header("performative", "INFORM")
             .build();
         when(messageService.sendAndWait(any(), anyLong()))
             .thenReturn(CompletableFuture.completedFuture(responseMsg));
         
         var msg = DialogueMessage.builder()
-            .receiverId("https://local-agent.com")
             .senderId("local-agent")
+            .receiverId("https://local-agent.com")
             .performative(Performative.REQUEST)
             .build();
         

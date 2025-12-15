@@ -72,11 +72,11 @@ class DialogueA2AConverterTest {
     @Test
     void shouldMapPerformativeToCorrectRole() {
         var request = DialogueMessage.builder()
-            .performative(Performative.REQUEST).content("").build();
+            .performative(Performative.REQUEST).content("").senderId("request").build();
         var inform = DialogueMessage.builder()
-            .performative(Performative.INFORM).content("").build();
+            .performative(Performative.INFORM).content("").senderId("inform").build();
         var notify = DialogueMessage.builder()
-            .performative(Performative.NOTIFY).content("").build();
+            .performative(Performative.NOTIFY).content("").senderId("notify").build();
         
         assertThat(converter.toA2AMessage(request).role()).isEqualTo("user");
         assertThat(converter.toA2AMessage(inform).role()).isEqualTo("assistant");
@@ -88,6 +88,7 @@ class DialogueA2AConverterTest {
         var response = DialogueMessage.builder()
             .id("msg-2")
             .conversationId("conv-1")
+            .senderId("conversation")
             .performative(Performative.INFORM)
             .content("result data")
             .build();
@@ -104,6 +105,7 @@ class DialogueA2AConverterTest {
     void shouldMarkFailureAsError() {
         var failure = DialogueMessage.builder()
             .performative(Performative.FAILURE)
+            .senderId("failure")
             .content("error occurred")
             .build();
         
@@ -117,6 +119,7 @@ class DialogueA2AConverterTest {
     void shouldHandleNullContent() {
         var msg = DialogueMessage.builder()
             .performative(Performative.AGREE)
+            .senderId("null-content")
             .build();
         
         var a2aMsg = converter.toA2AMessage(msg);
