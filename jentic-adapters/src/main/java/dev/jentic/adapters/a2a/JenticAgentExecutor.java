@@ -4,130 +4,186 @@ import dev.jentic.core.Message;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
+import io.a2a.server.agentexecution.AgentExecutor;
+import io.a2a.server.agentexecution.RequestContext;
+import io.a2a.server.events.EventQueue;
+import io.a2a.server.tasks.TaskUpdater;
+import io.a2a.spec.JSONRPCError;
+import io.a2a.spec.Part;
+import io.a2a.spec.TaskNotCancelableError;
+import io.a2a.spec.TaskState;
+import io.a2a.spec.TextPart;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 /**
- * Implements A2A AgentExecutor to expose internal Jentic agents.
+ * Implements A2A SDK AgentExecutor to expose Jentic agents as A2A servers.
  * 
- * <p>This class routes incoming A2A requests to internal agents via MessageService,
- * allowing external A2A clients to interact with Jentic agents.
+ * <p>Routes incoming A2A requests to internal Jentic agents via MessageService.
+ * Uses the official A2A Java SDK v0.3.2.Final API.
  * 
- * <p>Usage with A2A SDK:
+ * <p>Usage with CDI/Quarkus:
  * <pre>{@code
- * // Register as CDI producer for Quarkus/Jakarta EE
- * @Produces
- * public AgentExecutor produceExecutor(MessageService messageService) {
- *     return new JenticAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
+ * @ApplicationScoped
+ * public class MyAgentExecutorProducer {
+ *     @Inject
+ *     MessageService messageService;
+ *     
+ *     @Produces
+ *     public AgentExecutor createExecutor() {
+ *         return new JenticAgentExecutor("my-agent", messageService, Duration.ofMinutes(5));
+ *     }
  * }
  * }</pre>
  * 
  * @since 0.5.0
  */
-public class JenticAgentExecutor {
+public class JenticAgentExecutor implements AgentExecutor {
     
     private static final Logger log = LoggerFactory.getLogger(JenticAgentExecutor.class);
     
     private final String internalAgentId;
     private final MessageService messageService;
-    private final DialogueA2AConverter converter;
     private final Duration timeout;
+    private final DialogueA2AConverter converter;
     
-    public JenticAgentExecutor(
-            String internalAgentId,
-            MessageService messageService,
-            Duration timeout) {
+    public JenticAgentExecutor(String internalAgentId, MessageService messageService, Duration timeout) {
         this.internalAgentId = internalAgentId;
         this.messageService = messageService;
-        this.converter = new DialogueA2AConverter();
         this.timeout = timeout;
+        this.converter = new DialogueA2AConverter();
     }
     
-    /**
-     * Executes an A2A request by routing to internal agent.
-     * 
-     * @param request the A2A request
-     * @param statusCallback callback for status updates
-     * @return the response
-     */
-    public CompletableFuture<DialogueA2AConverter.A2AResponse> execute(
-            DialogueA2AConverter.A2AMessage request,
-            Consumer<String> statusCallback) {
+    @Override
+    public void execute(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+        String taskId = context.getTaskId();
+        TaskUpdater updater = new TaskUpdater(context, eventQueue);
         
-        log.debug("Executing A2A request for agent {}: {}", internalAgentId, request.messageId());
+        log.info("Executing A2A request: taskId={}, agent={}", taskId, internalAgentId);
         
-        // Notify started
-        if (statusCallback != null) {
-            statusCallback.accept("working");
+        try {
+            // Mark as submitted and start working
+            if (context.getTask() == null) {
+                updater.submit();
+            }
+            updater.startWork();
+            
+            // Extract message from context
+            io.a2a.spec.Message a2aMessage = context.getMessage();
+            if (a2aMessage == null) {
+                throw new IllegalArgumentException("No message in request context");
+            }
+            
+            // Extract text from message parts
+            String userMessage = extractTextFromMessage(a2aMessage);
+            
+            // Convert to Jentic DialogueMessage
+            String externalSenderId = "a2a-client-" + taskId;
+            DialogueMessage incomingMsg = DialogueMessage.builder()
+                .conversationId(taskId)
+                .senderId(externalSenderId)
+                .receiverId(internalAgentId)
+                .performative(Performative.REQUEST)
+                .content(userMessage)
+                .build();
+            
+            // Send to internal agent and wait for response
+            Message responseMsg = messageService.sendAndWait(
+                incomingMsg.toMessage(),
+                timeout.toMillis()
+            ).get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+            
+            // Convert response
+            DialogueMessage responseDialogue = DialogueMessage.fromMessage(responseMsg);
+            
+            // Create response part
+            String responseText = responseDialogue.content() != null 
+                ? responseDialogue.content().toString() 
+                : "";
+            TextPart responsePart = new TextPart(responseText, null);
+            List<Part<?>> parts = List.of(responsePart);
+            
+            // Add artifact and complete based on performative
+            updater.addArtifact(parts, null, null, null);
+            
+            if (responseDialogue.performative() == Performative.FAILURE ||
+                responseDialogue.performative() == Performative.REFUSE) {
+                updater.fail();
+            } else {
+                updater.complete();
+            }
+            
+            log.info("A2A request completed: taskId={}", taskId);
+            
+        } catch (java.util.concurrent.TimeoutException e) {
+            log.error("A2A request timeout: taskId={}", taskId);
+            updater.fail();
+            
+        } catch (Exception e) {
+            log.error("A2A request failed: taskId={}, error={}", taskId, e.getMessage(), e);
+            updater.fail();
+        }
+    }
+    
+    @Override
+    public void cancel(RequestContext context, EventQueue eventQueue) throws JSONRPCError {
+        String taskId = context.getTaskId();
+        log.info("Cancelling A2A request: taskId={}", taskId);
+        
+        TaskUpdater updater = new TaskUpdater(context, eventQueue);
+        
+        // Check if task can be cancelled
+        if (context.getTask() != null) {
+            TaskState state = context.getTask().getStatus().state();
+            if (state == TaskState.CANCELED || state == TaskState.COMPLETED) {
+                throw new TaskNotCancelableError();
+            }
         }
         
-        // Convert A2A -> DialogueMessage
-        DialogueMessage dialogueMsg = converter.fromA2AMessage(request, internalAgentId);
-        
-        // Route to internal agent
-        return routeToInternalAgent(dialogueMsg)
-            .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
-            .thenApply(response -> {
-                log.debug("Internal agent responded: {}", response.performative());
-                return converter.toA2AResponse(response);
-            })
-            .exceptionally(ex -> {
-                log.error("Error executing A2A request: {}", ex.getMessage(), ex);
-                return new DialogueA2AConverter.A2AResponse(
-                    request.messageId(),
-                    request.contextId(),
-                    "Error: " + ex.getMessage(),
-                    "failed",
-                    true
-                );
-            });
+        try {
+            // Send CANCEL message to internal agent
+            DialogueMessage cancelMsg = DialogueMessage.builder()
+                .conversationId(taskId)
+                .senderId("a2a-cancel")
+                .receiverId(internalAgentId)
+                .performative(Performative.CANCEL)
+                .content("Cancelled by A2A client")
+                .build();
+            
+            messageService.send(cancelMsg.toMessage());
+            
+            // Update A2A task status
+            updater.cancel();
+            
+        } catch (Exception e) {
+            log.error("Failed to cancel A2A request: taskId={}", taskId, e);
+            throw new TaskNotCancelableError();
+        }
     }
     
     /**
-     * Cancels an ongoing A2A request.
-     * 
-     * @param contextId the context/task ID to cancel
-     * @return true if cancelled successfully
-     */
-    public CompletableFuture<Boolean> cancel(String contextId) {
-        log.debug("Cancelling A2A request: {}", contextId);
-        
-        // Send CANCEL message to internal agent
-        DialogueMessage cancelMsg = DialogueMessage.builder()
-            .conversationId(contextId)
-            .senderId("a2a-bridge")
-            .receiverId(internalAgentId)
-            .performative(Performative.CANCEL)
-            .build();
-        
-        Message message = cancelMsg.toMessage();
-        return messageService.send(message)
-            .thenApply(v -> true)
-            .exceptionally(ex -> {
-                log.error("Error cancelling request: {}", ex.getMessage());
-                return false;
-            });
-    }
-    
-    /**
-     * Routes a DialogueMessage to the internal agent and waits for response.
-     */
-    private CompletableFuture<DialogueMessage> routeToInternalAgent(DialogueMessage msg) {
-        Message request = msg.toMessage();
-        
-        return messageService.sendAndWait(request, timeout.toMillis())
-            .thenApply(DialogueMessage::fromMessage);
-    }
-    
-    /**
-     * @return the internal agent ID this executor routes to
+     * Returns the internal Jentic agent ID this executor routes to.
      */
     public String getInternalAgentId() {
         return internalAgentId;
+    }
+    
+    /**
+     * Extracts text content from A2A Message parts.
+     */
+    private String extractTextFromMessage(io.a2a.spec.Message message) {
+        StringBuilder textBuilder = new StringBuilder();
+        if (message.getParts() != null) {
+            for (Part<?> part : message.getParts()) {
+                if (part instanceof TextPart textPart) {
+                    textBuilder.append(textPart.getText());
+                }
+            }
+        }
+        return textBuilder.toString();
     }
 }

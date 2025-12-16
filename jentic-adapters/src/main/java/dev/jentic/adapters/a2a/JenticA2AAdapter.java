@@ -3,40 +3,48 @@ package dev.jentic.adapters.a2a;
 import dev.jentic.core.AgentDirectory;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.dialogue.DialogueMessage;
+import io.a2a.spec.AgentCard;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Optional;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Main adapter coordinating A2A integration.
+ * Main A2A adapter coordinating internal and external agent communication.
  * 
- * <p>This adapter provides unified message routing that automatically determines
- * whether to route internally (via MessageService) or externally (via A2A protocol).
- * 
- * <p>Routing logic:
+ * <p>Features:
  * <ul>
- *   <li>If target agent is registered locally → route via MessageService</li>
- *   <li>If target is a URL (http/https) → route via A2A client</li>
- *   <li>Otherwise → fail with unknown agent error</li>
+ *   <li>Auto-routing: internal agents via MessageService, external via A2A HTTP</li>
+ *   <li>Agent card caching for external agents</li>
+ *   <li>Streaming support for long-running tasks</li>
  * </ul>
  * 
  * <p>Usage:
  * <pre>{@code
- * JenticA2AAdapter adapter = new JenticA2AAdapter(
+ * // Create adapter
+ * var adapter = new JenticA2AAdapter(
  *     messageService,
  *     agentDirectory,
  *     "my-agent",
  *     Duration.ofMinutes(5)
  * );
  * 
- * // Send to internal agent
- * adapter.send(DialogueMessage.request("my-agent", "other-agent", "do task"));
+ * // Send to internal agent (auto-detected)
+ * adapter.send(DialogueMessage.builder()
+ *     .receiverId("internal-agent")
+ *     .performative(Performative.REQUEST)
+ *     .content(data)
+ *     .build());
  * 
- * // Send to external A2A agent
- * adapter.send(DialogueMessage.request("my-agent", "https://external.com", "query"));
+ * // Send to external A2A agent (URL)
+ * adapter.send(DialogueMessage.builder()
+ *     .receiverId("https://external-agent.com")
+ *     .performative(Performative.QUERY)
+ *     .content("question")
+ *     .build());
  * }</pre>
  * 
  * @since 0.5.0
@@ -51,6 +59,10 @@ public class JenticA2AAdapter {
     private final String localAgentId;
     private final Duration timeout;
     
+    // Cache for external agent cards
+    private final Map<String, CachedAgentCard> agentCardCache = new ConcurrentHashMap<>();
+    private final Duration cacheExpiry = Duration.ofMinutes(10);
+    
     public JenticA2AAdapter(
             MessageService messageService,
             AgentDirectory agentDirectory,
@@ -64,126 +76,130 @@ public class JenticA2AAdapter {
     }
     
     /**
-     * Creates an adapter with custom A2A client.
-     */
-    public JenticA2AAdapter(
-            MessageService messageService,
-            AgentDirectory agentDirectory,
-            JenticA2AClient externalClient,
-            String localAgentId,
-            Duration timeout) {
-        this.messageService = messageService;
-        this.agentDirectory = agentDirectory;
-        this.externalClient = externalClient;
-        this.localAgentId = localAgentId;
-        this.timeout = timeout;
-    }
-    
-    /**
      * Sends a message, auto-routing to internal or external agent.
      * 
-     * @param msg the message to send
-     * @return the response message
+     * @param message the DialogueMessage to send
+     * @return CompletableFuture with the response
      */
-    public CompletableFuture<DialogueMessage> send(DialogueMessage msg) {
-        String targetId = msg.receiverId();
-        
-        if (targetId == null || targetId.isEmpty()) {
-            return CompletableFuture.failedFuture(
-                new IllegalArgumentException("Target agent ID is required")
-            );
-        }
+    public CompletableFuture<DialogueMessage> send(DialogueMessage message) {
+        String targetId = message.receiverId();
         
         // Check if internal agent
         if (isInternalAgent(targetId)) {
             log.debug("Routing to internal agent: {}", targetId);
-            return sendInternal(msg);
+            return sendInternal(message);
         }
         
         // Check if external A2A agent (URL format)
-        if (isExternalUrl(targetId)) {
+        if (isExternalA2AUrl(targetId)) {
             log.debug("Routing to external A2A agent: {}", targetId);
-            return sendExternal(msg);
+            return sendExternal(targetId, message);
         }
         
-        // Unknown agent
-        log.warn("Unknown agent: {}", targetId);
+        // Unknown target
         return CompletableFuture.failedFuture(
             new IllegalArgumentException("Unknown agent: " + targetId + 
-                ". Must be a registered internal agent or an A2A URL (http/https)")
+                ". Must be registered internally or be an A2A URL (http/https)")
         );
     }
     
     /**
-     * Sends a request to an internal agent.
+     * Sends a message to an internal agent via MessageService.
      */
-    private CompletableFuture<DialogueMessage> sendInternal(DialogueMessage msg) {
-        return messageService
-            .sendAndWait(msg.toMessage(), timeout.toMillis())
+    public CompletableFuture<DialogueMessage> sendInternal(DialogueMessage message) {
+        return messageService.sendAndWait(message.toMessage(), timeout.toMillis())
             .thenApply(DialogueMessage::fromMessage);
     }
     
     /**
-     * Sends a request to an external A2A agent.
+     * Sends a message to an external A2A agent.
      */
-    private CompletableFuture<DialogueMessage> sendExternal(DialogueMessage msg) {
-        return externalClient.send(msg.receiverId(), msg, localAgentId);
+    public CompletableFuture<DialogueMessage> sendExternal(String agentUrl, DialogueMessage message) {
+        return externalClient.send(agentUrl, message, localAgentId);
     }
     
     /**
-     * Checks if a target is a registered internal agent.
+     * Sends with streaming for long-running tasks.
      */
-    private boolean isInternalAgent(String targetId) {
-        if (agentDirectory == null) {
-            return false;
+    public CompletableFuture<DialogueMessage> sendWithStreaming(
+            DialogueMessage message,
+            JenticA2AClient.StatusCallback statusCallback) {
+        
+        String targetId = message.receiverId();
+        
+        if (!isExternalA2AUrl(targetId)) {
+            // Internal agents don't support streaming in this version
+            return send(message);
         }
-        try {
-            return agentDirectory.findById(targetId)
-                .join()
-                .isPresent();
-        } catch (Exception e) {
-            return false;
-        }
+        
+        return externalClient.sendWithStreaming(targetId, message, localAgentId, statusCallback);
     }
     
     /**
-     * Checks if target is an external URL.
+     * Gets the AgentCard for an external A2A agent (cached).
      */
-    private boolean isExternalUrl(String targetId) {
+    public CompletableFuture<AgentCard> getExternalAgentCard(String agentUrl) {
+        CachedAgentCard cached = agentCardCache.get(agentUrl);
+        
+        if (cached != null && !cached.isExpired()) {
+            return CompletableFuture.completedFuture(cached.card());
+        }
+        
+        return externalClient.getAgentCard(agentUrl)
+            .thenApply(card -> {
+                agentCardCache.put(agentUrl, new CachedAgentCard(card, System.currentTimeMillis()));
+                return card;
+            });
+    }
+    
+    /**
+     * Checks if a target is an internal agent.
+     */
+    public boolean isInternalAgent(String targetId) {
+        if (targetId == null) return false;
+        return agentDirectory.findById(targetId).join().isPresent();
+    }
+    
+    /**
+     * Checks if a target is an external A2A URL.
+     */
+    public boolean isExternalA2AUrl(String targetId) {
+        if (targetId == null) return false;
         return targetId.startsWith("http://") || targetId.startsWith("https://");
     }
     
     /**
-     * Fetches the Agent Card from an external A2A endpoint.
-     * 
-     * @param agentUrl the agent's base URL
-     * @return the agent card
+     * Validates connectivity to an external A2A agent.
      */
-    public CompletableFuture<JenticA2AClient.AgentCard> fetchAgentCard(String agentUrl) {
-        return externalClient.fetchAgentCard(agentUrl);
+    public CompletableFuture<Boolean> validateExternalAgent(String agentUrl) {
+        return externalClient.isA2AAgent(agentUrl);
     }
     
     /**
-     * Checks if an external A2A agent is available.
-     * 
-     * @param agentUrl the agent URL to check
-     * @return true if agent is reachable
+     * Clears the agent card cache.
      */
-    public CompletableFuture<Boolean> pingExternal(String agentUrl) {
-        return externalClient.ping(agentUrl);
+    public void clearCache() {
+        agentCardCache.clear();
     }
     
     /**
-     * @return the local agent ID
+     * Gets the local agent ID.
      */
     public String getLocalAgentId() {
         return localAgentId;
     }
     
     /**
-     * @return the A2A client for external communication
+     * Gets the underlying A2A client.
      */
     public JenticA2AClient getExternalClient() {
         return externalClient;
+    }
+    
+    // Cache entry
+    private record CachedAgentCard(AgentCard card, long cachedAt) {
+        boolean isExpired() {
+            return System.currentTimeMillis() - cachedAt > Duration.ofMinutes(10).toMillis();
+        }
     }
 }

@@ -2,155 +2,192 @@ package dev.jentic.adapters.a2a;
 
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
+import io.a2a.spec.Artifact;
+import io.a2a.spec.Message;
+import io.a2a.spec.Part;
+import io.a2a.spec.Task;
+import io.a2a.spec.TaskState;
+import io.a2a.spec.TextPart;
 
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
- * Converts between Jentic DialogueMessage and A2A Message/Task formats.
- * 
- * <p>A2A protocol uses a different message structure than Jentic's dialogue layer.
- * This converter handles bidirectional conversion while preserving semantic intent.
+ * Converts between Jentic DialogueMessage and A2A SDK types.
  * 
  * @since 0.5.0
  */
 public class DialogueA2AConverter {
     
-    /**
-     * Converts a DialogueMessage to A2A message format.
-     * 
-     * @param msg the dialogue message
-     * @return A2A message representation
-     */
-    public A2AMessage toA2AMessage(DialogueMessage msg) {
-        return new A2AMessage(
-            msg.id(),
-            msg.conversationId(),
-            extractTextContent(msg.content()),
-            mapPerformativeToRole(msg.performative()),
-            Map.of(
-                "performative", msg.performative().name(),
-                "protocol", msg.protocol() != null ? msg.protocol() : "",
-                "senderId", msg.senderId(),
-                "receiverId", msg.receiverId() != null ? msg.receiverId() : ""
-            )
-        );
-    }
+    private static final String META_PERFORMATIVE = "jentic.performative";
+    private static final String META_CONVERSATION_ID = "jentic.conversationId";
+    private static final String META_IN_REPLY_TO = "jentic.inReplyTo";
+    private static final String META_PROTOCOL = "jentic.protocol";
     
     /**
-     * Converts an A2A message to DialogueMessage.
-     * 
-     * @param a2aMsg the A2A message
-     * @param localAgentId the local agent receiving the message
-     * @return DialogueMessage representation
+     * Converts A2A Task response to DialogueMessage.
      */
-    public DialogueMessage fromA2AMessage(A2AMessage a2aMsg, String localAgentId) {
-        Performative performative = inferPerformative(a2aMsg);
+    public DialogueMessage fromTask(Task task, String localAgentId) {
+        // Determine performative from task state
+        Performative performative = mapTaskStateToPerformative(task.getStatus().state());
+        
+        // Extract content from artifacts or status message
+        Object content = extractContent(task);
+        
+        // Extract metadata
+        Map<String, Object> metadata = task.getMetadata();
+        String conversationId = getMetadataString(metadata, META_CONVERSATION_ID, task.getId());
+        String inReplyTo = getMetadataString(metadata, META_IN_REPLY_TO, null);
+        String protocol = getMetadataString(metadata, META_PROTOCOL, null);
         
         return DialogueMessage.builder()
-            .id(a2aMsg.messageId())
-            .conversationId(a2aMsg.contextId())
-            .senderId(extractSenderId(a2aMsg))
+            .id(UUID.randomUUID().toString())
+            .conversationId(conversationId)
+            .senderId(extractSenderId(task))
             .receiverId(localAgentId)
             .performative(performative)
-            .content(a2aMsg.content())
+            .content(content)
+            .protocol(protocol)
+            .inReplyTo(inReplyTo)
             .build();
     }
     
     /**
-     * Converts a DialogueMessage response to A2A response format.
-     * 
-     * @param response the dialogue response
-     * @return A2A response representation
+     * Converts A2A Message to DialogueMessage (for incoming requests).
      */
-    public A2AResponse toA2AResponse(DialogueMessage response) {
-        return new A2AResponse(
-            response.id(),
-            response.conversationId(),
-            extractTextContent(response.content()),
-            mapPerformativeToStatus(response.performative()),
-            response.performative() == Performative.FAILURE
-        );
+    public DialogueMessage fromA2AMessage(Message a2aMessage, String taskId, String senderId, String receiverId) {
+        // Extract text content from parts
+        String textContent = extractTextFromParts(a2aMessage.getParts());
+        
+        // Default to REQUEST for incoming messages
+        Performative performative = Performative.REQUEST;
+        
+        return DialogueMessage.builder()
+            .id(a2aMessage.getMessageId())
+            .conversationId(taskId)
+            .senderId(senderId)
+            .receiverId(receiverId)
+            .performative(performative)
+            .content(textContent)
+            .build();
     }
     
     /**
-     * Infers Performative from A2A message context.
-     * A2A doesn't have explicit performatives, so we infer from context.
+     * Creates A2A Message for response.
      */
-    private Performative inferPerformative(A2AMessage a2aMsg) {
-        // Check metadata for explicit performative
-        if (a2aMsg.metadata() != null) {
-            String perfStr = a2aMsg.metadata().get("performative");
-            if (perfStr != null && !perfStr.isEmpty()) {
-                try {
-                    return Performative.valueOf(perfStr);
-                } catch (IllegalArgumentException e) {
-                    // Fall through to inference
-                }
-            }
-        }
+    public Message toA2AMessage(DialogueMessage dialogueMessage) {
+        TextPart textPart = new TextPart(serializeContent(dialogueMessage.content()), null);
         
-        // Infer from role
-        return switch (a2aMsg.role()) {
-            case "user" -> Performative.REQUEST;
-            case "assistant" -> Performative.INFORM;
-            case "system" -> Performative.NOTIFY;
-            default -> Performative.REQUEST;
+        return new Message.Builder()
+            .messageId(dialogueMessage.id())
+            .role(Message.Role.AGENT)
+            .parts(List.of(textPart))
+            .build();
+    }
+    
+    /**
+     * Creates A2A Artifact from DialogueMessage content.
+     */
+    public Artifact toArtifact(DialogueMessage dialogueMessage) {
+        TextPart textPart = new TextPart(serializeContent(dialogueMessage.content()), null);
+        
+        return new Artifact.Builder()
+            .artifactId(dialogueMessage.id())
+            .name("response")
+            .parts(List.of(textPart))
+            .build();
+    }
+    
+    /**
+     * Maps A2A TaskState to Jentic Performative.
+     */
+    public Performative mapTaskStateToPerformative(TaskState state) {
+        return switch (state) {
+            case COMPLETED -> Performative.INFORM;
+            case FAILED -> Performative.FAILURE;
+            case CANCELED -> Performative.CANCEL;
+            case WORKING, SUBMITTED -> Performative.AGREE;
+            case INPUT_REQUIRED -> Performative.QUERY;
+            default -> Performative.INFORM;
         };
     }
     
-    private String mapPerformativeToRole(Performative performative) {
+    /**
+     * Maps Jentic Performative to A2A TaskState.
+     */
+    public TaskState mapPerformativeToTaskState(Performative performative) {
         return switch (performative) {
-            case REQUEST, QUERY, CFP -> "user";
-            case INFORM, AGREE, PROPOSE -> "assistant";
-            case REFUSE, FAILURE, CANCEL -> "assistant";
-            case NOTIFY -> "system";
+            case INFORM -> TaskState.COMPLETED;
+            case FAILURE -> TaskState.FAILED;
+            case CANCEL -> TaskState.CANCELED;
+            case AGREE -> TaskState.WORKING;
+            case REFUSE -> TaskState.FAILED;
+            case QUERY -> TaskState.INPUT_REQUIRED;
+            default -> TaskState.WORKING;
         };
     }
     
-    private String mapPerformativeToStatus(Performative performative) {
-        return switch (performative) {
-            case INFORM -> "completed";
-            case AGREE -> "working";
-            case FAILURE -> "failed";
-            case REFUSE -> "rejected";
-            case CANCEL -> "canceled";
-            default -> "completed";
-        };
-    }
+    // === Private helpers ===
     
-    private String extractSenderId(A2AMessage a2aMsg) {
-        if (a2aMsg.metadata() != null && a2aMsg.metadata().containsKey("senderId")) {
-            return a2aMsg.metadata().get("senderId");
-        }
-        return "external-agent";
-    }
-    
-    private String extractTextContent(Object content) {
+    private String serializeContent(Object content) {
         if (content == null) {
             return "";
+        }
+        if (content instanceof String s) {
+            return s;
         }
         return content.toString();
     }
     
-    /**
-     * A2A Message representation (simplified).
-     */
-    public record A2AMessage(
-        String messageId,
-        String contextId,
-        String content,
-        String role,
-        Map<String, String> metadata
-    ) {}
+    private Object extractContent(Task task) {
+        // First try artifacts
+        List<Artifact> artifacts = task.getArtifacts();
+        if (artifacts != null && !artifacts.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (Artifact artifact : artifacts) {
+                String text = extractTextFromParts(artifact.parts());
+                if (!text.isEmpty()) {
+                    sb.append(text);
+                }
+            }
+            if (!sb.isEmpty()) {
+                return sb.toString();
+            }
+        }
+        
+        // Fall back to status message
+        if (task.getStatus() != null && task.getStatus().message() != null) {
+            Message msg = task.getStatus().message();
+            return extractTextFromParts(msg.getParts());
+        }
+        
+        return "";
+    }
     
-    /**
-     * A2A Response representation (simplified).
-     */
-    public record A2AResponse(
-        String messageId,
-        String contextId,
-        String content,
-        String status,
-        boolean isError
-    ) {}
+    private String extractTextFromParts(List<Part<?>> parts) {
+        if (parts == null) return "";
+        
+        StringBuilder sb = new StringBuilder();
+        for (Part<?> part : parts) {
+            if (part instanceof TextPart textPart) {
+                sb.append(textPart.getText());
+            }
+        }
+        return sb.toString();
+    }
+    
+    private String extractSenderId(Task task) {
+        Map<String, Object> metadata = task.getMetadata();
+        if (metadata != null && metadata.containsKey("agentId")) {
+            return metadata.get("agentId").toString();
+        }
+        return "external-agent";
+    }
+    
+    private String getMetadataString(Map<String, Object> metadata, String key, String defaultValue) {
+        if (metadata == null) return defaultValue;
+        Object value = metadata.get(key);
+        return value != null ? value.toString() : defaultValue;
+    }
 }
