@@ -1,8 +1,5 @@
 package dev.jentic.examples.dialogue;
 
-import dev.jentic.core.Agent;
-import dev.jentic.core.Behavior;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.dialogue.DialogueHandler;
 import dev.jentic.core.dialogue.DialogueMessage;
@@ -10,7 +7,6 @@ import dev.jentic.core.dialogue.Performative;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.dialogue.DialogueCapability;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
 
 import java.time.Duration;
 import java.util.Comparator;
@@ -88,7 +84,6 @@ public class ContractNetExample {
     static class Manager extends BaseAgent {
 
         private final DialogueCapability dialogue = new DialogueCapability(this);
-        private boolean running;
 
         @Override public String getAgentId() { return "manager"; }
         @Override public String getAgentName() { return "Manager"; }
@@ -97,7 +92,6 @@ public class ContractNetExample {
         protected void onStart() {
             super.onStart();
             dialogue.initialize(messageService);
-            running = true;
             System.out.println("[Manager] Started");
         }
 
@@ -105,7 +99,6 @@ public class ContractNetExample {
         protected void onStop() {
             super.onStop();
             dialogue.shutdown(messageService);
-            running = false;
         }
         
         CompletableFuture<String> allocateTask(Task task, List<String> workerIds) {
@@ -161,7 +154,6 @@ public class ContractNetExample {
         private final double efficiency;
         private final DialogueCapability dialogue = new DialogueCapability(this);
         private final Random random = new Random();
-        private boolean running;
         
         Worker(String id, double efficiency) {
             this.id = id;
@@ -175,7 +167,6 @@ public class ContractNetExample {
         protected void onStart() {
             super.onStart();
             dialogue.initialize(messageService);
-            running = true;
             System.out.printf("[%s] Started (efficiency: %.0f%%)%n", id, efficiency * 100);
         }
 
@@ -183,7 +174,6 @@ public class ContractNetExample {
         protected void onStop() {
             super.onStop();
             dialogue.shutdown(messageService);
-            running = false;
         }
 
         @DialogueHandler(performatives = Performative.CFP)
