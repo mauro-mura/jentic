@@ -351,24 +351,14 @@ We follow [Semantic Versioning](https://semver.org/):
 
 ### Getting Help
 
-1. **Check Documentation** - README, wiki, examples
+1. **Check Documentation** - README, examples
 2. **Search Issues** - Someone might have had the same problem
 3. **Ask in Discussions** - Community can help
 4. **Create an Issue** - If you found a bug or have a specific request
 
-## 🏆 Recognition
-
-We appreciate all contributions and will:
-
-- List contributors in release notes
-- Highlight significant contributions in blog posts
-- Provide "Contributor" badge on Discord
-- Send Jentic stickers to first-time contributors! 🎉
-
 ## 📧 Contact
 
-- **Project Lead**: [Your Name](mailto:your.email@example.com)
-- **Community Discord**: [Jentic Community](https://discord.gg/jentic)
+- **Project Lead**: Mauro Mura
 - **Issues**: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
 
 Thank you for helping make Jentic better! 🚀
