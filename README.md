@@ -129,7 +129,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -140,7 +140,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -152,7 +152,7 @@ Enterprise-grade implementations (coming in future releases).
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-adapters</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -163,7 +163,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-tools</artifactId>
-    <version>0.5.0</version>
+    <version>0.6.0-SNAPSHOT</version>
 </dependency>
 ```
 
