@@ -4,6 +4,7 @@ import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.config.ConfigurationLoader;
 import dev.jentic.core.exceptions.ConfigurationException;
+import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
@@ -11,6 +12,7 @@ import dev.jentic.runtime.discovery.AgentScanner;
 import dev.jentic.runtime.discovery.AnnotationProcessor;
 import dev.jentic.runtime.lifecycle.LifecycleListener;
 import dev.jentic.runtime.lifecycle.LifecycleManager;
+import dev.jentic.runtime.memory.InMemoryStore;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.slf4j.Logger;
@@ -33,6 +35,7 @@ public class JenticRuntime {
     private final MessageService messageService;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
+    private final MemoryStore memoryStore;
 
     // Discovery components
     private final AgentScanner agentScanner;
@@ -63,10 +66,12 @@ public class JenticRuntime {
                 builder.agentDirectory : new LocalAgentDirectory();
         this.behaviorScheduler = builder.behaviorScheduler != null ?
                 builder.behaviorScheduler : new SimpleBehaviorScheduler();
+        this.memoryStore = builder.memoryStore != null ?
+        		builder.memoryStore : new InMemoryStore();
 
         // Initialize discovery components
         this.agentScanner = new AgentScanner();
-        this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler);
+        this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler, memoryStore);
         this.annotationProcessor = new AnnotationProcessor(messageService);
         this.lifecycleManager = new LifecycleManager();
 
@@ -200,6 +205,9 @@ public class JenticRuntime {
             baseAgent.setMessageService(messageService);
             baseAgent.setAgentDirectory(agentDirectory);
             baseAgent.setBehaviorScheduler(behaviorScheduler);
+            if (memoryStore != null) {
+            	baseAgent.setMemoryStore(memoryStore);
+            }
         }
 
         // Create descriptor and register in directory
@@ -490,6 +498,7 @@ public class JenticRuntime {
         private MessageService messageService;
         private AgentDirectory agentDirectory;
         private BehaviorScheduler behaviorScheduler;
+        private MemoryStore memoryStore;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
 
@@ -566,6 +575,11 @@ public class JenticRuntime {
             this.behaviorScheduler = behaviorScheduler;
             return this;
         }
+        
+        public Builder memoryStore(MemoryStore memoryStore) {
+           this.memoryStore = memoryStore;
+           return this;
+       }
 
         public Builder scanPackage(String packageName) {
             if (packageName != null && !packageName.trim().isEmpty()) {

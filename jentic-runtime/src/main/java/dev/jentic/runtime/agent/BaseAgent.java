@@ -1,7 +1,9 @@
 package dev.jentic.runtime.agent;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,11 +23,56 @@ import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.MessageService;
+import dev.jentic.core.memory.MemoryEntry;
+import dev.jentic.core.memory.MemoryQuery;
+import dev.jentic.core.memory.MemoryScope;
+import dev.jentic.core.memory.MemoryStats;
+import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 
 /**
- * Base implementation of Agent interface.
- * Provides common functionality for all agents.
+ * Base implementation for all agents in the Jentic framework.
+ * 
+ * <p>Provides core functionality including:
+ * <ul>
+ *   <li>Lifecycle management (start/stop)</li>
+ *   <li>Message handling</li>
+ *   <li>Behavior scheduling</li>
+ *   <li>Agent directory integration</li>
+ *   <li>Memory management (since 0.6.0)</li>
+ * </ul>
+ * 
+ * <p>All concrete agents should extend this class and implement
+ * the required lifecycle methods.
+ * 
+ * <p><b>Memory Support (since 0.6.0):</b>
+ * Agents can optionally use memory features by calling memory methods.
+ * Memory features are only available if {@link #setMemoryStore(MemoryStore)}
+ * is called during initialization.
+ * 
+ * <p>Example usage:
+ * <pre>{@code
+ * @JenticAgent("my-agent")
+ * public class MyAgent extends BaseAgent {
+ *     
+ *     @Override
+ *     protected void onStart() {
+ *         // Use memory if available
+ *         rememberShort("session-id", "abc123", Duration.ofMinutes(30));
+ *         rememberLong("user-preference", "dark-mode");
+ *     }
+ *     
+ *     @JenticMessageHandler("process-request")
+ *     public void handleRequest(Message message) {
+ *         recall("session-id", MemoryScope.SHORT_TERM)
+ *             .thenAccept(sessionId -> {
+ *                 log.info("Processing for session: {}", sessionId);
+ *             });
+ *     }
+ * }
+ * }</pre>
+ * 
+ * @since 0.1.0
  */
 public abstract class BaseAgent implements Agent {
     
@@ -43,9 +90,14 @@ public abstract class BaseAgent implements Agent {
     private final List<Runnable> startHooks = new CopyOnWriteArrayList<>();
     private final List<Runnable> stopHooks = new CopyOnWriteArrayList<>();
 
+    // Core services (injected by runtime)
     protected MessageService messageService;
     protected BehaviorScheduler behaviorScheduler;
     protected AgentDirectory agentDirectory;
+    
+    // Memory support (injected by runtime, optional - since 0.6.0)
+    protected MemoryStore memoryStore;
+    private String memoryNamespace;
     
     protected AgentDescriptor agentDescriptor;
     
@@ -65,12 +117,15 @@ public abstract class BaseAgent implements Agent {
     
     /**
      * Create an agent with ID and name
+     * @param agentId the agent identifier
+     * @param agentName the agent display name
      */
     protected BaseAgent(String agentId, String agentName) {
         this.agentId = agentId;
         this.agentName = agentName;
         
         this.agentDescriptor = createDefaultDescriptor();
+        this.memoryNamespace = "agent:" + agentId + ":";
     }
     
     @Override
@@ -226,6 +281,20 @@ public abstract class BaseAgent implements Agent {
                  descriptor.agentType(), descriptor.capabilities());
     }
 
+    /**
+     * Injects the memory store (optional).
+     * Called by the runtime during agent initialization.
+     * 
+     * <p>If not set, memory operations will throw {@link IllegalStateException}.
+     * 
+     * @param memoryStore the memory store
+     * @since 0.6.0
+     */
+    public void setMemoryStore(MemoryStore memoryStore) {
+        this.memoryStore = memoryStore;
+        log.debug("Memory store configured for agent: {}", agentId);
+    }
+    
     // =========================================================================
     // LIFECYCLE HOOKS API
     // =========================================================================
@@ -542,6 +611,321 @@ public abstract class BaseAgent implements Agent {
     private void unregisterFromDirectory() {
         if (agentDirectory != null) {
             agentDirectory.unregister(agentId);
+        }
+    }
+    
+// ========== MEMORY API (since 0.6.0) ==========
+    
+    /**
+     * Stores a short-term memory (volatile, cleared on restart).
+     * 
+     * <p>Short-term memories are suitable for:
+     * <ul>
+     *   <li>Temporary state during task execution</li>
+     *   <li>Caching of computed values</li>
+     *   <li>Session-specific information</li>
+     * </ul>
+     * 
+     * @param key the memory key (will be namespaced automatically)
+     * @param content the memory content
+     * @return a future that completes when stored
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> rememberShort(String key, String content) {
+        return rememberShort(key, content, null);
+    }
+    
+    /**
+     * Stores a short-term memory with expiration.
+     * 
+     * @param key the memory key (will be namespaced automatically)
+     * @param content the memory content
+     * @param ttl time-to-live (null = never expires)
+     * @return a future that completes when stored
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> rememberShort(String key, String content, Duration ttl) {
+        ensureMemoryStore();
+        
+        var entry = MemoryEntry.builder(content)
+            .ownerId(agentId)
+            .expiresAt(ttl != null ? java.time.Instant.now().plus(ttl) : null)
+            .metadata("type", "agent-memory")
+            .build();
+        
+        return memoryStore.store(namespaced(key), entry, MemoryScope.SHORT_TERM)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.trace("Stored short-term memory: key={}, ttl={}", key, ttl);
+                } else {
+                    log.error("Failed to store short-term memory: key={}", key, ex);
+                }
+            });
+    }
+    
+    /**
+     * Stores a long-term memory (persistent, survives restart).
+     * 
+     * <p>Long-term memories are suitable for:
+     * <ul>
+     *   <li>Learned facts and knowledge</li>
+     *   <li>User preferences</li>
+     *   <li>Historical patterns</li>
+     * </ul>
+     * 
+     * @param key the memory key (will be namespaced automatically)
+     * @param content the memory content
+     * @return a future that completes when stored
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> rememberLong(String key, String content) {
+        ensureMemoryStore();
+        
+        var entry = MemoryEntry.builder(content)
+            .ownerId(agentId)
+            .metadata("type", "agent-memory")
+            .metadata("stored_at", java.time.Instant.now().toString())
+            .build();
+        
+        return memoryStore.store(namespaced(key), entry, MemoryScope.LONG_TERM)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.trace("Stored long-term memory: key={}", key);
+                } else {
+                    log.error("Failed to store long-term memory: key={}", key, ex);
+                }
+            });
+    }
+    
+    /**
+     * Stores a long-term memory with metadata.
+     * 
+     * @param key the memory key
+     * @param content the memory content
+     * @param metadata additional metadata
+     * @return a future that completes when stored
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> rememberLong(String key, String content, 
+                                                    Map<String, Object> metadata) {
+        ensureMemoryStore();
+        
+        var builder = MemoryEntry.builder(content)
+            .ownerId(agentId)
+            .metadata("type", "agent-memory");
+        
+        metadata.forEach(builder::metadata);
+        
+        return memoryStore.store(namespaced(key), builder.build(), MemoryScope.LONG_TERM)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.trace("Stored long-term memory with metadata: key={}", key);
+                } else {
+                    log.error("Failed to store long-term memory: key={}", key, ex);
+                }
+            });
+    }
+    
+    /**
+     * Shares a memory with other agents (for coordination).
+     * 
+     * <p>Shared memories allow multiple agents to access the same information,
+     * useful for orchestrated workflows and multi-agent collaboration.
+     * 
+     * @param key the shared memory key (not namespaced)
+     * @param content the memory content
+     * @param agentIds the agent IDs to share with
+     * @return a future that completes when stored
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> shareMemory(String key, String content, 
+                                                   String... agentIds) {
+        ensureMemoryStore();
+        
+        var entry = MemoryEntry.builder(content)
+            .ownerId(agentId)
+            .sharedWith(agentIds)
+            .metadata("type", "shared-memory")
+            .metadata("created_by", agentId)
+            .build();
+        
+        return memoryStore.store("shared:" + key, entry, MemoryScope.SHORT_TERM)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.debug("Shared memory with {} agents: key={}", agentIds.length, key);
+                } else {
+                    log.error("Failed to share memory: key={}", key, ex);
+                }
+            });
+    }
+    
+    /**
+     * Recalls a memory from the specified scope.
+     * 
+     * @param key the memory key (will be namespaced automatically)
+     * @param scope the memory scope to search in
+     * @return a future containing the memory content, or empty if not found
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Optional<String>> recall(String key, MemoryScope scope) {
+        ensureMemoryStore();
+        
+        return memoryStore.retrieve(namespaced(key), scope)
+            .thenApply(opt -> opt.map(MemoryEntry::content))
+            .whenComplete((result, ex) -> {
+                if (ex == null) {
+                    log.trace("Recalled memory: key={}, scope={}, found={}", 
+                             key, scope, result.isPresent());
+                } else {
+                    log.error("Failed to recall memory: key={}, scope={}", key, scope, ex);
+                }
+            });
+    }
+    
+    /**
+     * Recalls a shared memory.
+     * 
+     * @param key the shared memory key (not namespaced)
+     * @return a future containing the memory content, or empty if not found
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Optional<String>> recallShared(String key) {
+        ensureMemoryStore();
+        
+        return memoryStore.retrieve("shared:" + key, MemoryScope.SHORT_TERM)
+            .thenApply(opt -> opt.filter(e -> e.canAccess(agentId))
+                                 .map(MemoryEntry::content))
+            .whenComplete((result, ex) -> {
+                if (ex == null) {
+                    log.trace("Recalled shared memory: key={}, found={}", key, result.isPresent());
+                } else {
+                    log.error("Failed to recall shared memory: key={}", key, ex);
+                }
+            });
+    }
+    
+    /**
+     * Searches through agent's memories.
+     * 
+     * @param query the search text
+     * @param scope the memory scope to search in
+     * @return a future containing matching memory contents
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<List<String>> searchMemory(String query, MemoryScope scope) {
+        ensureMemoryStore();
+        
+        var memoryQuery = MemoryQuery.builder()
+            .text(query)
+            .scope(scope)
+            .ownerId(agentId)
+            .limit(20)
+            .build();
+        
+        return memoryStore.search(memoryQuery)
+            .thenApply(entries -> entries.stream()
+                .map(MemoryEntry::content)
+                .toList())
+            .whenComplete((results, ex) -> {
+                if (ex == null) {
+                    log.trace("Searched memory: query={}, scope={}, found={}", 
+                             query, scope, results.size());
+                } else {
+                    log.error("Failed to search memory: query={}, scope={}", query, scope, ex);
+                }
+            });
+    }
+    
+    /**
+     * Searches with custom filters.
+     * 
+     * @param query the memory query
+     * @return a future containing matching entries
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<List<MemoryEntry>> searchMemory(MemoryQuery query) {
+        ensureMemoryStore();
+        return memoryStore.search(query);
+    }
+    
+    /**
+     * Forgets a memory.
+     * 
+     * @param key the memory key (will be namespaced automatically)
+     * @param scope the memory scope
+     * @return a future that completes when deleted
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> forget(String key, MemoryScope scope) {
+        ensureMemoryStore();
+        
+        return memoryStore.delete(namespaced(key), scope)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.trace("Forgot memory: key={}, scope={}", key, scope);
+                } else {
+                    log.error("Failed to forget memory: key={}, scope={}", key, scope, ex);
+                }
+            });
+    }
+    
+    /**
+     * Clears all memories in the specified scope.
+     * 
+     * <p><b>Warning:</b> This operation cannot be undone.
+     * 
+     * @param scope the memory scope to clear
+     * @return a future that completes when cleared
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> clearMemory(MemoryScope scope) {
+        ensureMemoryStore();
+        
+        return memoryStore.clear(scope)
+            .whenComplete((v, ex) -> {
+                if (ex == null) {
+                    log.info("Cleared all {} memories", scope);
+                } else {
+                    log.error("Failed to clear {} memories", scope, ex);
+                }
+            });
+    }
+    
+    /**
+     * Gets memory statistics for this agent.
+     * 
+     * @return memory usage statistics
+     * @throws IllegalStateException if memory store not configured
+     * @since 0.6.0
+     */
+    public MemoryStats getMemoryStats() {
+        ensureMemoryStore();
+        return memoryStore.getStats();
+    }
+    
+    // ========== PRIVATE HELPERS ==========
+    
+    private String namespaced(String key) {
+        return memoryNamespace + key;
+    }
+    
+    private void ensureMemoryStore() {
+        if (memoryStore == null) {
+            throw new IllegalStateException(
+                "MemoryStore not configured. Enable memory feature in runtime configuration " +
+                "or call setMemoryStore() during initialization."
+            );
         }
     }
     

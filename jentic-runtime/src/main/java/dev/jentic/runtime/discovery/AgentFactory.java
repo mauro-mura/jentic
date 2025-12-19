@@ -16,6 +16,7 @@ import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.exceptions.AgentException;
+import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.agent.BaseAgent;
 
 /**
@@ -29,20 +30,26 @@ public class AgentFactory {
     private final MessageService messageService;
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
+    private final MemoryStore memoryStore;
     private final Map<Class<?>, Object> availableServices;
 
     public AgentFactory(MessageService messageService,
                         AgentDirectory agentDirectory,
-                        BehaviorScheduler behaviorScheduler) {
+                        BehaviorScheduler behaviorScheduler,
+                        MemoryStore memoryStore) {
         this.messageService = messageService;
         this.agentDirectory = agentDirectory;
         this.behaviorScheduler = behaviorScheduler;
+        this.memoryStore = memoryStore;
         this.availableServices = new HashMap<>();
 
         // Register core services
         this.availableServices.put(MessageService.class, messageService);
         this.availableServices.put(AgentDirectory.class, agentDirectory);
         this.availableServices.put(BehaviorScheduler.class, behaviorScheduler);
+        if (memoryStore != null) {
+            this.availableServices.put(MemoryStore.class, memoryStore);
+        }
     }
 
     /**
@@ -162,6 +169,10 @@ public class AgentFactory {
         baseAgent.setAgentDirectory(agentDirectory);
         baseAgent.setBehaviorScheduler(behaviorScheduler);
 
+        if (memoryStore != null) {
+        	baseAgent.setMemoryStore(memoryStore);
+        }
+        
         log.debug("Configured BaseAgent: {}", baseAgent.getAgentId());
     }
 
