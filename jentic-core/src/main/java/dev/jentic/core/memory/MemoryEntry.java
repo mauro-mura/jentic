@@ -14,6 +14,7 @@ import java.util.*;
  *   <li><b>expiresAt</b>: Optional expiration time for automatic cleanup</li>
  *   <li><b>ownerId</b>: Agent that created this memory</li>
  *   <li><b>sharedWith</b>: Agents that have access to this memory</li>
+ *   <li><b>tokenCount</b>: estimated token count for LLM context</li>
  * </ul>
  * 
  * <p>Memory entries are immutable and thread-safe.
@@ -37,7 +38,8 @@ public record MemoryEntry(
     Instant createdAt,
     Instant expiresAt,
     String ownerId,
-    Set<String> sharedWith
+    Set<String> sharedWith,
+    int tokenCount
 ) {
     
     /**
@@ -58,6 +60,10 @@ public record MemoryEntry(
         
         if (expiresAt != null && expiresAt.isBefore(createdAt)) {
             throw new IllegalArgumentException("Expiration time cannot be before creation time");
+        }
+        
+        if (tokenCount < 0) {
+            throw new IllegalArgumentException("Token count cannot be negative");
         }
     }
     
@@ -135,6 +141,7 @@ public record MemoryEntry(
         private Instant expiresAt;
         private String ownerId;
         private final Set<String> sharedWith = new HashSet<>();
+        private int tokenCount = 0;
         
         private Builder(String content) {
             this.content = content;
@@ -219,6 +226,21 @@ public record MemoryEntry(
         }
         
         /**
+         * Sets the estimated token count for LLM context.
+         * 
+         * @param tokenCount the estimated token count (must be >= 0)
+         * @return this builder
+         * @throws IllegalArgumentException if tokenCount is negative
+         */
+        public Builder tokenCount(int tokenCount) {  // ✅ ADDED in Day 2
+            if (tokenCount < 0) {
+                throw new IllegalArgumentException("Token count cannot be negative");
+            }
+            this.tokenCount = tokenCount;
+            return this;
+        }
+        
+        /**
          * Builds the MemoryEntry instance.
          * 
          * @return a new immutable MemoryEntry
@@ -230,7 +252,8 @@ public record MemoryEntry(
                 createdAt,
                 expiresAt,
                 ownerId,
-                sharedWith
+                sharedWith,
+                tokenCount
             );
         }
     }
