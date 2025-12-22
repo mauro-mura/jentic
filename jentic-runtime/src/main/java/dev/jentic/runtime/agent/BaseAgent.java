@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.behavior.BaseBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +99,8 @@ public abstract class BaseAgent implements Agent {
     // Memory support (injected by runtime, optional - since 0.6.0)
     protected MemoryStore memoryStore;
     private String memoryNamespace;
+
+    protected LLMMemoryManager llmMemoryManager;
     
     protected AgentDescriptor agentDescriptor;
     
@@ -293,6 +296,37 @@ public abstract class BaseAgent implements Agent {
     public void setMemoryStore(MemoryStore memoryStore) {
         this.memoryStore = memoryStore;
         log.debug("Memory store configured for agent: {}", agentId);
+    }
+
+    /**
+     * Injects the LLM memory manager (optional).
+     * @param llmMemoryManager
+     * @since 0.6.0
+     */
+    public void setLLMMemoryManager(LLMMemoryManager llmMemoryManager) {
+        this.llmMemoryManager = llmMemoryManager;
+        log.debug("LLM memory manager configured for agent: {}", agentId);
+    }
+
+    /**
+     * accessor with validation
+     * @return llmMemoryManager
+     * @since 0.6.0
+     */
+    protected LLMMemoryManager getLLMMemoryManager() {
+        if (llmMemoryManager == null) {
+            throw new IllegalStateException("LLMMemoryManager not initialized");
+        }
+        return llmMemoryManager;
+    }
+
+    /**
+     * check llm memory availability
+     *
+     * @since 0.6.0
+     */
+    protected boolean hasLLMMemory() {
+        return llmMemoryManager != null;
     }
     
     // =========================================================================
