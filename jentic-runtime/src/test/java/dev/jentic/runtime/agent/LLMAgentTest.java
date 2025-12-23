@@ -17,11 +17,11 @@ import static dev.jentic.runtime.memory.llm.ContextWindowStrategies.*;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * Tests for AIAgent helper class.
+ * Tests for LLMAgent helper class.
  */
-class AIAgentTest {
+class LLMAgentTest {
     
-    private TestAIAgent agent;
+    private TestLLMAgent agent;
     private MemoryStore memoryStore;
     private DefaultLLMMemoryManager llmMemory;
     
@@ -34,7 +34,7 @@ class AIAgentTest {
             "test-agent"
         );
         
-        agent = new TestAIAgent("test-agent");
+        agent = new TestLLMAgent("test-agent");
         agent.setMemoryStore(memoryStore);
         agent.setLLMMemoryManager(llmMemory);
     }
@@ -289,9 +289,9 @@ class AIAgentTest {
     /**
      * Test implementation of AIAgent.
      */
-    static class TestAIAgent extends AIAgent {
+    static class TestLLMAgent extends LLMAgent {
         
-        public TestAIAgent(String agentId) {
+        public TestLLMAgent(String agentId) {
             super(agentId);
         }
         

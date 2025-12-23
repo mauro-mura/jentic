@@ -12,7 +12,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
- * Base class for AI agents that use LLM (Large Language Model) memory.
+ * Base class for LLM-powered agents that use language model memory.
  * 
  * <p>Extends {@link BaseAgent} with convenient methods for:
  * <ul>
@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
  * <p><b>Example Usage:</b>
  * <pre>{@code
  * @JenticAgent("chat-bot")
- * public class ChatBot extends AIAgent {
+ * public class ChatBot extends LLMAgent {
  *     
  *     @JenticMessageHandler("user.message")
  *     public void handleUserMessage(Message msg) {
@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
  * 
  * @since 0.6.0
  */
-public abstract class AIAgent extends BaseAgent {
+public abstract class LLMAgent extends BaseAgent {
     
     /**
      * Default context window strategy (SLIDING).
@@ -87,28 +87,28 @@ public abstract class AIAgent extends BaseAgent {
     protected int messagesToSummarize = 10;
     
     /**
-     * Creates an AI agent with auto-generated ID.
+     * Creates an LLM agent with auto-generated ID.
      */
-    protected AIAgent() {
+    protected LLMAgent() {
         super();
     }
     
     /**
-     * Creates an AI agent with specific ID.
+     * Creates an LLM agent with specific ID.
      * 
      * @param agentId the agent identifier
      */
-    protected AIAgent(String agentId) {
+    protected LLMAgent(String agentId) {
         super(agentId);
     }
     
     /**
-     * Creates an AI agent with ID and name.
+     * Creates an LLM agent with ID and name.
      * 
      * @param agentId the agent identifier
      * @param agentName the agent display name
      */
-    protected AIAgent(String agentId, String agentName) {
+    protected LLMAgent(String agentId, String agentName) {
         super(agentId, agentName);
     }
     
@@ -117,22 +117,26 @@ public abstract class AIAgent extends BaseAgent {
     /**
      * Add a message to the conversation history.
      * 
+     * <p>Enhanced version of {@link BaseAgent#addLLMMessage} with auto-summarization.
+     * 
      * @param message the LLM message
      * @return future that completes when added
      */
     protected CompletableFuture<Void> addConversationMessage(LLMMessage message) {
-        return getLLMMemoryManager().addMessage(message)
+        return addLLMMessage(message)
             .thenRun(() -> checkAndSummarizeIfNeeded());
     }
     
     /**
      * Add multiple messages to the conversation history.
      * 
+     * <p>Enhanced version of {@link BaseAgent#addLLMMessages} with auto-summarization.
+     * 
      * @param messages the messages
      * @return future that completes when added
      */
     protected CompletableFuture<Void> addConversationMessages(List<LLMMessage> messages) {
-        return getLLMMemoryManager().addMessages(messages)
+        return addLLMMessages(messages)
             .thenRun(() -> checkAndSummarizeIfNeeded());
     }
     
@@ -156,7 +160,7 @@ public abstract class AIAgent extends BaseAgent {
         int maxTokens,
         ContextWindowStrategy strategy
     ) {
-        return getLLMMemoryManager().getConversationHistory(maxTokens, strategy);
+        return getLLMConversationHistory(maxTokens, strategy);
     }
     
     /**
@@ -165,7 +169,7 @@ public abstract class AIAgent extends BaseAgent {
      * @return future that completes when cleared
      */
     protected CompletableFuture<Void> clearConversation() {
-        return getLLMMemoryManager().clearConversationHistory();
+        return clearLLMConversation();
     }
     
     /**
@@ -173,8 +177,8 @@ public abstract class AIAgent extends BaseAgent {
      * 
      * @return token count
      */
-    protected int getConversationTokens() {
-        return getLLMMemoryManager().getCurrentTokenCount();
+    public int getConversationTokens() {
+        return getLLMConversationTokens();
     }
     
     /**
@@ -182,14 +186,16 @@ public abstract class AIAgent extends BaseAgent {
      * 
      * @return message count
      */
-    protected int getConversationMessageCount() {
-        return getLLMMemoryManager().getMessageCount();
+    public int getConversationMessageCount() {
+        return getLLMConversationMessageCount();
     }
     
     // ========== FACTS / LONG-TERM MEMORY ==========
     
     /**
      * Store a fact in long-term memory.
+     * 
+     * <p>Simplified version of {@link BaseAgent#rememberLLM} with empty metadata.
      * 
      * @param key the fact key
      * @param content the fact content
@@ -202,6 +208,8 @@ public abstract class AIAgent extends BaseAgent {
     /**
      * Store a fact in long-term memory with metadata.
      * 
+     * <p>Convenience wrapper around {@link BaseAgent#rememberLLM}.
+     * 
      * @param key the fact key
      * @param content the fact content
      * @param metadata the metadata
@@ -212,7 +220,7 @@ public abstract class AIAgent extends BaseAgent {
         String content,
         Map<String, Object> metadata
     ) {
-        return getLLMMemoryManager().remember(key, content, metadata);
+        return rememberLLM(key, content, metadata);
     }
     
     /**
@@ -233,7 +241,7 @@ public abstract class AIAgent extends BaseAgent {
      * @return future with relevant facts
      */
     protected CompletableFuture<List<MemoryEntry>> retrieveFacts(String query, int maxTokens) {
-        return getLLMMemoryManager().retrieveRelevantContext(query, maxTokens);
+        return retrieveLLMContext(query, maxTokens);
     }
     
     // ========== PROMPT BUILDING ==========

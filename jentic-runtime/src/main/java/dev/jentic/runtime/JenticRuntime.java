@@ -1,27 +1,46 @@
 package dev.jentic.runtime;
 
-import dev.jentic.core.*;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Agent;
+import dev.jentic.core.AgentDescriptor;
+import dev.jentic.core.AgentDirectory;
+import dev.jentic.core.AgentStatus;
+import dev.jentic.core.BehaviorScheduler;
+import dev.jentic.core.JenticConfiguration;
+import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.config.ConfigurationLoader;
 import dev.jentic.core.exceptions.ConfigurationException;
 import dev.jentic.core.memory.MemoryStore;
+import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.agent.LLMAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
 import dev.jentic.runtime.discovery.AnnotationProcessor;
 import dev.jentic.runtime.lifecycle.LifecycleListener;
 import dev.jentic.runtime.lifecycle.LifecycleManager;
-import dev.jentic.runtime.memory.InMemoryStore;
+import dev.jentic.runtime.memory.llm.DefaultLLMMemoryManager;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Main runtime for Jentic framework with automatic agent discovery.
@@ -36,6 +55,7 @@ public class JenticRuntime {
     private final AgentDirectory agentDirectory;
     private final BehaviorScheduler behaviorScheduler;
     private final MemoryStore memoryStore;
+    private final Function<String, LLMMemoryManager> llmMemoryManagerFactory;
 
     // Discovery components
     private final AgentScanner agentScanner;
@@ -66,9 +86,12 @@ public class JenticRuntime {
                 builder.agentDirectory : new LocalAgentDirectory();
         this.behaviorScheduler = builder.behaviorScheduler != null ?
                 builder.behaviorScheduler : new SimpleBehaviorScheduler();
-        this.memoryStore = builder.memoryStore != null ?
-        		builder.memoryStore : new InMemoryStore();
+        this.memoryStore = builder.memoryStore; // optional
 
+        this.llmMemoryManagerFactory = builder.llmMemoryManagerFactory != null ?
+                builder.llmMemoryManagerFactory :
+                this.createDefaultLLMMemoryManagerFactory();
+        
         // Initialize discovery components
         this.agentScanner = new AgentScanner();
         this.agentFactory = new AgentFactory(messageService, agentDirectory, behaviorScheduler, memoryStore);
@@ -87,6 +110,19 @@ public class JenticRuntime {
             registerServiceUnchecked(entry.getKey(), entry.getValue());
         }
     }
+    
+    /**
+     *  Creates the default LLM memory manager factory.
+     * @return a factory function that creates LLMMemoryManager instances per agent
+     */
+    private Function<String,LLMMemoryManager> createDefaultLLMMemoryManagerFactory() {
+		if (memoryStore == null) return null;
+    	return agentId -> new DefaultLLMMemoryManager(
+		    memoryStore,
+		    new dev.jentic.runtime.memory.llm.SimpleTokenEstimator(),
+		    agentId
+		);
+	}
 
     /**
      * Start the runtime and all registered agents
@@ -207,6 +243,12 @@ public class JenticRuntime {
             baseAgent.setBehaviorScheduler(behaviorScheduler);
             if (memoryStore != null) {
             	baseAgent.setMemoryStore(memoryStore);
+            	
+            	if (agent instanceof LLMAgent) {
+            		LLMMemoryManager llmMemory = llmMemoryManagerFactory.apply(agent.getAgentId());
+            		baseAgent.setLLMMemoryManager(llmMemory);
+            	}
+            	
             }
         }
 
@@ -499,6 +541,7 @@ public class JenticRuntime {
         private AgentDirectory agentDirectory;
         private BehaviorScheduler behaviorScheduler;
         private MemoryStore memoryStore;
+        private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
         private final Set<String> scanPackages = new HashSet<>();
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
 
@@ -579,7 +622,12 @@ public class JenticRuntime {
         public Builder memoryStore(MemoryStore memoryStore) {
            this.memoryStore = memoryStore;
            return this;
-       }
+        }
+        
+        public Builder llmMemoryManagerFactory(Function<String, LLMMemoryManager> factory) {
+            this.llmMemoryManagerFactory = factory;
+            return this;
+        }
 
         public Builder scanPackage(String packageName) {
             if (packageName != null && !packageName.trim().isEmpty()) {
