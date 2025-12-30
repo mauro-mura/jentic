@@ -3,6 +3,7 @@ package dev.jentic.runtime.agent;
 import dev.jentic.core.llm.LLMMessage;
 import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.llm.ContextWindowStrategy;
+import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.memory.llm.ContextWindowStrategies;
 
 import java.util.ArrayList;
@@ -59,7 +60,12 @@ import java.util.stream.Collectors;
  * @since 0.6.0
  */
 public abstract class LLMAgent extends BaseAgent {
-    
+
+    /**
+     * LLM Memory support (injected by runtime)
+     */
+    private LLMMemoryManager llmMemoryManager;
+
     /**
      * Default context window strategy (SLIDING).
      */
@@ -111,13 +117,169 @@ public abstract class LLMAgent extends BaseAgent {
     protected LLMAgent(String agentId, String agentName) {
         super(agentId, agentName);
     }
-    
+
+    // ========== LLM MEMORY MANAGER ==========
+
+    /**
+     * Injects the LLM memory manager (optional).
+     * @param llmMemoryManager
+     */
+    public void setLLMMemoryManager(LLMMemoryManager llmMemoryManager) {
+        this.llmMemoryManager = llmMemoryManager;
+        log.debug("LLM memory manager configured for agent: {}", getAgentId());
+    }
+
+    /**
+     * accessor with validation
+     * @return llmMemoryManager
+     */
+    private LLMMemoryManager getLLMMemoryManager() {
+        if (llmMemoryManager == null) {
+            throw new IllegalStateException("LLMMemoryManager not initialized");
+        }
+        return llmMemoryManager;
+    }
+
+    /**
+     * check llm memory availability
+     *
+     * @return true if LLM memory is configured
+     */
+    protected boolean hasLLMMemory() {
+        return llmMemoryManager != null;
+    }
+
+    // ========== BASE LLM MEMORY OPERATIONS ==========
+
+    /**
+     * Adds a message to the LLM conversation history.
+     *
+     * <p>This is a direct delegation to {@link dev.jentic.core.memory.llm.LLMMemoryManager#addMessage}.
+     * For enhanced functionality with auto-summarization, see {@link LLMAgent#addConversationMessage}.
+     *
+     * @param message the LLM message to add
+     * @return a future that completes when the message is added
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     * @see LLMAgent#addConversationMessage for enhanced version
+     */
+    protected CompletableFuture<Void> addLLMMessage(dev.jentic.core.llm.LLMMessage message) {
+        return getLLMMemoryManager().addMessage(message);
+    }
+
+    /**
+     * Adds multiple messages to the LLM conversation history.
+     *
+     * <p>This is a direct delegation to {@link dev.jentic.core.memory.llm.LLMMemoryManager#addMessages}.
+     *
+     * @param messages the messages to add
+     * @return a future that completes when messages are added
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> addLLMMessages(List<dev.jentic.core.llm.LLMMessage> messages) {
+        return getLLMMemoryManager().addMessages(messages);
+    }
+
+    /**
+     * Gets the LLM conversation history within token budget.
+     *
+     * <p>This is a direct delegation to {@link dev.jentic.core.memory.llm.LLMMemoryManager#getConversationHistory}.
+     *
+     * @param maxTokens maximum number of tokens
+     * @param strategy the context window strategy to use
+     * @return a future with the conversation history
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<List<dev.jentic.core.llm.LLMMessage>> getLLMConversationHistory(
+            int maxTokens,
+            dev.jentic.core.memory.llm.ContextWindowStrategy strategy
+    ) {
+        return getLLMMemoryManager().getConversationHistory(maxTokens, strategy);
+    }
+
+    /**
+     * Stores a fact in long-term LLM memory.
+     *
+     * <p>This is a direct delegation to {@link dev.jentic.core.memory.llm.LLMMemoryManager#remember}.
+     * For simplified API with defaults, see {@link LLMAgent#storeFact}.
+     *
+     * @param key the fact key
+     * @param content the fact content
+     * @param metadata the metadata
+     * @return a future that completes when stored
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     * @see LLMAgent#storeFact for simplified version
+     */
+    protected CompletableFuture<Void> rememberLLM(
+            String key,
+            String content,
+            Map<String, Object> metadata
+    ) {
+        return getLLMMemoryManager().remember(key, content, metadata);
+    }
+
+    /**
+     * Retrieves relevant context from long-term LLM memory.
+     *
+     * <p>This is a direct delegation to {@link dev.jentic.core.memory.llm.LLMMemoryManager#retrieveRelevantContext}.
+     *
+     * @param query the search query
+     * @param maxTokens maximum tokens for results
+     * @return a future with relevant memory entries
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<List<MemoryEntry>> retrieveLLMContext(
+            String query,
+            int maxTokens
+    ) {
+        return getLLMMemoryManager().retrieveRelevantContext(query, maxTokens);
+    }
+
+    /**
+     * Clears the LLM conversation history.
+     *
+     * <p>This clears short-term conversation but preserves long-term facts.
+     *
+     * @return a future that completes when cleared
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected CompletableFuture<Void> clearLLMConversation() {
+        return getLLMMemoryManager().clearConversationHistory();
+    }
+
+    /**
+     * Gets the current token count of the conversation.
+     *
+     * @return the current token count
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected int getLLMConversationTokens() {
+        return getLLMMemoryManager().getCurrentTokenCount();
+    }
+
+    /**
+     * Gets the number of messages in the conversation.
+     *
+     * @return the message count
+     * @throws IllegalStateException if LLM memory manager not configured
+     * @since 0.6.0
+     */
+    protected int getLLMConversationMessageCount() {
+        return getLLMMemoryManager().getMessageCount();
+    }
+
     // ========== CONVERSATION MANAGEMENT ==========
     
     /**
      * Add a message to the conversation history.
      * 
-     * <p>Enhanced version of {@link BaseAgent#addLLMMessage} with auto-summarization.
+     * <p>Enhanced version of {@link #addLLMMessage} with auto-summarization.
      * 
      * @param message the LLM message
      * @return future that completes when added
@@ -130,7 +292,7 @@ public abstract class LLMAgent extends BaseAgent {
     /**
      * Add multiple messages to the conversation history.
      * 
-     * <p>Enhanced version of {@link BaseAgent#addLLMMessages} with auto-summarization.
+     * <p>Enhanced version of {@link #addLLMMessages} with auto-summarization.
      * 
      * @param messages the messages
      * @return future that completes when added
@@ -195,7 +357,7 @@ public abstract class LLMAgent extends BaseAgent {
     /**
      * Store a fact in long-term memory.
      * 
-     * <p>Simplified version of {@link BaseAgent#rememberLLM} with empty metadata.
+     * <p>Simplified version of {@link #rememberLLM} with empty metadata.
      * 
      * @param key the fact key
      * @param content the fact content
@@ -208,7 +370,7 @@ public abstract class LLMAgent extends BaseAgent {
     /**
      * Store a fact in long-term memory with metadata.
      * 
-     * <p>Convenience wrapper around {@link BaseAgent#rememberLLM}.
+     * <p>Convenience wrapper around {@link #rememberLLM}.
      * 
      * @param key the fact key
      * @param content the fact content

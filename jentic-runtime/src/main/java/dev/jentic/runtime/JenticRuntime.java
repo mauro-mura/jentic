@@ -244,9 +244,9 @@ public class JenticRuntime {
             if (memoryStore != null) {
             	baseAgent.setMemoryStore(memoryStore);
             	
-            	if (agent instanceof LLMAgent) {
+            	if (agent instanceof LLMAgent llmAgent) {
             		LLMMemoryManager llmMemory = llmMemoryManagerFactory.apply(agent.getAgentId());
-            		baseAgent.setLLMMemoryManager(llmMemory);
+            		llmAgent.setLLMMemoryManager(llmMemory);
             	}
             	
             }
