@@ -14,7 +14,7 @@ import java.util.concurrent.CountDownLatch;
  * 
  * <p>This example shows:
  * <ul>
- *   <li>Automatic LLM memory injection by runtime (v0.7.0)</li>
+ *   <li>Automatic LLM memory injection by runtime</li>
  *   <li>Creating and configuring a ChatAgent</li>
  *   <li>Interactive conversation with memory</li>
  *   <li>Fact extraction and retrieval</li>
@@ -105,7 +105,7 @@ public class ChatAgentExample {
         
         // ========== START AGENT ==========
         
-        System.out.println("3. Starting reuntime...");
+        System.out.println("3. Starting runtime...");
         runtime.start().join();
         
         

@@ -105,7 +105,8 @@ public class DefaultLLMMemoryManager implements LLMMemoryManager {
             
             MemoryEntry.Builder builder = MemoryEntry.builder(content)
                 .ownerId(agentId)
-                .tokenCount(tokens);
+                .tokenCount(tokens)
+                .metadata("key", key);
             
             for (Map.Entry<String, Object> metaEntry : metadata.entrySet()) {
                 builder.metadata(metaEntry.getKey(), metaEntry.getValue());

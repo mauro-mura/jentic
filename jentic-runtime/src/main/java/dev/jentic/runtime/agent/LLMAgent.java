@@ -133,7 +133,7 @@ public abstract class LLMAgent extends BaseAgent {
      * accessor with validation
      * @return llmMemoryManager
      */
-    private LLMMemoryManager getLLMMemoryManager() {
+    protected LLMMemoryManager getLLMMemoryManager() {
         if (llmMemoryManager == null) {
             throw new IllegalStateException("LLMMemoryManager not initialized");
         }
@@ -453,7 +453,10 @@ public abstract class LLMAgent extends BaseAgent {
                 
                 if (!context.isEmpty()) {
                     String contextStr = context.stream()
-                        .map(MemoryEntry::content)
+                        .map(entry -> {
+                            String key = (String) entry.metadata().getOrDefault("key", "fact");
+                            return key + ": " + entry.content();
+                        })
                         .collect(Collectors.joining(", "));
                     
                     prompt.add(LLMMessage.system("Relevant facts: " + contextStr));
