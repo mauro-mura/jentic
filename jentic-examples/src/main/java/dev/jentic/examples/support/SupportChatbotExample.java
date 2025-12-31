@@ -2,11 +2,15 @@ package dev.jentic.examples.support;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
+import dev.jentic.examples.support.agents.AccountAgent;
 import dev.jentic.examples.support.agents.FAQAgent;
 import dev.jentic.examples.support.agents.RouterAgent;
+import dev.jentic.examples.support.agents.SecurityAgent;
+import dev.jentic.examples.support.agents.TransactionAgent;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
 import dev.jentic.examples.support.model.SupportResponse;
+import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,15 +42,25 @@ public class SupportChatbotExample {
         KnowledgeStore knowledgeStore = SupportKnowledgeData.createPopulatedStore();
         log.info("Loaded {} FAQ documents", knowledgeStore.size());
         
+        // Initialize mock data service
+        MockUserDataService dataService = new MockUserDataService();
+        log.info("Mock user data service initialized");
+        
         // Create runtime
         JenticRuntime runtime = JenticRuntime.builder().build();
         
         // Create and register agents
         RouterAgent routerAgent = new RouterAgent();
         FAQAgent faqAgent = new FAQAgent(knowledgeStore);
+        AccountAgent accountAgent = new AccountAgent(dataService);
+        TransactionAgent transactionAgent = new TransactionAgent(dataService);
+        SecurityAgent securityAgent = new SecurityAgent(dataService);
         
         runtime.registerAgent(routerAgent);
         runtime.registerAgent(faqAgent);
+        runtime.registerAgent(accountAgent);
+        runtime.registerAgent(transactionAgent);
+        runtime.registerAgent(securityAgent);
         
         // Start runtime
         runtime.start().join();
@@ -89,8 +103,8 @@ public class SupportChatbotExample {
         String sessionId = UUID.randomUUID().toString().substring(0, 8);
         
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
-        System.out.println("║  FinanceCloud Support Chat                                 ║");
-        System.out.println("║  Type your question or 'quit' to exit                      ║");
+        System.out.println("║  FinanceCloud Support Chat                                  ║");
+        System.out.println("║  Type your question or 'quit' to exit                       ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
@@ -127,12 +141,18 @@ public class SupportChatbotExample {
             AtomicReference<SupportResponse> lastResponse) throws Exception {
         
         String[] demoQueries = {
-            "How do I reset my password?",
+            // FAQ queries
             "What banks do you support?",
-            "How can I create a budget?",
-            "I need help with a disputed transaction",
             "How much does premium cost?",
-            "Is my data secure?"
+            // Security queries
+            "How do I reset my password?",
+            "Show me my trusted devices",
+            // Account queries
+            "What's my account balance?",
+            "Show my linked accounts",
+            // Transaction queries
+            "Show my recent transactions",
+            "I need to dispute a transaction"
         };
         
         String sessionId = "demo-session";

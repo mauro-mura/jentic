@@ -61,6 +61,12 @@ public class FAQAgent extends BaseAgent {
         
         log.debug("FAQ query: '{}'", queryText);
         
+        // Handle greetings and short queries
+        if (isGreeting(queryText)) {
+            sendResponse(message, createWelcomeResponse(query));
+            return;
+        }
+        
         // Search knowledge base
         List<KnowledgeDocument> matches = knowledgeStore.search(queryText, TOP_K);
         
@@ -79,6 +85,36 @@ public class FAQAgent extends BaseAgent {
         }
         
         sendResponse(message, response);
+    }
+    
+    /**
+     * Checks if query is a greeting or very short.
+     */
+    private boolean isGreeting(String text) {
+        if (text == null) return true;
+        String lower = text.toLowerCase().trim();
+        if (lower.length() < 4) return true;
+        return lower.matches("^(hi|hey|hello|help|yo|sup|ciao|hola|ola)\\s*[!?.]*$");
+    }
+    
+    /**
+     * Creates a welcome response for greetings.
+     */
+    private SupportResponse createWelcomeResponse(SupportQuery query) {
+        String text = """
+            👋 **Welcome to FinanceCloud Support!**
+            
+            I'm here to help you with:
+            • **Account** - Balance, profile, linked accounts
+            • **Transactions** - History, exports, disputes
+            • **Security** - Password, 2FA, devices
+            • **Budgets** - Create and track spending limits
+            
+            How can I assist you today?
+            """;
+        
+        return new SupportResponse(query.sessionId(), text, SupportIntent.FAQ,
+            1.0, List.of("View my balance", "Reset password", "Recent transactions"), false);
     }
     
     /**
