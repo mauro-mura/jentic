@@ -2,13 +2,6 @@ package dev.jentic.examples.support;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.examples.support.agents.AccountAgent;
-import dev.jentic.examples.support.agents.BudgetAgent;
-import dev.jentic.examples.support.agents.EscalationAgent;
-import dev.jentic.examples.support.agents.FAQAgent;
-import dev.jentic.examples.support.agents.RouterAgent;
-import dev.jentic.examples.support.agents.SecurityAgent;
-import dev.jentic.examples.support.agents.TransactionAgent;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
@@ -41,39 +34,27 @@ public class SupportChatbotExample {
     public static void main(String[] args) throws Exception {
         log.info("=== FinanceCloud Support Chatbot ===");
         
-        // Initialize knowledge base
+        // Initialize services
         KnowledgeStore knowledgeStore = SupportKnowledgeData.createPopulatedStore();
         log.info("Loaded {} FAQ documents", knowledgeStore.size());
         
-        // Initialize mock data service
         MockUserDataService dataService = new MockUserDataService();
         log.info("Mock user data service initialized");
         
-        // Initialize conversation context manager
         ConversationContextManager contextManager = new ConversationContextManager();
         log.info("Conversation context manager initialized");
         
-        // Create runtime
-        JenticRuntime runtime = JenticRuntime.builder().build();
+        // Create runtime with package scanning and service injection
+        JenticRuntime runtime = JenticRuntime.builder()
+            // Register services for dependency injection
+            .service(KnowledgeStore.class, knowledgeStore)
+            .service(MockUserDataService.class, dataService)
+            .service(ConversationContextManager.class, contextManager)
+            // Scan package for @JenticAgent annotated classes
+            .scanPackage("dev.jentic.examples.support.agents")
+            .build();
         
-        // Create and register agents (7 agents total)
-        RouterAgent routerAgent = new RouterAgent(contextManager);
-        FAQAgent faqAgent = new FAQAgent(knowledgeStore);
-        AccountAgent accountAgent = new AccountAgent(dataService);
-        TransactionAgent transactionAgent = new TransactionAgent(dataService);
-        SecurityAgent securityAgent = new SecurityAgent(dataService);
-        BudgetAgent budgetAgent = new BudgetAgent(dataService);
-        EscalationAgent escalationAgent = new EscalationAgent(contextManager);
-        
-        runtime.registerAgent(routerAgent);
-        runtime.registerAgent(faqAgent);
-        runtime.registerAgent(accountAgent);
-        runtime.registerAgent(transactionAgent);
-        runtime.registerAgent(securityAgent);
-        runtime.registerAgent(budgetAgent);
-        runtime.registerAgent(escalationAgent);
-        
-        // Start runtime
+        // Start runtime (agents discovered and created automatically)
         runtime.start().join();
         log.info("Runtime started with {} agents", runtime.getAgents().size());
         
