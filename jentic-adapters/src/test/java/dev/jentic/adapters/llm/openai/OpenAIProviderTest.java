@@ -47,7 +47,7 @@ class OpenAIProviderTest {
         void build_withCustomConfig_shouldSucceed() {
             OpenAIProvider provider = OpenAIProvider.builder()
                     .apiKey("test-api-key")
-                    .model("gpt-4o")
+                    .modelName("gpt-4o")
                     .temperature(0.5)
                     .maxTokens(500)
                     .build();
@@ -233,7 +233,7 @@ class OpenAIProviderTest {
 
             OpenAIProvider provider = OpenAIProvider.builder()
                     .apiKey(apiKey)
-                    .model("gpt-4o-mini")
+                    .modelName("gpt-4o-mini")
                     .maxTokens(100)
                     .build();
 
@@ -259,7 +259,7 @@ class OpenAIProviderTest {
             OpenAIProvider provider = OpenAIProvider.builder()
                     .apiKey(apiKey)
                     .baseUrl("https://api.groq.com/openai/v1")
-                    .model("openai/gpt-oss-20b")
+                    .modelName("openai/gpt-oss-20b")
                     .maxTokens(100)
                     .build();
 
@@ -284,7 +284,7 @@ class OpenAIProviderTest {
 
             OpenAIProvider provider = OpenAIProvider.builder()
                     .apiKey(apiKey)
-                    .model("gpt-4o-mini")
+                    .modelName("gpt-4o-mini")
                     .build();
 
             LLMRequest request = LLMRequest.builder("stream-test")

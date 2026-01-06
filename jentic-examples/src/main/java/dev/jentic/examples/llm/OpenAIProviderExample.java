@@ -44,7 +44,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .model("gpt-4o-mini")
+            .modelName("gpt-4o-mini")
             .temperature(0.7)
             .maxTokens(150)
             .build();
@@ -71,7 +71,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
                 .apiKey(apiKey)
-                .model("gpt-4o-mini")
+                .modelName("gpt-4o-mini")
                 .build();
 
         LLMRequest request = LLMRequest.builder("streaming-chat")
@@ -101,7 +101,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .model("gpt-4o-mini")
+            .modelName("gpt-4o-mini")
             .maxTokens(200)
             .build();
 
@@ -127,7 +127,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .model("gpt-4o")
+            .modelName("gpt-4o")
             .build();
 
         // Define weather tool
@@ -166,7 +166,7 @@ public class OpenAIProviderExample {
 
         LLMProvider provider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .model("gpt-4o-mini")
+            .modelName("gpt-4o-mini")
             .temperature(0.8)
             .build();
 

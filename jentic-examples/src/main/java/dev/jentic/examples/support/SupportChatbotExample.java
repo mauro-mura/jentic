@@ -5,6 +5,8 @@ import dev.jentic.core.MessageHandler;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
+import dev.jentic.examples.support.llm.LLMConfig;
+import dev.jentic.examples.support.llm.LLMResponseGenerator;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.runtime.JenticRuntime;
@@ -19,13 +21,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * FinanceCloud Support Chatbot Example - Phase 1
+ * FinanceCloud Support Chatbot Example - Phase 4
  * 
  * Demonstrates a multi-agent support system with:
- * - RouterAgent: classifies intent and routes queries
- * - FAQAgent: answers using knowledge base retrieval
+ * - RouterAgent: classifies intent with sentiment analysis
+ * - FAQAgent: answers using RAG (knowledge base + LLM)
+ * - Specialized agents: Account, Transaction, Security, Budget
+ * - EscalationAgent: human handoff
  * 
- * Run this example and interact via console.
+ * LLM support:
+ * - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL env var
+ * - Falls back to template-based responses if no LLM configured
  */
 public class SupportChatbotExample {
     
@@ -44,12 +50,24 @@ public class SupportChatbotExample {
         ConversationContextManager contextManager = new ConversationContextManager();
         log.info("Conversation context manager initialized");
         
+        // Initialize LLM (from environment or fallback to template mode)
+        LLMConfig llmConfig = LLMConfig.fromEnvironment();
+        LLMResponseGenerator llmGenerator = new LLMResponseGenerator(llmConfig);
+        
+        if (llmGenerator.isLLMEnabled()) {
+            log.info("LLM enabled: {} mode", llmConfig.getProviderType());
+        } else {
+            log.info("LLM not configured - using template-based responses");
+            log.info("  Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL to enable LLM");
+        }
+        
         // Create runtime with package scanning and service injection
         JenticRuntime runtime = JenticRuntime.builder()
             // Register services for dependency injection
             .service(KnowledgeStore.class, knowledgeStore)
             .service(MockUserDataService.class, dataService)
             .service(ConversationContextManager.class, contextManager)
+            .service(LLMResponseGenerator.class, llmGenerator)
             // Scan package for @JenticAgent annotated classes
             .scanPackage("dev.jentic.examples.support.agents")
             .build();

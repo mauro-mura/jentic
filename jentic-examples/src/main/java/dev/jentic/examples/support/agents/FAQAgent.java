@@ -5,6 +5,7 @@ import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.examples.support.knowledge.KnowledgeDocument;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
+import dev.jentic.examples.support.llm.LLMResponseGenerator;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
@@ -16,12 +17,12 @@ import java.util.List;
 
 /**
  * Handles FAQ queries using the knowledge base.
- * Performs retrieval and generates responses from matched documents.
+ * Supports LLM-enhanced responses (RAG pattern) when available.
  */
 @JenticAgent(
     value = "faq-agent",
     type = "handler",
-    capabilities = {"knowledge-retrieval", "faq"}
+    capabilities = {"knowledge-retrieval", "faq", "rag"}
 )
 public class FAQAgent extends BaseAgent {
     
@@ -30,10 +31,22 @@ public class FAQAgent extends BaseAgent {
     private static final double MIN_CONFIDENCE = 0.15;
     
     private final KnowledgeStore knowledgeStore;
+    private final LLMResponseGenerator llmGenerator;
     
+    /**
+     * Constructor without LLM (template-based responses).
+     */
     public FAQAgent(KnowledgeStore knowledgeStore) {
+        this(knowledgeStore, null);
+    }
+    
+    /**
+     * Constructor with optional LLM support.
+     */
+    public FAQAgent(KnowledgeStore knowledgeStore, LLMResponseGenerator llmGenerator) {
         super("faq-agent", "FAQ Handler");
         this.knowledgeStore = knowledgeStore;
+        this.llmGenerator = llmGenerator;
     }
     
     @Override
@@ -44,7 +57,9 @@ public class FAQAgent extends BaseAgent {
         // Also handle unclassified queries
         messageService.subscribe("support.unknown", MessageHandler.sync(this::handleFAQQuery));
         
-        log.info("FAQ Agent started with {} documents", knowledgeStore.size());
+        String llmStatus = llmGenerator != null && llmGenerator.isLLMEnabled() 
+            ? "LLM enabled" : "template mode";
+        log.info("FAQ Agent started with {} documents ({})", knowledgeStore.size(), llmStatus);
     }
     
     @Override
@@ -119,10 +134,45 @@ public class FAQAgent extends BaseAgent {
     
     /**
      * Creates response from matched document.
+     * Uses LLM if available, otherwise falls back to template.
      */
     private SupportResponse createResponse(SupportQuery query, KnowledgeDocument match,
             double confidence, List<KnowledgeDocument> alternatives) {
         
+        String text;
+        
+        // Try LLM-enhanced response
+        if (llmGenerator != null && llmGenerator.isLLMEnabled()) {
+            try {
+                text = llmGenerator.generate(query.text(), alternatives, SupportIntent.FAQ);
+                log.debug("Generated LLM response for query: '{}'", query.text());
+            } catch (Exception e) {
+                log.warn("LLM generation failed, using template: {}", e.getMessage());
+                text = createTemplateResponse(match, alternatives);
+            }
+        } else {
+            text = createTemplateResponse(match, alternatives);
+        }
+        
+        List<String> actions = List.of(
+            "Was this helpful? (yes/no)",
+            "Ask another question"
+        );
+        
+        return new SupportResponse(
+            query.sessionId(),
+            text,
+            SupportIntent.FAQ,
+            confidence,
+            actions,
+            false
+        );
+    }
+    
+    /**
+     * Template-based response from document.
+     */
+    private String createTemplateResponse(KnowledgeDocument match, List<KnowledgeDocument> alternatives) {
         StringBuilder text = new StringBuilder();
         text.append("**").append(match.title()).append("**\n\n");
         text.append(match.content());
@@ -138,26 +188,38 @@ public class FAQAgent extends BaseAgent {
             text.setLength(text.length() - 3);
         }
         
-        List<String> actions = List.of(
-            "Was this helpful? (yes/no)",
-            "Ask another question"
-        );
-        
-        return new SupportResponse(
-            query.sessionId(),
-            text.toString(),
-            SupportIntent.FAQ,
-            confidence,
-            actions,
-            false
-        );
+        return text.toString();
     }
     
     /**
      * Response when no documents match.
      */
     private SupportResponse createNoMatchResponse(SupportQuery query) {
-        String text = """
+        String text;
+        
+        // Try LLM for no-match response
+        if (llmGenerator != null && llmGenerator.isLLMEnabled()) {
+            try {
+                text = llmGenerator.generate(query.text(), List.of(), SupportIntent.FAQ);
+            } catch (Exception e) {
+                text = createNoMatchTemplate();
+            }
+        } else {
+            text = createNoMatchTemplate();
+        }
+        
+        return new SupportResponse(
+            query.sessionId(),
+            text,
+            SupportIntent.FAQ,
+            0.0,
+            List.of("Try a different question", "Speak to an agent"),
+            false
+        );
+    }
+    
+    private String createNoMatchTemplate() {
+        return """
             I couldn't find specific information about your question.
             
             Here's what I can help with:
@@ -169,15 +231,6 @@ public class FAQAgent extends BaseAgent {
             
             Could you rephrase your question, or type 'agent' to speak with a human?
             """;
-        
-        return new SupportResponse(
-            query.sessionId(),
-            text,
-            SupportIntent.FAQ,
-            0.0,
-            List.of("Try a different question", "Speak to an agent"),
-            false
-        );
     }
     
     /**

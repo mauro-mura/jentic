@@ -48,7 +48,7 @@ public class AIAssistantExample {
         // Create AI Assistant with OpenAI provider
         LLMProvider llmProvider = LLMProviderFactory.openai()
                 .apiKey(System.getenv("OPENAI_API_KEY"))
-                .model("gpt-4.1")
+                .modelName("gpt-4.1")
                 .temperature(0.7)
                 .maxTokens(1500)
                 .build();
@@ -182,7 +182,7 @@ public class AIAssistantExample {
         
         LLMProvider llmProvider = LLMProviderFactory.openai()
             .apiKey(System.getenv("OPENAI_API_KEY"))
-            .model("gpt-4o")
+            .modelName("gpt-4o")
             .build();
         
         AIAssistantAgent aiAgent = new AIAssistantAgent(llmProvider);

@@ -16,6 +16,7 @@ public class SentimentAnalyzer {
         "stupid", "ridiculous", "unacceptable", "disappointed", "disappointing",
         "broken", "doesn't work", "not working", "failed", "failing",
         "waste", "scam", "garbage", "trash", "pathetic", "incompetent",
+        // Added for better coverage
         "nothing works", "never works", "still broken", "not helpful",
         "unhelpful", "pointless", "impossible", "can't", "cannot",
         "won't", "stuck", "confused", "confusing", "wrong", "incorrect",

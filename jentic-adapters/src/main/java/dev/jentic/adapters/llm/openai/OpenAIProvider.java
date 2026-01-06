@@ -278,7 +278,7 @@ public class OpenAIProvider implements LLMProvider {
             return this;
         }
 
-        public Builder model(String modelName) {
+        public Builder modelName(String modelName) {
             this.modelName = modelName;
             return this;
         }

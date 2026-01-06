@@ -34,7 +34,7 @@ public class ResearchTeamExample {
         // Create LLM provider
         LLMProvider llmProvider = OpenAIProvider.builder()
             .apiKey(apiKey)
-            .model("gpt-4")
+            .modelName("gpt-4")
             .temperature(0.7)
             .maxTokens(1500)
             .build();

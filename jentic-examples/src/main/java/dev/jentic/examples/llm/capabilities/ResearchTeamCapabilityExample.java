@@ -6,7 +6,6 @@ import dev.jentic.core.annotations.*;
 import dev.jentic.core.llm.*;
 import dev.jentic.runtime.JenticRuntime;
 import dev.jentic.runtime.agent.BaseAgent;
-import dev.jentic.adapters.llm.openai.OpenAIProvider;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -36,7 +35,7 @@ public class ResearchTeamCapabilityExample {
         
         LLMProvider llmProvider = LLMProviderFactory.openai()
             .apiKey(apiKey)
-            .model("gpt-4")
+            .modelName("gpt-4")
             .temperature(0.7)
             .maxTokens(1500)
             .logRequests(true)

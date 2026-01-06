@@ -14,7 +14,7 @@ public class CustomerSupportExample {
         // Initialize LLM provider
         LLMProvider llmProvider = LLMProviderFactory.openai()
             .apiKey(System.getenv("OPENAI_API_KEY"))
-            .model("gpt-4o-mini")
+            .modelName("gpt-4o-mini")
             .temperature(0.7)
             .build();
         
