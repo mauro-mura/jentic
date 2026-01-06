@@ -3,10 +3,13 @@ package dev.jentic.examples.support;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.examples.support.agents.AccountAgent;
+import dev.jentic.examples.support.agents.BudgetAgent;
+import dev.jentic.examples.support.agents.EscalationAgent;
 import dev.jentic.examples.support.agents.FAQAgent;
 import dev.jentic.examples.support.agents.RouterAgent;
 import dev.jentic.examples.support.agents.SecurityAgent;
 import dev.jentic.examples.support.agents.TransactionAgent;
+import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
 import dev.jentic.examples.support.model.SupportResponse;
@@ -46,21 +49,29 @@ public class SupportChatbotExample {
         MockUserDataService dataService = new MockUserDataService();
         log.info("Mock user data service initialized");
         
+        // Initialize conversation context manager
+        ConversationContextManager contextManager = new ConversationContextManager();
+        log.info("Conversation context manager initialized");
+        
         // Create runtime
         JenticRuntime runtime = JenticRuntime.builder().build();
         
-        // Create and register agents
-        RouterAgent routerAgent = new RouterAgent();
+        // Create and register agents (7 agents total)
+        RouterAgent routerAgent = new RouterAgent(contextManager);
         FAQAgent faqAgent = new FAQAgent(knowledgeStore);
         AccountAgent accountAgent = new AccountAgent(dataService);
         TransactionAgent transactionAgent = new TransactionAgent(dataService);
         SecurityAgent securityAgent = new SecurityAgent(dataService);
+        BudgetAgent budgetAgent = new BudgetAgent(dataService);
+        EscalationAgent escalationAgent = new EscalationAgent(contextManager);
         
         runtime.registerAgent(routerAgent);
         runtime.registerAgent(faqAgent);
         runtime.registerAgent(accountAgent);
         runtime.registerAgent(transactionAgent);
         runtime.registerAgent(securityAgent);
+        runtime.registerAgent(budgetAgent);
+        runtime.registerAgent(escalationAgent);
         
         // Start runtime
         runtime.start().join();
@@ -91,6 +102,7 @@ public class SupportChatbotExample {
         
         // Shutdown
         log.info("Shutting down...");
+        contextManager.shutdown();
         runtime.stop().join();
         log.info("=== Example completed ===");
     }
@@ -103,8 +115,8 @@ public class SupportChatbotExample {
         String sessionId = UUID.randomUUID().toString().substring(0, 8);
         
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
-        System.out.println("║  FinanceCloud Support Chat                                  ║");
-        System.out.println("║  Type your question or 'quit' to exit                       ║");
+        System.out.println("║  FinanceCloud Support Chat                                 ║");
+        System.out.println("║  Type your question or 'quit' to exit                      ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
@@ -141,18 +153,22 @@ public class SupportChatbotExample {
             AtomicReference<SupportResponse> lastResponse) throws Exception {
         
         String[] demoQueries = {
+            // Greeting
+            "hi",
             // FAQ queries
             "What banks do you support?",
-            "How much does premium cost?",
-            // Security queries
-            "How do I reset my password?",
-            "Show me my trusted devices",
             // Account queries
             "What's my account balance?",
-            "Show my linked accounts",
             // Transaction queries
             "Show my recent transactions",
-            "I need to dispute a transaction"
+            // Security queries  
+            "Show my trusted devices",
+            // Budget queries
+            "Show my budgets",
+            // Escalation test
+            "I need to speak to a human agent",
+            // Sentiment test (frustrated)
+            "This is frustrating! Nothing is working!!"
         };
         
         String sessionId = "demo-session";
