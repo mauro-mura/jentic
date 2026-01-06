@@ -292,10 +292,22 @@ public final class SupportKnowledgeData {
     
     /**
      * Initializes a KnowledgeStore with all sample documents.
+     * Uses InMemoryKnowledgeStore (simple keyword matching).
      */
     public static KnowledgeStore createPopulatedStore() {
         KnowledgeStore store = new InMemoryKnowledgeStore();
         getAllDocuments().forEach(store::add);
+        return store;
+    }
+    
+    /**
+     * Initializes a SemanticKnowledgeStore with TF-IDF ranking.
+     * Provides better relevance scoring than simple keyword matching.
+     */
+    public static SemanticKnowledgeStore createSemanticStore() {
+        SemanticKnowledgeStore store = new SemanticKnowledgeStore();
+        getAllDocuments().forEach(store::add);
+        store.buildIndex();
         return store;
     }
 }
