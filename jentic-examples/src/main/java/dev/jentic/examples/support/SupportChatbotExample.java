@@ -2,6 +2,7 @@ package dev.jentic.examples.support;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
+import dev.jentic.examples.support.a2a.SupportA2AServer;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.EmbeddingConfig;
 import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
@@ -23,10 +24,11 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * FinanceCloud Support Chatbot Example - Phase 6
+ * FinanceCloud Support Chatbot Example - Phase 7
  * 
  * Demonstrates a multi-agent support system with:
  * - RouterAgent: classifies intent with sentiment analysis
@@ -34,10 +36,16 @@ import java.util.concurrent.atomic.AtomicReference;
  * - Specialized agents: Account, Transaction, Security, Budget
  * - EscalationAgent: human handoff
  * - Production features: persistence, analytics, localization, rate limiting
+ * - A2A protocol support for external agent communication
  * 
  * LLM support:
  * - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL env var
  * - Falls back to template-based responses if no LLM configured
+ * 
+ * Run modes:
+ * - Interactive: mvn exec:java (default)
+ * - Demo: mvn exec:java -Dexec.args="demo"
+ * - A2A Config: mvn exec:java -Dexec.args="--a2a" (shows A2A configuration)
  */
 public class SupportChatbotExample {
     
@@ -143,12 +151,26 @@ public class SupportChatbotExample {
             responseLatch.countDown();
         }));
         
+        // Check for A2A info mode
+        boolean a2aMode = args.length > 0 && args[0].equals("--a2a");
+        
+        if (a2aMode) {
+            // Show A2A configuration (actual server requires Quarkus or custom Jetty)
+            SupportA2AServer.logConfiguration("http://localhost:8080");
+            log.info("");
+            log.info("To expose as A2A server, use with Quarkus or integrate with JettyWebConsole.");
+            log.info("See SupportA2AServer javadoc for integration examples.");
+        }
+        
         // Interactive mode
         if (args.length == 0) {
             runInteractiveMode(runtime);
-        } else {
+        } else if (!a2aMode) {
             // Demo mode with sample queries
             runDemoMode(runtime, lastResponse);
+        } else {
+            // A2A info mode - also run interactive
+            runInteractiveMode(runtime);
         }
         
         // Shutdown
@@ -173,7 +195,8 @@ public class SupportChatbotExample {
         
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
         System.out.println("║  FinanceCloud Support Chat                                 ║");
-        System.out.println("║  Commands: 'quit', 'stats', 'lang <code>'                  ║");
+        System.out.println("║  Commands: 'quit', 'stats'                                 ║");
+        System.out.println("║  Run with --a2a to show A2A configuration                  ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
