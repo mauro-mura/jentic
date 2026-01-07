@@ -5,6 +5,7 @@ import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.examples.support.knowledge.KnowledgeDocument;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
+import dev.jentic.examples.support.knowledge.QueryExpander;
 import dev.jentic.examples.support.llm.LLMResponseGenerator;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
@@ -17,12 +18,12 @@ import java.util.List;
 
 /**
  * Handles FAQ queries using the knowledge base.
- * Supports LLM-enhanced responses (RAG pattern) when available.
+ * Supports query expansion, hybrid search, and LLM-enhanced responses.
  */
 @JenticAgent(
     value = "faq-agent",
     type = "handler",
-    capabilities = {"knowledge-retrieval", "faq", "rag"}
+    capabilities = {"knowledge-retrieval", "faq", "rag", "hybrid-search"}
 )
 public class FAQAgent extends BaseAgent {
     
@@ -32,21 +33,31 @@ public class FAQAgent extends BaseAgent {
     
     private final KnowledgeStore knowledgeStore;
     private final LLMResponseGenerator llmGenerator;
+    private final QueryExpander queryExpander;
     
     /**
-     * Constructor without LLM (template-based responses).
+     * Constructor without LLM or query expansion.
      */
     public FAQAgent(KnowledgeStore knowledgeStore) {
-        this(knowledgeStore, null);
+        this(knowledgeStore, null, null);
     }
     
     /**
-     * Constructor with optional LLM support.
+     * Constructor with LLM support.
      */
     public FAQAgent(KnowledgeStore knowledgeStore, LLMResponseGenerator llmGenerator) {
+        this(knowledgeStore, llmGenerator, null);
+    }
+    
+    /**
+     * Full constructor with all features.
+     */
+    public FAQAgent(KnowledgeStore knowledgeStore, LLMResponseGenerator llmGenerator, 
+            QueryExpander queryExpander) {
         super("faq-agent", "FAQ Handler");
         this.knowledgeStore = knowledgeStore;
         this.llmGenerator = llmGenerator;
+        this.queryExpander = queryExpander;
     }
     
     @Override
@@ -57,9 +68,21 @@ public class FAQAgent extends BaseAgent {
         // Also handle unclassified queries
         messageService.subscribe("support.unknown", MessageHandler.sync(this::handleFAQQuery));
         
-        String llmStatus = llmGenerator != null && llmGenerator.isLLMEnabled() 
-            ? "LLM enabled" : "template mode";
-        log.info("FAQ Agent started with {} documents ({})", knowledgeStore.size(), llmStatus);
+        String features = buildFeatureString();
+        log.info("FAQ Agent started with {} documents ({})", knowledgeStore.size(), features);
+    }
+    
+    private String buildFeatureString() {
+        StringBuilder sb = new StringBuilder();
+        if (llmGenerator != null && llmGenerator.isLLMEnabled()) {
+            sb.append("LLM");
+        } else {
+            sb.append("template");
+        }
+        if (queryExpander != null) {
+            sb.append(" + query expansion");
+        }
+        return sb.toString();
     }
     
     @Override
@@ -82,8 +105,18 @@ public class FAQAgent extends BaseAgent {
             return;
         }
         
-        // Search knowledge base
-        List<KnowledgeDocument> matches = knowledgeStore.search(queryText, TOP_K);
+        // Expand query with synonyms if expander available
+        String searchQuery = queryText;
+        if (queryExpander != null) {
+            var expansion = queryExpander.expandWithDetails(queryText);
+            if (expansion.wasExpanded()) {
+                searchQuery = expansion.expandedQuery();
+                log.debug("Query expanded: '{}' -> '{}'", queryText, searchQuery);
+            }
+        }
+        
+        // Search knowledge base with expanded query
+        List<KnowledgeDocument> matches = knowledgeStore.search(searchQuery, TOP_K);
         
         SupportResponse response;
         if (matches.isEmpty()) {

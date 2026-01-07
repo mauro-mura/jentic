@@ -310,4 +310,33 @@ public final class SupportKnowledgeData {
         store.buildIndex();
         return store;
     }
+    
+    /**
+     * Initializes a HybridKnowledgeStore with TF-IDF + embeddings.
+     * Requires embedding model for vector search.
+     * Falls back to TF-IDF only if embeddings unavailable.
+     */
+    public static HybridKnowledgeStore createHybridStore(EmbeddingConfig embeddingConfig) {
+        HybridKnowledgeStore store;
+        
+        if (embeddingConfig != null && embeddingConfig.isEnabled()) {
+            var embeddingModel = embeddingConfig.createModel();
+            if (embeddingModel != null) {
+                store = new HybridKnowledgeStore(
+                    embeddingModel, 
+                    embeddingConfig.getDimensions(),
+                    0.4,  // TF-IDF weight
+                    0.6   // Embeddings weight
+                );
+            } else {
+                store = new HybridKnowledgeStore(); // TF-IDF only fallback
+            }
+        } else {
+            store = new HybridKnowledgeStore(); // TF-IDF only
+        }
+        
+        getAllDocuments().forEach(store::add);
+        store.buildIndex();
+        return store;
+    }
 }

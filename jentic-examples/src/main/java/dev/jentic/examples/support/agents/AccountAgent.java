@@ -8,7 +8,6 @@ import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.examples.support.service.MockUserDataService.LinkedAccount;
-import dev.jentic.examples.support.service.MockUserDataService.UserProfile;
 import dev.jentic.runtime.agent.BaseAgent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

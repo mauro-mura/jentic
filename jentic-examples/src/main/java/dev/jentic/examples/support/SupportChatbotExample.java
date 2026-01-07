@@ -3,12 +3,16 @@ package dev.jentic.examples.support;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.examples.support.context.ConversationContextManager;
+import dev.jentic.examples.support.knowledge.EmbeddingConfig;
+import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
-import dev.jentic.examples.support.knowledge.SemanticKnowledgeStore;
+import dev.jentic.examples.support.knowledge.QueryExpander;
 import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
 import dev.jentic.examples.support.llm.LLMConfig;
 import dev.jentic.examples.support.llm.LLMResponseGenerator;
 import dev.jentic.examples.support.model.SupportResponse;
+import dev.jentic.examples.support.production.*;
+import dev.jentic.examples.support.production.LanguageDetector.Language;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.runtime.JenticRuntime;
 import org.slf4j.Logger;
@@ -16,19 +20,20 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * FinanceCloud Support Chatbot Example - Phase 4
+ * FinanceCloud Support Chatbot Example - Phase 6
  * 
  * Demonstrates a multi-agent support system with:
  * - RouterAgent: classifies intent with sentiment analysis
  * - FAQAgent: answers using RAG (knowledge base + LLM)
  * - Specialized agents: Account, Transaction, Security, Budget
  * - EscalationAgent: human handoff
+ * - Production features: persistence, analytics, localization, rate limiting
  * 
  * LLM support:
  * - Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL env var
@@ -41,16 +46,53 @@ public class SupportChatbotExample {
     public static void main(String[] args) throws Exception {
         log.info("=== FinanceCloud Support Chatbot ===");
         
-        // Initialize services with semantic search (TF-IDF)
-        SemanticKnowledgeStore knowledgeStore = SupportKnowledgeData.createSemanticStore();
-        log.info("Loaded {} FAQ documents with TF-IDF index ({} terms)", 
-            knowledgeStore.size(), knowledgeStore.searchWithScores("test", 1).size() >= 0 ? "ready" : "building");
+        // ========== PRODUCTION SERVICES ==========
+        
+        // Persistence (file-based storage)
+        Path storagePath = Path.of(System.getProperty("user.home"), ".financecloud", "conversations");
+        ConversationRepository conversationRepo = new ConversationRepository(storagePath);
+        log.info("Conversation repository initialized at {}", storagePath);
+        
+        // Analytics
+        AnalyticsService analytics = new AnalyticsService();
+        log.info("Analytics service initialized");
+        
+        // Multi-language support
+        LanguageDetector languageDetector = new LanguageDetector(Language.ENGLISH);
+        LocalizationService localization = new LocalizationService(Language.ENGLISH);
+        log.info("Localization service initialized ({} languages)", localization.getSupportedLanguages().size());
+        
+        // Rate limiting (60 req/min, burst 10/sec)
+        RateLimiter rateLimiter = new RateLimiter();
+        log.info("Rate limiter initialized");
+        
+        // ========== KNOWLEDGE & SEARCH ==========
+        
+        // Initialize embedding configuration
+        EmbeddingConfig embeddingConfig = EmbeddingConfig.fromEnvironment();
+        
+        // Initialize knowledge store with hybrid search (TF-IDF + embeddings)
+        HybridKnowledgeStore knowledgeStore = SupportKnowledgeData.createHybridStore(embeddingConfig);
+        
+        if (knowledgeStore.isEmbeddingsEnabled()) {
+            log.info("Loaded {} FAQ documents with hybrid search (TF-IDF + embeddings)", 
+                knowledgeStore.size());
+        } else {
+            log.info("Loaded {} FAQ documents with TF-IDF search (embeddings not configured)", 
+                knowledgeStore.size());
+        }
+        
+        // Initialize query expander for synonym support
+        QueryExpander queryExpander = new QueryExpander();
+        log.info("Query expander initialized with domain synonyms");
         
         MockUserDataService dataService = new MockUserDataService();
         log.info("Mock user data service initialized");
         
         ConversationContextManager contextManager = new ConversationContextManager();
         log.info("Conversation context manager initialized");
+        
+        // ========== LLM ==========
         
         // Initialize LLM (from environment or fallback to template mode)
         LLMConfig llmConfig = LLMConfig.fromEnvironment();
@@ -60,16 +102,24 @@ public class SupportChatbotExample {
             log.info("LLM enabled: {} mode", llmConfig.getProviderType());
         } else {
             log.info("LLM not configured - using template-based responses");
-            log.info("  Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or OLLAMA_BASE_URL to enable LLM");
         }
+        
+        // ========== RUNTIME ==========
         
         // Create runtime with package scanning and service injection
         JenticRuntime runtime = JenticRuntime.builder()
-            // Register services for dependency injection
+            // Core services
             .service(KnowledgeStore.class, knowledgeStore)
+            .service(QueryExpander.class, queryExpander)
             .service(MockUserDataService.class, dataService)
             .service(ConversationContextManager.class, contextManager)
             .service(LLMResponseGenerator.class, llmGenerator)
+            // Production services
+            .service(ConversationRepository.class, conversationRepo)
+            .service(AnalyticsService.class, analytics)
+            .service(LanguageDetector.class, languageDetector)
+            .service(LocalizationService.class, localization)
+            .service(RateLimiter.class, rateLimiter)
             // Scan package for @JenticAgent annotated classes
             .scanPackage("dev.jentic.examples.support.agents")
             .build();
@@ -103,21 +153,27 @@ public class SupportChatbotExample {
         
         // Shutdown
         log.info("Shutting down...");
+        
+        // Print analytics report
+        System.out.println("\n" + analytics.generateReport());
+        
         contextManager.shutdown();
+        rateLimiter.shutdown();
         runtime.stop().join();
         log.info("=== Example completed ===");
     }
     
     /**
-     * Interactive console mode.
+     * Interactive console mode with production features.
      */
     private static void runInteractiveMode(JenticRuntime runtime) throws Exception {
+        // Get services from runtime (in real app, these would be injected)
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         String sessionId = UUID.randomUUID().toString().substring(0, 8);
         
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
         System.out.println("║  FinanceCloud Support Chat                                 ║");
-        System.out.println("║  Type your question or 'quit' to exit                      ║");
+        System.out.println("║  Commands: 'quit', 'stats', 'lang <code>'                  ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
@@ -129,6 +185,13 @@ public class SupportChatbotExample {
             }
             
             if (input.isBlank()) {
+                continue;
+            }
+            
+            // Special commands
+            if (input.equalsIgnoreCase("stats")) {
+                // Would print analytics in real implementation
+                System.out.println("Bot: Use 'quit' to see analytics report on exit.\n");
                 continue;
             }
             
