@@ -2,7 +2,7 @@ package dev.jentic.examples.support;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.examples.support.a2a.SupportA2AServer;
+import dev.jentic.examples.support.a2a.A2AHttpServer;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.EmbeddingConfig;
 import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
@@ -24,7 +24,6 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -45,7 +44,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Run modes:
  * - Interactive: mvn exec:java (default)
  * - Demo: mvn exec:java -Dexec.args="demo"
- * - A2A Config: mvn exec:java -Dexec.args="--a2a" (shows A2A configuration)
+ * - A2A Server: mvn exec:java -Dexec.args="--a2a [port]"
  */
 public class SupportChatbotExample {
     
@@ -151,15 +150,21 @@ public class SupportChatbotExample {
             responseLatch.countDown();
         }));
         
-        // Check for A2A info mode
+        // Check for A2A server mode
         boolean a2aMode = args.length > 0 && args[0].equals("--a2a");
+        int a2aPort = 8081; // Default A2A port (separate from console)
+        if (a2aMode && args.length > 1) {
+            a2aPort = Integer.parseInt(args[1]);
+        }
         
+        A2AHttpServer a2aServer = null;
         if (a2aMode) {
-            // Show A2A configuration (actual server requires Quarkus or custom Jetty)
-            SupportA2AServer.logConfiguration("http://localhost:8080");
-            log.info("");
-            log.info("To expose as A2A server, use with Quarkus or integrate with JettyWebConsole.");
-            log.info("See SupportA2AServer javadoc for integration examples.");
+            // Start A2A HTTP server
+            a2aServer = A2AHttpServer.builder()
+                .port(a2aPort)
+                .messageService(runtime.getMessageService())
+                .build();
+            a2aServer.start().join();
         }
         
         // Interactive mode
@@ -169,12 +174,18 @@ public class SupportChatbotExample {
             // Demo mode with sample queries
             runDemoMode(runtime, lastResponse);
         } else {
-            // A2A info mode - also run interactive
+            // A2A server mode - run interactive alongside
+            log.info("A2A Server running on port {}. Starting interactive mode...", a2aPort);
             runInteractiveMode(runtime);
         }
         
         // Shutdown
         log.info("Shutting down...");
+        
+        // Stop A2A server if running
+        if (a2aServer != null) {
+            a2aServer.stop().join();
+        }
         
         // Print analytics report
         System.out.println("\n" + analytics.generateReport());
@@ -196,7 +207,7 @@ public class SupportChatbotExample {
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
         System.out.println("║  FinanceCloud Support Chat                                 ║");
         System.out.println("║  Commands: 'quit', 'stats'                                 ║");
-        System.out.println("║  Run with --a2a to show A2A configuration                  ║");
+        System.out.println("║  Run with --a2a [port] to start A2A server                 ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
