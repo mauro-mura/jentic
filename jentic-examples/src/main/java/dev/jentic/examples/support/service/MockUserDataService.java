@@ -35,6 +35,7 @@ public class MockUserDataService {
         String email,
         String phone,
         String plan,
+        BigDecimal balance,
         LocalDate memberSince,
         List<LinkedAccount> linkedAccounts
     ) {}
@@ -48,12 +49,22 @@ public class MockUserDataService {
         LocalDateTime lastSync
     ) {}
     
+    public List<LinkedAccount> getLinkedAccounts(String userId) {
+        return getUser(userId)
+            .map(UserProfile::linkedAccounts)
+            .orElse(List.of());
+    }
+    
     // ========== TRANSACTIONS ==========
     
     public List<Transaction> getTransactions(String userId, int limit) {
         return transactions.getOrDefault(userId, List.of()).stream()
             .limit(limit)
             .toList();
+    }
+    
+    public List<Transaction> getRecentTransactions(String userId, int limit) {
+        return getTransactions(userId, limit);
     }
     
     public List<Transaction> getTransactionsByCategory(String userId, String category) {
@@ -84,8 +95,19 @@ public class MockUserDataService {
     
     // ========== SECURITY ==========
     
-    public Optional<SecuritySettings> getSecuritySettings(String userId) {
+    public Optional<SecuritySettings> getSecuritySettingsOpt(String userId) {
         return Optional.ofNullable(securitySettings.get(userId));
+    }
+    
+    public SecuritySettings getSecuritySettings(String userId) {
+        return securitySettings.getOrDefault(userId, new SecuritySettings(
+            userId, false, "none", List.of(), LocalDateTime.now().minusDays(30), 0, false
+        ));
+    }
+    
+    public List<TrustedDevice> getTrustedDevices(String userId) {
+        SecuritySettings settings = securitySettings.get(userId);
+        return settings != null ? settings.trustedDevices() : List.of();
     }
     
     public boolean initiate2FASetup(String userId, String method) {
@@ -104,14 +126,15 @@ public class MockUserDataService {
         String twoFactorMethod,
         List<TrustedDevice> trustedDevices,
         LocalDateTime lastPasswordChange,
-        int failedLoginAttempts
+        int failedLoginAttempts,
+        boolean accountLocked
     ) {}
     
     public record TrustedDevice(
         String deviceId,
         String deviceName,
         String deviceType,
-        LocalDateTime lastActive,
+        LocalDateTime lastUsed,
         String location
     ) {}
     
@@ -127,7 +150,8 @@ public class MockUserDataService {
         BigDecimal limit,
         BigDecimal spent,
         LocalDate periodStart,
-        LocalDate periodEnd
+        LocalDate periodEnd,
+        boolean alertEnabled
     ) {
         public BigDecimal remaining() {
             return limit.subtract(spent);
@@ -153,6 +177,7 @@ public class MockUserDataService {
             "demo@example.com",
             "+1-555-0123",
             "Premium",
+            new BigDecimal("2011.11"),  // Total balance across accounts
             LocalDate.of(2023, 6, 15),
             List.of(
                 new LinkedAccount("acc-1", "Chase", "Checking", "4521", 
@@ -194,20 +219,21 @@ public class MockUserDataService {
                     LocalDateTime.now().minusDays(10), "Unknown Location")
             ),
             LocalDateTime.now().minusDays(45),
-            0
+            0,
+            false  // accountLocked
         ));
         
         // Budgets
         budgets.put(userId, List.of(
             new Budget("bud-1", "Groceries", new BigDecimal("500"), 
                 new BigDecimal("327.34"), LocalDate.now().withDayOfMonth(1), 
-                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1)),
+                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1), true),
             new Budget("bud-2", "Entertainment", new BigDecimal("100"),
                 new BigDecimal("95.99"), LocalDate.now().withDayOfMonth(1),
-                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1)),
+                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1), true),
             new Budget("bud-3", "Transportation", new BigDecimal("200"),
                 new BigDecimal("45.00"), LocalDate.now().withDayOfMonth(1),
-                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1))
+                LocalDate.now().withDayOfMonth(1).plusMonths(1).minusDays(1), false)
         ));
         
         // Also add demo-user for demo mode

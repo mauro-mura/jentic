@@ -3,6 +3,10 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.dialogue.DialogueMessage;
+import dev.jentic.core.dialogue.Performative;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
 import dev.jentic.examples.support.knowledge.KnowledgeDocument;
 import dev.jentic.examples.support.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.knowledge.QueryExpander;
@@ -11,21 +15,25 @@ import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.dialogue.DialogueCapability;
+import dev.jentic.core.dialogue.DialogueHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Handles FAQ queries using the knowledge base.
- * Supports query expansion, hybrid search, and LLM-enhanced responses.
+ * Supports query expansion, hybrid search, LLM-enhanced responses,
+ * and collaborative reasoning via DialogueCapability.
  */
 @JenticAgent(
     value = "faq-agent",
     type = "handler",
-    capabilities = {"knowledge-retrieval", "faq", "rag", "hybrid-search"}
+    capabilities = {"knowledge-retrieval", "faq", "rag", "hybrid-search", "consultable"}
 )
-public class FAQAgent extends BaseAgent {
+public class FAQAgent extends BaseAgent implements ConsultableAgent {
     
     private static final Logger log = LoggerFactory.getLogger(FAQAgent.class);
     private static final int TOP_K = 3;
@@ -34,6 +42,7 @@ public class FAQAgent extends BaseAgent {
     private final KnowledgeStore knowledgeStore;
     private final LLMResponseGenerator llmGenerator;
     private final QueryExpander queryExpander;
+    private final DialogueCapability dialogue;
     
     /**
      * Constructor without LLM or query expansion.
@@ -58,10 +67,14 @@ public class FAQAgent extends BaseAgent {
         this.knowledgeStore = knowledgeStore;
         this.llmGenerator = llmGenerator;
         this.queryExpander = queryExpander;
+        this.dialogue = new DialogueCapability(this);
     }
     
     @Override
     protected void onStart() {
+        // Initialize dialogue capability for collaborative reasoning
+        dialogue.initialize(getMessageService());
+        
         // Subscribe to FAQ topic
         messageService.subscribe("support.faq", MessageHandler.sync(this::handleFAQQuery));
         
@@ -82,12 +95,112 @@ public class FAQAgent extends BaseAgent {
         if (queryExpander != null) {
             sb.append(" + query expansion");
         }
+        sb.append(" + dialogue");
         return sb.toString();
     }
     
     @Override
     protected void onStop() {
+        dialogue.shutdown(getMessageService());
         log.info("FAQ Agent stopped");
+    }
+    
+    // ========== CONSULTABLE AGENT IMPLEMENTATION ==========
+    
+    @Override
+    public List<SupportIntent> getExpertise() {
+        return List.of(SupportIntent.FAQ, SupportIntent.GENERAL);
+    }
+    
+    /**
+     * Handles consultation requests from CollaborativeRouterAgent.
+     */
+    @DialogueHandler(performatives = {Performative.QUERY})
+    public void handleConsultation(DialogueMessage msg) {
+        if (msg.content() instanceof AgentConsultation consultation) {
+            log.debug("Received consultation request: {}", consultation.queryText());
+            AgentContribution contribution = consult(consultation);
+            dialogue.reply(msg, Performative.INFORM, contribution);
+        } else {
+            // Handle as regular query
+            dialogue.reply(msg, Performative.REFUSE, "Expected AgentConsultation");
+        }
+    }
+    
+    @Override
+    public AgentContribution consult(AgentConsultation consultation) {
+        String queryText = consultation.queryText();
+        
+        // Handle greetings
+        if (isGreeting(queryText)) {
+            return new AgentContribution(
+                getAgentId(),
+                "Welcome to FinanceCloud Support! I can help with account, transactions, security, and budgets.",
+                0.9,
+                SupportIntent.FAQ,
+                List.of("ACTION: Show help menu")
+            );
+        }
+        
+        // Expand query if available
+        String searchQuery = queryText;
+        if (queryExpander != null) {
+            var expansion = queryExpander.expandWithDetails(queryText);
+            if (expansion.wasExpanded()) {
+                searchQuery = expansion.expandedQuery();
+            }
+        }
+        
+        // Search knowledge base
+        List<KnowledgeDocument> matches = knowledgeStore.search(searchQuery, TOP_K);
+        
+        if (matches.isEmpty()) {
+            return cannotContribute("No relevant FAQ articles found for: " + queryText);
+        }
+        
+        KnowledgeDocument bestMatch = matches.get(0);
+        double confidence = bestMatch.relevanceScore(queryText);
+        
+        if (confidence < MIN_CONFIDENCE) {
+            return new AgentContribution(
+                getAgentId(),
+                "Possible topics: " + matches.stream()
+                    .limit(3)
+                    .map(KnowledgeDocument::title)
+                    .toList(),
+                0.25,
+                SupportIntent.FAQ,
+                List.of("ACTION: Clarify question")
+            );
+        }
+        
+        // Build response text
+        String responseText;
+        if (llmGenerator != null && llmGenerator.isLLMEnabled()) {
+            try {
+                responseText = llmGenerator.generate(queryText, matches, SupportIntent.FAQ);
+            } catch (Exception e) {
+                responseText = createTemplateResponse(bestMatch, matches);
+            }
+        } else {
+            responseText = createTemplateResponse(bestMatch, matches);
+        }
+        
+        // Extract insights from matched documents
+        List<String> insights = new ArrayList<>();
+        insights.add("SOURCE: " + bestMatch.title());
+        if (matches.size() > 1) {
+            insights.add("RELATED: " + matches.get(1).title());
+        }
+        insights.add("ACTION: Ask follow-up question");
+        
+        return new AgentContribution(
+            getAgentId(),
+            responseText,
+            confidence,
+            SupportIntent.FAQ,
+            insights
+        );
     }
     
     /**

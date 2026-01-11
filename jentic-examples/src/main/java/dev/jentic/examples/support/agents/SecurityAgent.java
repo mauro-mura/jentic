@@ -3,6 +3,11 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.dialogue.DialogueMessage;
+import dev.jentic.core.dialogue.Performative;
+import dev.jentic.core.dialogue.DialogueHandler;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
@@ -10,44 +15,149 @@ import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.examples.support.service.MockUserDataService.SecuritySettings;
 import dev.jentic.examples.support.service.MockUserDataService.TrustedDevice;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.dialogue.DialogueCapability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Handles security-related queries: password reset, 2FA, device management.
+ * Supports collaborative reasoning via ConsultableAgent interface.
  */
 @JenticAgent(
     value = "security-agent",
     type = "handler",
-    capabilities = {"security", "authentication", "2fa"}
+    capabilities = {"security", "authentication", "2fa", "consultable"}
 )
-public class SecurityAgent extends BaseAgent {
+public class SecurityAgent extends BaseAgent implements ConsultableAgent {
     
     private static final Logger log = LoggerFactory.getLogger(SecurityAgent.class);
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("MMM d, h:mm a");
     
     private final MockUserDataService dataService;
+    private final DialogueCapability dialogue;
     
     public SecurityAgent(MockUserDataService dataService) {
         super("security-agent", "Security Handler");
         this.dataService = dataService;
+        this.dialogue = new DialogueCapability(this);
     }
     
     @Override
     protected void onStart() {
+        dialogue.initialize(getMessageService());
         messageService.subscribe("support.security", MessageHandler.sync(this::handleSecurityQuery));
-        log.info("Security Agent started");
+        log.info("Security Agent started with dialogue support");
     }
     
     @Override
     protected void onStop() {
+        dialogue.shutdown(getMessageService());
         log.info("Security Agent stopped");
     }
+    
+    // ========== CONSULTABLE AGENT IMPLEMENTATION ==========
+    
+    @Override
+    public List<SupportIntent> getExpertise() {
+        return List.of(SupportIntent.SECURITY, SupportIntent.PASSWORD_RESET);
+    }
+    
+    @DialogueHandler(performatives = {Performative.QUERY})
+    public void handleConsultation(DialogueMessage msg) {
+        if (msg.content() instanceof AgentConsultation consultation) {
+            log.debug("Security consultation: {}", consultation.queryText());
+            AgentContribution contribution = consult(consultation);
+            dialogue.reply(msg, Performative.INFORM, contribution);
+        }
+    }
+    
+    @Override
+    public AgentContribution consult(AgentConsultation consultation) {
+        String queryText = consultation.queryText().toLowerCase();
+        String userId = "demo-user";
+        
+        double confidence = calculateConfidence(queryText,
+            "password", "security", "2fa", "login", "device", "suspicious", "locked", "hack");
+        
+        if (confidence < 0.3) {
+            return cannotContribute("Query not related to security");
+        }
+        
+        List<String> insights = new ArrayList<>();
+        StringBuilder response = new StringBuilder();
+        
+        // Get security settings
+        SecuritySettings settings = dataService.getSecuritySettings(userId);
+        List<TrustedDevice> devices = dataService.getTrustedDevices(userId);
+        
+        // Password related
+        if (containsAny(queryText, "password", "reset", "forgot")) {
+            response.append("Password reset available via email verification. ");
+            long daysSinceChange = ChronoUnit.DAYS.between(settings.lastPasswordChange(), LocalDateTime.now());
+            insights.add("LAST_PASSWORD_CHANGE: " + daysSinceChange + " days ago");
+            if (daysSinceChange > 90) {
+                insights.add("ACTION: Recommend password update");
+            }
+        }
+        
+        // 2FA status
+        if (containsAny(queryText, "2fa", "two factor", "authenticator", "secure")) {
+            if (response.length() > 0) response.append("\n");
+            response.append("2FA is ").append(settings.twoFactorEnabled() ? "ENABLED ✓" : "DISABLED");
+            insights.add("2FA_STATUS: " + (settings.twoFactorEnabled() ? "enabled" : "disabled"));
+            if (!settings.twoFactorEnabled()) {
+                insights.add("ACTION: Recommend enabling 2FA");
+            }
+        }
+        
+        // Device/login activity
+        if (containsAny(queryText, "device", "login", "session", "suspicious", "activity")) {
+            if (response.length() > 0) response.append("\n");
+            response.append("Trusted devices: ").append(devices.size());
+            insights.add("TRUSTED_DEVICES: " + devices.size());
+            
+            // Check for recent activity
+            if (!devices.isEmpty()) {
+                TrustedDevice mostRecent = devices.get(0);
+                long hoursSinceLogin = ChronoUnit.HOURS.between(mostRecent.lastUsed(), LocalDateTime.now());
+                insights.add("LAST_LOGIN: " + hoursSinceLogin + " hours ago from " + mostRecent.deviceType());
+            }
+        }
+        
+        // Account locked
+        if (containsAny(queryText, "locked", "blocked", "cant login")) {
+            if (response.length() > 0) response.append("\n");
+            response.append("Account status: ").append(settings.accountLocked() ? "LOCKED" : "Active");
+            if (settings.accountLocked()) {
+                insights.add("ALERT: Account is locked");
+                insights.add("ACTION: Contact support to unlock");
+            }
+        }
+        
+        // Generic security check
+        if (response.length() == 0) {
+            response.append("Security status: ");
+            response.append(settings.twoFactorEnabled() ? "2FA enabled, " : "2FA disabled, ");
+            response.append(devices.size()).append(" trusted devices");
+            insights.add("SECURITY_SCORE: " + (settings.twoFactorEnabled() ? "good" : "moderate"));
+        }
+        
+        return new AgentContribution(
+            getAgentId(),
+            response.toString(),
+            confidence,
+            SupportIntent.SECURITY,
+            insights
+        );
+    }
+    
+    // ========== ORIGINAL QUERY HANDLERS ==========
     
     private void handleSecurityQuery(Message message) {
         SupportQuery query = extractQuery(message);
@@ -76,7 +186,7 @@ public class SecurityAgent extends BaseAgent {
     }
     
     private SupportResponse handlePasswordQuery(SupportQuery query, String userId) {
-        var settings = dataService.getSecuritySettings(userId);
+        var settings = dataService.getSecuritySettingsOpt(userId);
         
         StringBuilder sb = new StringBuilder();
         sb.append("**Password Reset**\n\n");
@@ -120,7 +230,7 @@ public class SecurityAgent extends BaseAgent {
     }
     
     private SupportResponse handle2FAQuery(SupportQuery query, String userId) {
-        return dataService.getSecuritySettings(userId)
+        return dataService.getSecuritySettingsOpt(userId)
             .map(settings -> {
                 StringBuilder sb = new StringBuilder();
                 sb.append("**Two-Factor Authentication (2FA)**\n\n");
@@ -163,7 +273,7 @@ public class SecurityAgent extends BaseAgent {
     }
     
     private SupportResponse handleDeviceQuery(SupportQuery query, String userId) {
-        return dataService.getSecuritySettings(userId)
+        return dataService.getSecuritySettingsOpt(userId)
             .map(settings -> {
                 StringBuilder sb = new StringBuilder();
                 sb.append("**Your Trusted Devices**\n\n");
@@ -174,11 +284,11 @@ public class SecurityAgent extends BaseAgent {
                     sb.append("No devices are currently logged in.");
                 } else {
                     for (TrustedDevice device : devices) {
-                        String status = isRecent(device.lastActive()) ? "🟢 Active" : "🔴 Inactive";
+                        String status = isRecent(device.lastUsed()) ? "🟢 Active" : "🔴 Inactive";
                         
                         sb.append(String.format("**%s** (%s)\n", device.deviceName(), device.deviceType()));
                         sb.append(String.format("  %s • Last active: %s\n", 
-                            status, device.lastActive().format(DATETIME_FMT)));
+                            status, device.lastUsed().format(DATETIME_FMT)));
                         sb.append(String.format("  📍 %s\n\n", device.location()));
                         
                         // Flag suspicious devices
@@ -203,7 +313,7 @@ public class SecurityAgent extends BaseAgent {
     }
     
     private SupportResponse handleLockedAccountQuery(SupportQuery query, String userId) {
-        var settings = dataService.getSecuritySettings(userId);
+        var settings = dataService.getSecuritySettingsOpt(userId);
         
         StringBuilder sb = new StringBuilder();
         sb.append("**Account Access Issues**\n\n");
@@ -253,7 +363,7 @@ public class SecurityAgent extends BaseAgent {
     }
     
     private SupportResponse handleSecurityOverview(SupportQuery query, String userId) {
-        return dataService.getSecuritySettings(userId)
+        return dataService.getSecuritySettingsOpt(userId)
             .map(settings -> {
                 StringBuilder sb = new StringBuilder();
                 sb.append("**Security Overview**\n\n");

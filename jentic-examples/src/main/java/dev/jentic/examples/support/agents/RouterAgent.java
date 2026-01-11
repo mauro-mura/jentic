@@ -55,7 +55,11 @@ public class RouterAgent extends BaseAgent {
     
     // Track query start times for response time calculation
     private final Map<String, QueryTracker> pendingQueries = new ConcurrentHashMap<>();
-    
+
+    // Store subscription IDs
+    private String querySubscriptionId;
+    private String responseSubscriptionId;
+
     // Keyword mappings for intent detection
     private static final Map<SupportIntent, Set<String>> INTENT_KEYWORDS = Map.of(
         SupportIntent.ACCOUNT, Set.of(
@@ -108,16 +112,22 @@ public class RouterAgent extends BaseAgent {
     @Override
     protected void onStart() {
         // Subscribe to incoming support requests
-        messageService.subscribe("support.query", MessageHandler.sync(this::handleQuery));
+        querySubscriptionId = messageService.subscribe("support.query", MessageHandler.sync(this::handleQuery));
         
         // Subscribe to responses for metrics tracking
-        messageService.subscribe("support.response", MessageHandler.sync(this::trackResponse));
+        responseSubscriptionId = messageService.subscribe("support.response", MessageHandler.sync(this::trackResponse));
         
         log.info("Router Agent started - listening on support.query and support.response");
     }
     
     @Override
     protected void onStop() {
+        if (querySubscriptionId != null) {
+            messageService.unsubscribe(querySubscriptionId);
+        }
+        if (responseSubscriptionId != null) {
+            messageService.unsubscribe(responseSubscriptionId);
+        }
         log.info("Router Agent stopped");
     }
     
@@ -267,7 +277,9 @@ public class RouterAgent extends BaseAgent {
             result.getRetryAfterSeconds());
         
         SupportResponse response = new SupportResponse(
-            sessionId, text, SupportIntent.FAQ, 1.0, List.of("Wait and retry"), true);
+            sessionId, text, SupportIntent.FAQ, 1.0,
+            List.of("Wait and retry"), false
+        );
         
         Message responseMsg = Message.builder()
             .topic("support.response")

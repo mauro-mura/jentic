@@ -2,7 +2,8 @@ package dev.jentic.examples.support;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.examples.support.a2a.SupportA2AServer;
+import dev.jentic.examples.support.a2a.A2AHttpServer;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.knowledge.EmbeddingConfig;
 import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
@@ -24,14 +25,14 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * FinanceCloud Support Chatbot Example - Phase 7
+ * FinanceCloud Support Chatbot Example - Phase 7+
  * 
  * Demonstrates a multi-agent support system with:
  * - RouterAgent: classifies intent with sentiment analysis
+ * - CollaborativeRouterAgent: multi-agent synthesis (--collab mode)
  * - FAQAgent: answers using RAG (knowledge base + LLM)
  * - Specialized agents: Account, Transaction, Security, Budget
  * - EscalationAgent: human handoff
@@ -43,9 +44,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * - Falls back to template-based responses if no LLM configured
  * 
  * Run modes:
- * - Interactive: mvn exec:java (default)
+ * - Interactive: mvn exec:java (default, simple routing)
+ * - Collaborative: mvn exec:java -Dexec.args="--collab" (multi-agent synthesis)
  * - Demo: mvn exec:java -Dexec.args="demo"
- * - A2A Config: mvn exec:java -Dexec.args="--a2a" (shows A2A configuration)
+ * - A2A Server: mvn exec:java -Dexec.args="--a2a [port]"
  */
 public class SupportChatbotExample {
     
@@ -151,30 +153,60 @@ public class SupportChatbotExample {
             responseLatch.countDown();
         }));
         
-        // Check for A2A info mode
-        boolean a2aMode = args.length > 0 && args[0].equals("--a2a");
-        
+        // Check run mode flags
+        boolean collabMode = hasArg(args, "--collab");
+        boolean a2aMode = hasArg(args, "--a2a");
+        int a2aPort = 8081;
         if (a2aMode) {
-            // Show A2A configuration (actual server requires Quarkus or custom Jetty)
-            SupportA2AServer.logConfiguration("http://localhost:8080");
-            log.info("");
-            log.info("To expose as A2A server, use with Quarkus or integrate with JettyWebConsole.");
-            log.info("See SupportA2AServer javadoc for integration examples.");
+            int idx = indexOf(args, "--a2a");
+            if (idx >= 0 && idx + 1 < args.length) {
+                try {
+                    a2aPort = Integer.parseInt(args[idx + 1]);
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        
+        // Register CollaborativeRouterAgent if in collab mode
+        if (collabMode) {
+            CollaborativeRouterAgent collabRouter = new CollaborativeRouterAgent(contextManager);
+            runtime.registerAgent(collabRouter);
+            log.info("Collaborative reasoning enabled - using CollaborativeRouterAgent");
+
+            runtime.unregisterAgent("router-agent");
+            Thread.sleep(1000);
+        }
+        
+        A2AHttpServer a2aServer = null;
+        if (a2aMode) {
+            // Start A2A HTTP server
+            a2aServer = A2AHttpServer.builder()
+                .port(a2aPort)
+                .messageService(runtime.getMessageService())
+                .build();
+            a2aServer.start().join();
         }
         
         // Interactive mode
-        if (args.length == 0) {
-            runInteractiveMode(runtime);
-        } else if (!a2aMode) {
+        boolean demoMode = hasArg(args, "demo");
+        
+        if (demoMode) {
             // Demo mode with sample queries
             runDemoMode(runtime, lastResponse);
         } else {
-            // A2A info mode - also run interactive
+            // Interactive mode (default, also for --collab and --a2a)
+            if (a2aMode) {
+                log.info("A2A Server running on port {}. Starting interactive mode...", a2aPort);
+            }
             runInteractiveMode(runtime);
         }
         
         // Shutdown
         log.info("Shutting down...");
+        
+        // Stop A2A server if running
+        if (a2aServer != null) {
+            a2aServer.stop().join();
+        }
         
         // Print analytics report
         System.out.println("\n" + analytics.generateReport());
@@ -196,7 +228,7 @@ public class SupportChatbotExample {
         System.out.println("\n╔════════════════════════════════════════════════════════════╗");
         System.out.println("║  FinanceCloud Support Chat                                 ║");
         System.out.println("║  Commands: 'quit', 'stats'                                 ║");
-        System.out.println("║  Run with --a2a to show A2A configuration                  ║");
+        System.out.println("║  Run modes: --collab, --a2a [port], demo                   ║");
         System.out.println("╚════════════════════════════════════════════════════════════╝\n");
         
         while (true) {
@@ -293,6 +325,27 @@ public class SupportChatbotExample {
         if (!response.suggestedActions().isEmpty()) {
             System.out.println("\n[Suggested: " + String.join(" | ", response.suggestedActions()) + "]");
         }
+        
+        // Show contributing agents if available (collaborative mode)
+        if (response.metadata() != null && response.metadata().containsKey("contributingAgents")) {
+            Object agents = response.metadata().get("contributingAgents");
+            System.out.println("[Contributors: " + agents + "]");
+        }
+        
         System.out.println("└────────────────────────────────────────────┘\n");
+    }
+    
+    private static boolean hasArg(String[] args, String arg) {
+        for (String a : args) {
+            if (a.equals(arg)) return true;
+        }
+        return false;
+    }
+    
+    private static int indexOf(String[] args, String arg) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals(arg)) return i;
+        }
+        return -1;
     }
 }

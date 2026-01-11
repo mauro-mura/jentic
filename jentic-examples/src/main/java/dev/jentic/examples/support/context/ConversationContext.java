@@ -49,6 +49,17 @@ public class ConversationContext {
         history.add(new Turn(TurnType.AGENT, text, currentIntent, Instant.now(), agentId));
     }
     
+    /**
+     * Generic method to add a message (user or assistant).
+     */
+    public void addMessage(String role, String text) {
+        if ("user".equalsIgnoreCase(role)) {
+            addUserTurn(text, currentIntent != null ? currentIntent : SupportIntent.UNKNOWN);
+        } else {
+            addAgentTurn(role, text);
+        }
+    }
+    
     public List<Turn> getHistory() {
         return Collections.unmodifiableList(history);
     }
@@ -94,6 +105,10 @@ public class ConversationContext {
     }
     
     // ========== ESCALATION ==========
+    
+    public void setLastIntent(SupportIntent intent) {
+        this.currentIntent = intent;
+    }
     
     public void requestEscalation(String reason) {
         this.escalationRequested = true;

@@ -3,50 +3,160 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.dialogue.DialogueMessage;
+import dev.jentic.core.dialogue.Performative;
+import dev.jentic.core.dialogue.DialogueHandler;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.examples.support.service.MockUserDataService.Transaction;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.dialogue.DialogueCapability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Handles transaction-related queries: history, disputes, exports.
+ * Supports collaborative reasoning via ConsultableAgent interface.
  */
 @JenticAgent(
     value = "transaction-agent",
     type = "handler",
-    capabilities = {"transaction-history", "disputes"}
+    capabilities = {"transaction-history", "disputes", "consultable"}
 )
-public class TransactionAgent extends BaseAgent {
+public class TransactionAgent extends BaseAgent implements ConsultableAgent {
     
     private static final Logger log = LoggerFactory.getLogger(TransactionAgent.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("MMM d, h:mm a");
     
     private final MockUserDataService dataService;
+    private final DialogueCapability dialogue;
     
     public TransactionAgent(MockUserDataService dataService) {
         super("transaction-agent", "Transaction Handler");
         this.dataService = dataService;
+        this.dialogue = new DialogueCapability(this);
     }
     
     @Override
     protected void onStart() {
+        dialogue.initialize(getMessageService());
         messageService.subscribe("support.transaction", MessageHandler.sync(this::handleTransactionQuery));
-        log.info("Transaction Agent started");
+        log.info("Transaction Agent started with dialogue support");
     }
     
     @Override
     protected void onStop() {
+        dialogue.shutdown(getMessageService());
         log.info("Transaction Agent stopped");
     }
+    
+    // ========== CONSULTABLE AGENT IMPLEMENTATION ==========
+    
+    @Override
+    public List<SupportIntent> getExpertise() {
+        return List.of(SupportIntent.TRANSACTION_HISTORY, SupportIntent.BILLING);
+    }
+    
+    @DialogueHandler(performatives = {Performative.QUERY})
+    public void handleConsultation(DialogueMessage msg) {
+        if (msg.content() instanceof AgentConsultation consultation) {
+            log.debug("Transaction consultation: {}", consultation.queryText());
+            AgentContribution contribution = consult(consultation);
+            dialogue.reply(msg, Performative.INFORM, contribution);
+        }
+    }
+    
+    @Override
+    public AgentContribution consult(AgentConsultation consultation) {
+        String queryText = consultation.queryText().toLowerCase();
+        String userId = "demo-user";
+        
+        double confidence = calculateConfidence(queryText,
+            "transaction", "payment", "history", "charge", "spent", "dispute", "refund", "statement");
+        
+        if (confidence < 0.3) {
+            return cannotContribute("Query not related to transactions");
+        }
+        
+        List<String> insights = new ArrayList<>();
+        StringBuilder response = new StringBuilder();
+        
+        List<Transaction> transactions = dataService.getRecentTransactions(userId, 10);
+        
+        // Transaction history
+        if (containsAny(queryText, "history", "recent", "last", "transactions")) {
+            BigDecimal total = transactions.stream()
+                .map(Transaction::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            response.append("Recent transactions: ").append(transactions.size())
+                .append(" (Total: $").append(total).append(")");
+            insights.add("TRANSACTION_COUNT: " + transactions.size());
+            insights.add("TOTAL_SPENT: $" + total);
+        }
+        
+        // Specific amount queries
+        if (containsAny(queryText, "spent", "how much", "total")) {
+            BigDecimal total = transactions.stream()
+                .map(Transaction::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            if (response.length() > 0) response.append("\n");
+            response.append("Total spent recently: $").append(total);
+            insights.add("SPENDING_SUMMARY: $" + total);
+        }
+        
+        // Dispute related
+        if (containsAny(queryText, "dispute", "fraud", "unauthorized", "wrong")) {
+            if (response.length() > 0) response.append("\n");
+            response.append("Disputes can be filed within 60 days of transaction");
+            insights.add("ACTION: File dispute");
+            insights.add("DISPUTE_WINDOW: 60 days");
+        }
+        
+        // Last transaction
+        if (containsAny(queryText, "last", "latest", "most recent") && !transactions.isEmpty()) {
+            Transaction last = transactions.get(0);
+            if (response.length() > 0) response.append("\n");
+            response.append("Latest: ").append(last.merchant())
+                .append(" - $").append(last.amount());
+            insights.add("LAST_TRANSACTION: " + last.merchant() + " ($" + last.amount() + ")");
+        }
+        
+        // Export/statement
+        if (containsAny(queryText, "export", "statement", "download", "pdf")) {
+            if (response.length() > 0) response.append("\n");
+            response.append("Statements available in PDF/CSV format");
+            insights.add("ACTION: Export statement");
+        }
+        
+        if (response.length() == 0 && !transactions.isEmpty()) {
+            Transaction last = transactions.get(0);
+            response.append("Last transaction: ").append(last.merchant())
+                .append(" ($").append(last.amount()).append(") on ")
+                .append(last.date().format(DATE_FMT));
+        }
+        
+        return new AgentContribution(
+            getAgentId(),
+            response.toString(),
+            confidence,
+            SupportIntent.TRANSACTION_HISTORY,
+            insights
+        );
+    }
+    
+    // ========== ORIGINAL QUERY HANDLERS ==========
     
     private void handleTransactionQuery(Message message) {
         SupportQuery query = extractQuery(message);

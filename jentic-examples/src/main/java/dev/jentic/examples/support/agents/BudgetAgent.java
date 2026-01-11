@@ -3,49 +3,164 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.dialogue.DialogueMessage;
+import dev.jentic.core.dialogue.Performative;
+import dev.jentic.core.dialogue.DialogueHandler;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.examples.support.service.MockUserDataService.Budget;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.dialogue.DialogueCapability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Handles budget-related queries: creation, tracking, alerts.
+ * Supports collaborative reasoning via ConsultableAgent interface.
  */
 @JenticAgent(
     value = "budget-agent",
     type = "handler",
-    capabilities = {"budget-management", "spending-tracking"}
+    capabilities = {"budget-management", "spending-tracking", "consultable"}
 )
-public class BudgetAgent extends BaseAgent {
+public class BudgetAgent extends BaseAgent implements ConsultableAgent {
     
     private static final Logger log = LoggerFactory.getLogger(BudgetAgent.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d");
     
     private final MockUserDataService dataService;
+    private final DialogueCapability dialogue;
     
     public BudgetAgent(MockUserDataService dataService) {
         super("budget-agent", "Budget Handler");
         this.dataService = dataService;
+        this.dialogue = new DialogueCapability(this);
     }
     
     @Override
     protected void onStart() {
+        dialogue.initialize(getMessageService());
         messageService.subscribe("support.budget", MessageHandler.sync(this::handleBudgetQuery));
-        log.info("Budget Agent started");
+        log.info("Budget Agent started with dialogue support");
     }
     
     @Override
     protected void onStop() {
+        dialogue.shutdown(getMessageService());
         log.info("Budget Agent stopped");
     }
+    
+    // ========== CONSULTABLE AGENT IMPLEMENTATION ==========
+    
+    @Override
+    public List<SupportIntent> getExpertise() {
+        return List.of(SupportIntent.BUDGET, SupportIntent.ACCOUNT_INFO);
+    }
+    
+    @DialogueHandler(performatives = {Performative.QUERY})
+    public void handleConsultation(DialogueMessage msg) {
+        if (msg.content() instanceof AgentConsultation consultation) {
+            log.debug("Budget consultation: {}", consultation.queryText());
+            AgentContribution contribution = consult(consultation);
+            dialogue.reply(msg, Performative.INFORM, contribution);
+        }
+    }
+    
+    @Override
+    public AgentContribution consult(AgentConsultation consultation) {
+        String queryText = consultation.queryText().toLowerCase();
+        String userId = "demo-user";
+        
+        double confidence = calculateConfidence(queryText,
+            "budget", "spending", "limit", "alert", "category", "overspent", "save");
+        
+        if (confidence < 0.3) {
+            return cannotContribute("Query not related to budgets");
+        }
+        
+        List<String> insights = new ArrayList<>();
+        StringBuilder response = new StringBuilder();
+        
+        List<Budget> budgets = dataService.getBudgets(userId);
+        
+        // Budget overview
+        if (containsAny(queryText, "budget", "budgets", "spending", "overview")) {
+            response.append("Active budgets: ").append(budgets.size());
+            insights.add("BUDGET_COUNT: " + budgets.size());
+            
+            // Find overspent budgets
+            long overspent = budgets.stream()
+                .filter(b -> b.spent().compareTo(b.limit()) > 0)
+                .count();
+            if (overspent > 0) {
+                insights.add("ALERT: " + overspent + " budgets exceeded");
+            }
+        }
+        
+        // Specific category
+        for (Budget budget : budgets) {
+            if (queryText.contains(budget.category().toLowerCase())) {
+                if (response.length() > 0) response.append("\n");
+                BigDecimal remaining = budget.limit().subtract(budget.spent());
+                int percent = budget.spent().multiply(BigDecimal.valueOf(100))
+                    .divide(budget.limit(), 0, RoundingMode.HALF_UP).intValue();
+                
+                response.append(budget.category()).append(": $")
+                    .append(budget.spent()).append("/$").append(budget.limit())
+                    .append(" (").append(percent).append("%)");
+                
+                insights.add("CATEGORY_" + budget.category().toUpperCase() + ": " + percent + "% used");
+                
+                if (remaining.compareTo(BigDecimal.ZERO) < 0) {
+                    insights.add("ALERT: " + budget.category() + " over budget by $" + remaining.abs());
+                }
+            }
+        }
+        
+        // Alerts
+        if (containsAny(queryText, "alert", "notification", "warning")) {
+            if (response.length() > 0) response.append("\n");
+            long alertCount = budgets.stream().filter(Budget::alertEnabled).count();
+            response.append("Budget alerts: ").append(alertCount).append(" enabled");
+            insights.add("ALERTS_ENABLED: " + alertCount);
+            insights.add("ACTION: Configure alerts");
+        }
+        
+        // Summary if no specific match
+        if (response.length() == 0 && !budgets.isEmpty()) {
+            BigDecimal totalLimit = budgets.stream()
+                .map(Budget::limit)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalSpent = budgets.stream()
+                .map(Budget::spent)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            response.append("Total budgeted: $").append(totalLimit)
+                .append(", Spent: $").append(totalSpent);
+            insights.add("TOTAL_BUDGET: $" + totalLimit);
+            insights.add("TOTAL_SPENT: $" + totalSpent);
+        }
+        
+        return new AgentContribution(
+            getAgentId(),
+            response.toString(),
+            confidence,
+            SupportIntent.BUDGET,
+            insights
+        );
+    }
+    
+    // ========== ORIGINAL QUERY HANDLERS ==========
     
     private void handleBudgetQuery(Message message) {
         SupportQuery query = extractQuery(message);

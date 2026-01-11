@@ -51,6 +51,13 @@ public class ConversationContextManager {
     }
     
     /**
+     * Gets or creates a context using sessionId as userId.
+     */
+    public ConversationContext getOrCreate(String sessionId) {
+        return getOrCreate(sessionId, sessionId);
+    }
+    
+    /**
      * Gets an existing context if present.
      */
     public Optional<ConversationContext> get(String sessionId) {

@@ -3,49 +3,151 @@ package dev.jentic.examples.support.agents;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.dialogue.DialogueMessage;
+import dev.jentic.core.dialogue.Performative;
+import dev.jentic.core.dialogue.DialogueHandler;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.examples.support.service.MockUserDataService;
 import dev.jentic.examples.support.service.MockUserDataService.LinkedAccount;
+import dev.jentic.examples.support.service.MockUserDataService.UserProfile;
 import dev.jentic.runtime.agent.BaseAgent;
+import dev.jentic.runtime.dialogue.DialogueCapability;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Handles account-related queries: profile info, linked accounts, settings.
+ * Supports collaborative reasoning via ConsultableAgent interface.
  */
 @JenticAgent(
     value = "account-agent",
     type = "handler",
-    capabilities = {"account-management", "profile"}
+    capabilities = {"account-management", "profile", "consultable"}
 )
-public class AccountAgent extends BaseAgent {
+public class AccountAgent extends BaseAgent implements ConsultableAgent {
     
     private static final Logger log = LoggerFactory.getLogger(AccountAgent.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM d, yyyy");
     
     private final MockUserDataService dataService;
+    private final DialogueCapability dialogue;
     
     public AccountAgent(MockUserDataService dataService) {
         super("account-agent", "Account Handler");
         this.dataService = dataService;
+        this.dialogue = new DialogueCapability(this);
     }
     
     @Override
     protected void onStart() {
+        dialogue.initialize(getMessageService());
         messageService.subscribe("support.account", MessageHandler.sync(this::handleAccountQuery));
-        log.info("Account Agent started");
+        log.info("Account Agent started with dialogue support");
     }
     
     @Override
     protected void onStop() {
+        dialogue.shutdown(getMessageService());
         log.info("Account Agent stopped");
     }
+    
+    // ========== CONSULTABLE AGENT IMPLEMENTATION ==========
+    
+    @Override
+    public List<SupportIntent> getExpertise() {
+        return List.of(SupportIntent.ACCOUNT_INFO, SupportIntent.BILLING);
+    }
+    
+    @DialogueHandler(performatives = {Performative.QUERY})
+    public void handleConsultation(DialogueMessage msg) {
+        if (msg.content() instanceof AgentConsultation consultation) {
+            log.debug("Account consultation: {}", consultation.queryText());
+            AgentContribution contribution = consult(consultation);
+            dialogue.reply(msg, Performative.INFORM, contribution);
+        }
+    }
+    
+    @Override
+    public AgentContribution consult(AgentConsultation consultation) {
+        String queryText = consultation.queryText().toLowerCase();
+        String userId = "demo-user"; // In production, extract from session
+        
+        // Calculate relevance confidence
+        double confidence = calculateConfidence(queryText, 
+            "balance", "account", "profile", "plan", "subscription", "linked", "bank");
+        
+        if (confidence < 0.3) {
+            return cannotContribute("Query not related to account information");
+        }
+        
+        List<String> insights = new ArrayList<>();
+        StringBuilder response = new StringBuilder();
+        
+        // Check what account info is relevant
+        if (containsAny(queryText, "balance", "money", "total", "how much")) {
+            dataService.getUser(userId).ifPresent(user -> {
+                response.append("Current balance: $")
+                    .append(user.balance())
+                    .append(" (").append(user.plan()).append(" plan)");
+                insights.add("BALANCE: $" + user.balance());
+            });
+        }
+        
+        if (containsAny(queryText, "profile", "info", "email", "phone")) {
+            dataService.getUser(userId).ifPresent(user -> {
+                if (response.length() > 0) response.append("\n");
+                response.append("Profile: ").append(user.name())
+                    .append(" (").append(user.email()).append(")");
+                insights.add("USER: " + user.name());
+            });
+        }
+        
+        if (containsAny(queryText, "linked", "bank", "connected")) {
+            List<LinkedAccount> accounts = dataService.getLinkedAccounts(userId);
+            if (!accounts.isEmpty()) {
+                if (response.length() > 0) response.append("\n");
+                response.append("Linked accounts: ").append(accounts.size());
+                insights.add("LINKED_ACCOUNTS: " + accounts.size());
+            }
+        }
+        
+        if (containsAny(queryText, "plan", "subscription", "premium")) {
+            dataService.getUser(userId).ifPresent(user -> {
+                if (response.length() > 0) response.append("\n");
+                response.append("Current plan: ").append(user.plan());
+                insights.add("PLAN: " + user.plan());
+                insights.add("ACTION: Upgrade plan");
+            });
+        }
+        
+        if (response.length() == 0) {
+            // Generic account info
+            dataService.getUser(userId).ifPresent(user -> {
+                response.append("Account holder: ").append(user.name())
+                    .append(", Plan: ").append(user.plan())
+                    .append(", Balance: $").append(user.balance());
+            });
+        }
+        
+        return new AgentContribution(
+            getAgentId(),
+            response.toString(),
+            confidence,
+            SupportIntent.ACCOUNT_INFO,
+            insights
+        );
+    }
+    
+    // ========== ORIGINAL QUERY HANDLERS ==========
     
     private void handleAccountQuery(Message message) {
         SupportQuery query = extractQuery(message);

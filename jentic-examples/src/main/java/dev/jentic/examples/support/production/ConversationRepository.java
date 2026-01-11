@@ -1,5 +1,6 @@
 package dev.jentic.examples.support.production;
 
+import dev.jentic.examples.support.context.ConversationContext;
 import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import org.slf4j.Logger;
