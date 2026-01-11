@@ -183,6 +183,8 @@ Web Console and CLI tools.
 - [x] YAML configuration support
 - [x] Web management console
 - [x] CLI tools
+- [x] A2A (Agent-to-Agent) protocol support
+- [x] LLM integration (OpenAI, Anthropic, Ollama)
 
 ### Planned (V1.0)
 - [ ] JMS message integration
@@ -209,6 +211,7 @@ Check out the `jentic-examples` module for complete examples:
 - Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
 - Discovery pattern: `dev.jentic.examples.discovery.DiscoveryExample`
 - E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`
+- A2A Integration: `dev.jentic.examples.a2a.A2AIntegrationExample`
 
 ## 🤝 Contributing
 
@@ -234,20 +237,6 @@ mvn exec:java -Dexec.mainClass="dev.jentic.examples.PingPongExample"
 - [Architecture Guide](docs/architecture.md)
 - [Agent Development Guide](docs/agent-development.md)
 - [Configuration Reference](docs/configuration.md)
-
-## 🗓️ Roadmap
-
-### Phase 1 (Weeks 1-5) - Foundation ✅
-Core interfaces and in-memory implementations
-
-### Phase 2 (Weeks 6-10) - Behaviors 🚧
-Advanced behavior patterns and configuration
-
-### Phase 3 (Weeks 11-16) - Management
-Web console and monitoring
-
-### Phase 4 (Weeks 17-20) - Production
-Docker, documentation, and release
 
 ## 💡 Why Jentic?
 
