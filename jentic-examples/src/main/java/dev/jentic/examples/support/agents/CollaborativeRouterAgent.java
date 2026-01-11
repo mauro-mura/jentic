@@ -2,14 +2,12 @@ package dev.jentic.examples.support.agents;
 
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageHandler;
-import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import dev.jentic.examples.support.context.ConversationContext;
 import dev.jentic.examples.support.context.ConversationContextManager;
 import dev.jentic.examples.support.model.SupportIntent;
-import dev.jentic.examples.support.model.SupportQuery;
 import dev.jentic.examples.support.model.SupportResponse;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.dialogue.DialogueCapability;
@@ -50,7 +48,7 @@ import java.util.stream.Collectors;
  * Synthesized Response
  * </pre>
  */
-@JenticAgent("collaborative-router")
+
 public class CollaborativeRouterAgent extends BaseAgent {
     
     private static final Logger log = LoggerFactory.getLogger(CollaborativeRouterAgent.class);

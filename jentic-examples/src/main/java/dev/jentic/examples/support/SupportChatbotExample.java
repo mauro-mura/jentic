@@ -170,6 +170,7 @@ public class SupportChatbotExample {
         if (collabMode) {
             CollaborativeRouterAgent collabRouter = new CollaborativeRouterAgent(contextManager);
             runtime.registerAgent(collabRouter);
+            collabRouter.start().join();
             log.info("Collaborative reasoning enabled - using CollaborativeRouterAgent");
 
             runtime.unregisterAgent("router-agent");
