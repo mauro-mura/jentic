@@ -110,8 +110,8 @@ jentic:
     name: my-agent-system
   
   agents:
-    auto-discovery: true
-    base-package: "com.example.agents"
+    autoDiscovery: true
+    basePackage: "com.example.agents"
   
   messaging:
     provider: in-memory  # Evolution: jms, kafka
@@ -145,8 +145,8 @@ Basic implementations for getting started quickly.
 ```
 
 ### jentic-adapters
-Basic implementations for LLMs (OpenAI, Anthropic, Ollama).
-Enterprise-grade implementations (coming in future releases).
+Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
+Enterprise-grade implementations (Kafka, Consul) are planned.
 
 ```xml
 <dependency>
@@ -200,14 +200,14 @@ Web Console and CLI tools.
 
 Check out the `jentic-examples` module for complete examples:
 
-- Ping-Pong: `dev.jentic.examples.PingPongExample`
-- Simple bootstrap: `dev.jentic.examples.SimpleExample`
-- Weather Station: `dev.jentic.examples.WeatherStationExample`
-- Task Manager: `dev.jentic.examples.TaskManagerExample`
+- Ping-Pong: `dev.jentic.examples.agent.PingPongExample`
+- Simple bootstrap: `dev.jentic.examples.agent.SimpleExample`
+- Weather Station: `dev.jentic.examples.agent.WeatherStationExample`
+- Task Manager: `dev.jentic.examples.agent.TaskManagerExample`
 - Advanced - Conditional Behavior: `dev.jentic.examples.behaviors.ConditionalBehaviorExample`
 - Advanced - Throttled Behavior: `dev.jentic.examples.behaviors.ThrottledExample`
 - Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
-- Discovery pattern: `dev.jentic.examples.DiscoveryExample`
+- Discovery pattern: `dev.jentic.examples.discovery.DiscoveryExample`
 - E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`
 
 ## 🤝 Contributing

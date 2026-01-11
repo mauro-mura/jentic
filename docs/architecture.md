@@ -14,11 +14,11 @@ Jentic embraces an interface‑first, modular architecture. Core contracts live 
 │   jentic-core    │    jentic-runtime   │    jentic-adapters  │
 │  (interfaces)    │ (in‑memory impls)   │ (enterprise impls)  │
 ├──────────────────┼─────────────────────┼─────────────────────┤
-│ Agent            │ BaseAgent           │ KafkaMessageService │
-│ Message          │ InMemoryMessageSvc  │ ConsulAgentDirectory│
-│ MessageService   │ LocalAgentDirectory │ QuartzScheduler     │
-│ AgentDirectory   │ SimpleBehaviorSched │ RedisMessageService │
-│ Behavior         │ Behaviors (Cyclic…) │ (future modules)    │
+│ Agent            │ BaseAgent           │ Kafka (Planned)     │
+│ Message          │ InMemoryMessageSvc  │ Consul (Planned)    │
+│ MessageService   │ LocalAgentDirectory │ A2A Adapter         │
+│ AgentDirectory   │ SimpleBehaviorSched │ LLM Adapters        │
+│ Behavior         │ Behaviors (Cyclic…) │ Redis (Planned)     │
 │ BehaviorScheduler│ Discovery/Scanning  │                     │
 └──────────────────┴─────────────────────┴─────────────────────┘
 ```
@@ -133,11 +133,15 @@ See ADRs for rationale and decisions:
 ## 12. Example Bootstrapping
 
 ```java
-var runtime = JenticRuntime.builder()
-    .scanPackage("dev.jentic.examples")
-    .build();
+public class Main {
+    public static void main(String[] args) {
+        var runtime = JenticRuntime.builder()
+            .scanPackage("dev.jentic.examples")
+            .build();
 
-runtime.start();
+        runtime.start();
+    }
+}
 ```
 
 Agents are discovered, registered, and their behaviors scheduled automatically.

@@ -108,40 +108,48 @@ public class MyAgent extends BaseAgent {
 ### 2. Send Requests
 
 ```java
-// Simple request
-dialogue.request("other-agent", taskData)
-    .thenAccept(response -> {
-        if (response.performative() == Performative.INFORM) {
-            // Success!
-            var result = response.content();
-        }
-    });
+public class Example {
+    public void example(DialogueCapability dialogue) {
+        // Simple request
+        dialogue.request("other-agent", taskData)
+            .thenAccept(response -> {
+                if (response.performative() == Performative.INFORM) {
+                    // Success!
+                    var result = response.content();
+                }
+            });
 
-// Query with timeout
-dialogue.query("data-agent", "what is X?", Duration.ofSeconds(10))
-    .thenAccept(response -> {
-        String answer = response.content().toString();
-    });
+        // Query with timeout
+        dialogue.query("data-agent", "what is X?", Duration.ofSeconds(10))
+            .thenAccept(response -> {
+                String answer = response.content().toString();
+            });
+    }
+}
 ```
 
 ### 3. Contract-Net (Multi-Party Negotiation)
 
 ```java
-// Manager broadcasts CFP
-var proposals = dialogue.callForProposals(
-    List.of("worker-1", "worker-2", "worker-3"),
-    taskSpec,
-    Duration.ofSeconds(30)
-).join();
+public class NegotiationExample {
+    public void negotiate(DialogueCapability dialogue, List<String> workers, Object taskSpec) {
+        // Manager broadcasts CFP
+        var proposals = dialogue.callForProposals(
+            workers,
+            taskSpec,
+            Duration.ofSeconds(30)
+        ).join();
 
-// Select best proposal
-var best = proposals.stream()
-    .filter(p -> p.performative() == Performative.PROPOSE)
-    .min(comparingCost)
-    .orElseThrow();
+        // Select best proposal
+        var best = proposals.stream()
+            .filter(p -> p.performative() == Performative.PROPOSE)
+            .min(Comparator.comparing(p -> p.content().toString())) // Example comparator
+            .orElseThrow();
 
-// Accept winner
-dialogue.reply(best, Performative.AGREE, "You're selected");
+        // Accept winner
+        dialogue.reply(best, Performative.AGREE, "You're selected");
+    }
+}
 ```
 
 ## Protocols
@@ -225,43 +233,36 @@ Commitment states:
 The adapter layer enables communication with external A2A agents:
 
 ```java
-// Create adapter with auto-routing
-var adapter = new JenticA2AAdapter(
-    messageService,
-    agentDirectory,
-    "my-agent",
-    Duration.ofMinutes(5)
-);
+public class A2AExample {
+    public void send(JenticA2AAdapter adapter, Object data) {
+        // Send to internal agent (auto-detected)
+        adapter.send(DialogueMessage.builder()
+            .receiverId("internal-agent")
+            .performative(Performative.REQUEST)
+            .content(data)
+            .build());
 
-// Send to internal agent (auto-detected)
-adapter.send(DialogueMessage.builder()
-    .receiverId("internal-agent")
-    .performative(Performative.REQUEST)
-    .content(data)
-    .build());
-
-// Send to external A2A agent (URL)
-adapter.send(DialogueMessage.builder()
-    .receiverId("https://external-agent.com")
-    .performative(Performative.QUERY)
-    .content("question")
-    .build());
+        // Send to external A2A agent (URL)
+        adapter.send(DialogueMessage.builder()
+            .receiverId("https://external-agent.com")
+            .performative(Performative.QUERY)
+            .content("question")
+            .build());
+    }
+}
 ```
 
 ### Exposing Jentic Agent as A2A Server
 
 ```java
-// Create executor for internal agent
-var executor = new JenticAgentExecutor(
-    "my-internal-agent",
-    messageService,
-    Duration.ofMinutes(5)
-);
-
-// Handle incoming A2A request
-executor.execute(a2aRequest, status -> {
-    // Status updates: "working", "completed", "failed"
-});
+public class A2AServerExample {
+    public void execute(JenticAgentExecutor executor, Object a2aRequest) {
+        // Handle incoming A2A request
+        executor.execute(a2aRequest, status -> {
+            // Status updates: "working", "completed", "failed"
+        });
+    }
+}
 ```
 
 ## Package Structure
@@ -339,7 +340,7 @@ mvn exec:java -pl jentic-examples \
 
 ## Version History
 
-- **1.1.0** - Initial dialogue protocol implementation
+- **0.7.0-SNAPSHOT** - Initial dialogue protocol implementation
   - Core types and interfaces
   - Three protocol implementations
   - Agent integration via DialogueCapability

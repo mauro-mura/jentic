@@ -59,7 +59,7 @@ Supported behavior types (see `jentic-runtime` implementations):
 - Event-driven: react to incoming messages
 - Waker: run once after a delay
 - Composite: sequential, parallel, FSM (runtime support utilities)
-- Advanced: conditional, throttled
+- Advanced: conditional, throttled, batch, retry, circuit breaker, scheduled, pipeline
 
 Annotate public methods on your agent class with `@JenticBehavior` and use `BehaviorType` plus optional timing parameters like `interval` or `delay`.
 

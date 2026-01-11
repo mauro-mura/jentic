@@ -27,8 +27,12 @@ jentic:
     name: my-agent-system
 
   agents:
-    auto-discovery: true
-    base-package: "dev.jentic.examples"
+    autoDiscovery: true
+    basePackage: "dev.jentic.examples"
+    # Or use scanPackages for multiple packages:
+    # scanPackages:
+    #   - "dev.jentic.examples.agents"
+    #   - "com.example.other"
 
   messaging:
     provider: in-memory   # planned: jms, kafka
@@ -52,11 +56,15 @@ You can configure the runtime without YAML:
 ```java
 import dev.jentic.runtime.JenticRuntime;
 
-var runtime = JenticRuntime.builder()
-    .scanPackage("dev.jentic.examples")
-    .build();
+public class App {
+    public static void main(String[] args) {
+        var runtime = JenticRuntime.builder()
+            .scanPackage("dev.jentic.examples")
+            .build();
 
-runtime.start();
+        runtime.start();
+    }
+}
 ```
 
 ## Persistence
