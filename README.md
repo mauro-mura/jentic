@@ -28,10 +28,64 @@ Jentic reimagines multi-agent systems with modern Java practices:
 
 ### Installation
 
+#### Option 1: Clone and Build from Source
+
 ```bash
 git clone https://github.com/mauro-mura/jentic.git
 cd jentic
 mvn clean install
+```
+
+#### Option 2: Add as Maven Dependency (Recommended)
+
+Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
+
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>dev.jentic</groupId>
+            <artifactId>jentic-bom</artifactId>
+            <version>0.7.0-SNAPSHOT</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <!-- Core + Runtime for basic agent applications -->
+    <dependency>
+        <groupId>dev.jentic</groupId>
+        <artifactId>jentic-runtime</artifactId>
+    </dependency>
+    
+    <!-- Optional: Add adapters for external integrations -->
+    <dependency>
+        <groupId>dev.jentic</groupId>
+        <artifactId>jentic-adapters</artifactId>
+    </dependency>
+</dependencies>
+```
+
+**Benefits of using the BOM:**
+- ✅ No need to specify versions for each Jentic module
+- ✅ Guaranteed compatibility between modules
+- ✅ Simplified dependency management
+- ✅ Easy upgrades - change one version, update all modules
+
+#### Option 3: Without BOM
+
+If you prefer explicit version management:
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>dev.jentic</groupId>
+        <artifactId>jentic-runtime</artifactId>
+        <version>0.7.0-SNAPSHOT</version>
+    </dependency>
+</dependencies>
 ```
 
 ### Your First Agent

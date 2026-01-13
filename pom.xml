@@ -30,6 +30,7 @@
     </properties>
 
     <modules>
+		<module>jentic-bom</module>
         <module>jentic-core</module>
         <module>jentic-runtime</module>
         <module>jentic-adapters</module>
@@ -39,27 +40,14 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Internal Dependencies -->
-            <dependency>
-                <groupId>dev.jentic</groupId>
-                <artifactId>jentic-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>dev.jentic</groupId>
-                <artifactId>jentic-runtime</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>dev.jentic</groupId>
-                <artifactId>jentic-adapters</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>dev.jentic</groupId>
-                <artifactId>jentic-tools</artifactId>
-                <version>${project.version}</version>
-            </dependency>
+        	<!-- Import Jentic BOM FIRST -->
+	        <dependency>
+	            <groupId>dev.jentic</groupId>
+	            <artifactId>jentic-bom</artifactId>
+	            <version>${project.version}</version>
+	            <type>pom</type>
+	            <scope>import</scope>
+	        </dependency>
 
             <!-- Logging -->
             <dependency>
@@ -173,13 +161,16 @@
                         <release>21</release>
                     </configuration>
                 </plugin>
-                
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>3.5.1</version>
                 </plugin>
-
+				<plugin>
+				    <groupId>org.apache.maven.plugins</groupId>
+				    <artifactId>maven-jar-plugin</artifactId>
+				    <version>3.4.2</version>
+				</plugin>
             </plugins>
         </pluginManagement>
 
