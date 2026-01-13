@@ -89,6 +89,9 @@
                         <manifest>
                             <mainClass>dev.jentic.tools.cli.JenticCLI</mainClass>
                         </manifest>
+                        <manifestEntries>
+	                        <Automatic-Module-Name>dev.jentic.tools</Automatic-Module-Name>
+	                    </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
