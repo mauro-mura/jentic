@@ -356,6 +356,13 @@ We follow [Semantic Versioning](https://semver.org/):
 3. **Ask in Discussions** - Community can help
 4. **Create an Issue** - If you found a bug or have a specific request
 
+## 🤖 Development with AI Assistance
+
+This project has been developed in collaboration with Claude AI.
+Many features, implementations, and architectural decisions have been
+shaped through AI-assisted development, code generation, and design
+discussions.
+
 ## 📧 Contact
 
 - **Project Lead**: Mauro Mura

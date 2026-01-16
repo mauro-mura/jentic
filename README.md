@@ -330,6 +330,6 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 - **Spring Framework**: For inspiration on clean architecture patterns
 - **Project Loom**: For making concurrent programming accessible
 
----
+## 🤖 Development
 
-**Built with ❤️ and ☕ for the Java community**
+Developed with AI-assisted code generation and design using Claude AI.
