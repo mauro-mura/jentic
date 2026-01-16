@@ -288,9 +288,18 @@ mvn exec:java -Dexec.mainClass="dev.jentic.examples.PingPongExample"
 
 ## 📖 Documentation
 
+### Core Documentation
 - [Architecture Guide](docs/architecture.md)
 - [Agent Development Guide](docs/agent-development.md)
 - [Configuration Reference](docs/configuration.md)
+- [Architecture Decision Records](docs/adr/README.md)
+
+### Advanced Behaviors
+- [Batch Behavior](docs/behaviors/BatchBehavior.md) - Process messages in batches
+- [Circuit Breaker](docs/behaviors/CircuitBreakerBehavior.md) - Fault tolerance patterns
+- [Pipeline Behavior](docs/behaviors/PipelineBehavior.md) - Sequential processing chains
+- [Retry Behavior](docs/behaviors/RetryBehavior.md) - Automatic retry mechanisms
+- [Scheduled Behavior](docs/behaviors/ScheduledBehavior.md) - Time-based execution
 
 ## 💡 Why Jentic?
 

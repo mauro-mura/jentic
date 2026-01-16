@@ -6,16 +6,16 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 
 | #                                                                   | Title                                | Status | Date       |
 |---------------------------------------------------------------------|--------------------------------------|---------|------------|
-| [ADR-001](docs/adr/ADR-001-use-java-21-with-virtual-threads.md)     | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
-| [ADR-002](docs/adr/ADR-002-interface-first-architecture.md)         | Interface-First Architecture         | Accepted | 2025-09-16 |
-| [ADR-003](docs/adr/ADR-003-maven-multi-module-structure.md)         | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
-| [ADR-004](docs/adr/ADR-004-progressive-complexity-strategy.md)      | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
-| [ADR-005](docs/adr/ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records     | Accepted | 2025-09-16 |
-| [ADR-006](docs/adr/ADR-006-annotation-based-agent-configuration.md) | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
-| [ADR-007](docs/adr/ADR-007-llm-core.md)                             | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
-| [ADR-008](docs/adr/ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
-| [ADR-009](docs/adr/ADR-009-agent-dialogue-protocol.md)              | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
-| [ADR-010](docs/adr/ADR-010-llm-memory-management.md)                | LLM Memory Management                | Accepted | 2025-12-23 |
+| [ADR-001](ADR-001-use-java-21-with-virtual-threads.md)              | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
+| [ADR-002](ADR-002-interface-first-architecture.md)                  | Interface-First Architecture         | Accepted | 2025-09-16 |
+| [ADR-003](ADR-003-maven-multi-module-structure.md)                  | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
+| [ADR-004](ADR-004-progressive-complexity-strategy.md)               | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
+| [ADR-005](ADR-005-json-message-format-with-records.md)              | JSON Message Format with Records     | Accepted | 2025-09-16 |
+| [ADR-006](ADR-006-annotation-based-agent-configuration.md)          | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
+| [ADR-007](ADR-007-llm-core.md)                                      | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
+| [ADR-008](ADR-008-WebConsole-Interface-First.md)                    | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
+| [ADR-009](ADR-009-agent-dialogue-protocol.md)                       | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
+| [ADR-010](ADR-010-llm-memory-management.md)                         | LLM Memory Management                | Accepted | 2025-12-23 |
 
 ---
 
@@ -101,52 +101,28 @@ When creating new ADRs, use this template:
 
 ---
 
-## Upcoming ADR Topics
 
-These architectural decisions are under consideration for future ADRs:
+## Future ADRs
 
-### ADR-011: Error Handling Strategy
-**Topic**: Standardized error handling across the framework  
-**Considerations**: Exception types, error propagation, retry mechanisms  
-**Status**: Under Discussion
+New ADRs will be created when architectural decisions are needed. ADRs are created on-demand, not planned in advance, to maintain flexibility and avoid premature commitments.
 
-### ADR-012: Configuration Management
-**Topic**: External configuration system design  
-**Considerations**: YAML vs Properties, environment-specific config, secrets management  
-**Status**: Proposed
+Common architectural topics that may require future ADRs include:
+- Error handling strategies
+- Configuration management approaches  
+- Logging and observability patterns
+- Testing strategies for distributed systems
+- Plugin/extension architectures
+- Security models and authentication
+- Performance monitoring and profiling
+- Deployment patterns and strategies
 
-### ADR-013: Logging and Observability
-**Topic**: Logging strategy and metrics collection  
-**Considerations**: Structured logging, distributed tracing, performance metrics  
-**Status**: Research Phase
-
-### ADR-014: Testing Strategy  
-**Topic**: Testing approaches for multi-agent systems  
-**Considerations**: Unit vs integration tests, agent lifecycle testing, message flow testing  
-**Status**: Proposed
-
-### ADR-015: Plugin Architecture
-**Topic**: Extensibility mechanism for third-party components  
-**Considerations**: SPI, dependency injection, plugin lifecycle  
-**Status**: Future
-
-### ADR-016: Security Model
-**Topic**: Authentication, authorization, and secure communication  
-**Considerations**: Agent identity, message encryption, access control  
-**Status**: Future
-
-### ADR-017: Performance Monitoring
-**Topic**: Built-in performance monitoring and profiling  
-**Considerations**: JVM metrics, agent-specific metrics, alerting  
-**Status**: Future
-
-### ADR-018: Deployment Strategies
-**Topic**: Recommended deployment patterns  
-**Considerations**: Single JVM, distributed, containerized, cloud-native  
-**Status**: Future
+When a new architectural decision is required:
+1. Assess if it warrants an ADR (significant impact, affects multiple components, long-term implications)
+2. Create the ADR using the template above
+3. Discuss with the team and stakeholders
+4. Update this index when the ADR is accepted
 
 ---
-
 ## Decision History
 
 ### Major Architectural Phases
@@ -206,11 +182,11 @@ graph TD
 
 ### Internal Documentation
 
-- [Architecture Overview](docs/architecture.md)
-- [Agent Development Guide](docs/agent-development.md)
-- [Configuration Reference](docs/configuration.md)
+- [Architecture Overview](../architecture.md)
+- [Agent Development Guide](../agent-development.md)
+- [Configuration Reference](../configuration.md)
 
 ---
 
 
-> 💡 **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated. Always check the status and date of each ADR to ensure you're working with current architectural decisions.
+> **Note**: ADRs are living documents. As Jentic evolves, these decisions may be revisited and updated. Always check the status and date of each ADR to ensure you're working with current architectural decisions.
