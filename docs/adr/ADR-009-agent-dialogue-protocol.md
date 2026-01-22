@@ -291,8 +291,8 @@ jentic-adapters/
 
 1. **A2A Java SDK**: https://github.com/a2aproject/a2a-java (Official SDK)
 2. A2A Protocol Specification: https://a2a-protocol.org/
-3. IBM ACP: https://github.com/IBM/agent-communication-protocol
-4. FIPA ACL (historical): http://www.fipa.org/specs/fipa00061/
+3. ACP: https://agentcommunicationprotocol.dev/introduction/welcome
+4. FIPA ACL (historical): https://web.archive.org/web/20250719195949/http://www.fipa.org/specs/fipa00061/
 
 ## Related ADRs
 
