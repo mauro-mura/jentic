@@ -15,44 +15,44 @@ The Dialogue Protocol provides structured, meaningful communication between agen
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        JENTIC CORE                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ Performative│  │DialogueMsg  │  │ Conversation        │ │
-│  │ (enum)      │  │ (record)    │  │ (interface)         │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │ Commitment  │  │ Protocol    │  │ @DialogueHandler    │ │
-│  │ (interface) │  │ (interface) │  │ (annotation)        │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ Performative│  │DialogueMsg  │  │ Conversation        │  │
+│  │ (enum)      │  │ (record)    │  │ (interface)         │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │ Commitment  │  │ Protocol    │  │ @DialogueHandler    │  │
+│  │ (interface) │  │ (interface) │  │ (annotation)        │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
 │                      JENTIC RUNTIME                         │
-│  ┌──────────────────┐  ┌──────────────────┐                │
-│  │ DefaultConversation│  │ DefaultCommitment│                │
-│  │ Manager          │  │ Tracker          │                │
-│  └──────────────────┘  └──────────────────┘                │
-│  ┌──────────────────┐  ┌──────────────────┐                │
+│  ┌────────────────────┐  ┌──────────────────┐               │
+│  │ DefaultConversation│  │ DefaultCommitment│               │
+│  │ Manager            │  │ Tracker          │               │
+│  └────────────────────┘  └──────────────────┘               │
+│  ┌───────────────────┐  ┌──────────────────┐                │
 │  │ DialogueCapability│  │ DialogueHandler  │                │
-│  │ (composition)    │  │ Registry         │                │
-│  └──────────────────┘  └──────────────────┘                │
-│  ┌────────────────────────────────────────┐                │
-│  │ Protocol Implementations               │                │
-│  │ • RequestProtocol                      │                │
-│  │ • QueryProtocol                        │                │
-│  │ • ContractNetProtocol                  │                │
-│  └────────────────────────────────────────┘                │
+│  │ (composition)     │  │ Registry         │                │
+│  └───────────────────┘  └──────────────────┘                │
+│  ┌────────────────────────────────────────┐                 │
+│  │ Protocol Implementations               │                 │
+│  │ • RequestProtocol                      │                 │
+│  │ • QueryProtocol                        │                 │
+│  │ • ContractNetProtocol                  │                 │
+│  └────────────────────────────────────────┘                 │
 └─────────────────────────────────────────────────────────────┘
                             │
 ┌─────────────────────────────────────────────────────────────┐
 │                     JENTIC ADAPTERS                         │
-│  ┌──────────────────┐  ┌──────────────────┐                │
-│  │ JenticA2AAdapter │  │ JenticA2AClient  │                │
-│  │ (routing)        │  │ (HTTP client)    │                │
-│  └──────────────────┘  └──────────────────┘                │
-│  ┌──────────────────┐  ┌──────────────────┐                │
+│  ┌──────────────────┐  ┌──────────────────┐                 │
+│  │ JenticA2AAdapter │  │ JenticA2AClient  │                 │
+│  │ (routing)        │  │ (HTTP client)    │                 │
+│  └──────────────────┘  └──────────────────┘                 │
+│  ┌───────────────────┐  ┌────────────────────┐              │
 │  │JenticAgentExecutor│  │DialogueA2AConverter│              │
-│  │ (server)         │  │ (conversion)     │                │
-│  └──────────────────┘  └──────────────────┘                │
+│  │ (server)          │  │ (conversion)       │              │
+│  └───────────────────┘  └────────────────────┘              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -340,7 +340,7 @@ mvn exec:java -pl jentic-examples \
 
 ## Version History
 
-- **0.7.0-SNAPSHOT** - Initial dialogue protocol implementation
+- **0.5.0** - Initial dialogue protocol implementation
   - Core types and interfaces
   - Three protocol implementations
   - Agent integration via DialogueCapability
