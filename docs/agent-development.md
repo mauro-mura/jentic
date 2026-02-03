@@ -31,7 +31,7 @@ public class HelloAgent extends BaseAgent {
     }
 
     @JenticMessageHandler("greetings")
-    public void onGreeting(Message message) {
+    public void handleGreeting(Message message) {
         log.info("Received: {}", message.getContent());
     }
 }

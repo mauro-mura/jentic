@@ -10,17 +10,17 @@ This document describes the architecture of Jentic, a modern, interface‑first 
 Jentic embraces an interface‑first, modular architecture. Core contracts live in jentic-core, while minimal, ready‑to‑use implementations live in jentic-runtime. Advanced/enterprise adapters will live in jentic-adapters.
 
 ```
-┌──────────────────┬─────────────────────┬─────────────────────┐
-│   jentic-core    │    jentic-runtime   │    jentic-adapters  │
-│  (interfaces)    │ (in‑memory impls)   │ (enterprise impls)  │
-├──────────────────┼─────────────────────┼─────────────────────┤
-│ Agent            │ BaseAgent           │ Kafka (Planned)     │
-│ Message          │ InMemoryMessageSvc  │ Consul (Planned)    │
-│ MessageService   │ LocalAgentDirectory │ A2A Adapter         │
-│ AgentDirectory   │ SimpleBehaviorSched │ LLM Adapters        │
-│ Behavior         │ Behaviors (Cyclic…) │ Redis (Planned)     │
-│ BehaviorScheduler│ Discovery/Scanning  │                     │
-└──────────────────┴─────────────────────┴─────────────────────┘
+┌──────────────────┬─────────────────────────┬─────────────────────┐
+│   jentic-core    │    jentic-runtime       │    jentic-adapters  │
+│  (interfaces)    │ (in‑memory impls)       │ (enterprise impls)  │
+├──────────────────┼─────────────────────────┼─────────────────────┤
+│ Agent            │ BaseAgent               │ Kafka (Planned)     │
+│ Message          │ InMemoryMessageService  │ Consul (Planned)    │
+│ MessageService   │ LocalAgentDirectory     │ A2A Adapter         │
+│ AgentDirectory   │ SimpleBehaviorScheduler │ LLM Adapters        │
+│ Behavior         │ Behaviors (Cyclic…)     │ Redis (Planned)     │
+│ BehaviorScheduler│ Discovery/Scanning      │                     │
+└──────────────────┴─────────────────────────┴─────────────────────┘
 ```
 
 Design goals:
@@ -120,15 +120,9 @@ Guidelines:
 ## 11. Evolution Path
 
 - MVP: in‑memory runtime for simple single‑JVM systems.
-- V1.1: JMS + DB adapters, management/CLI.
-- V1.2+: Kafka + Consul, clustering, cloud deployment.
+- Future: JMS + DB adapters, management/CLI, Kafka + Consul, clustering, cloud deployment.
 
-See ADRs for rationale and decisions:
-- docs/adr/ADR-001-use-java-21-with-virtual-threads.md
-- docs/adr/ADR-002-interface-first-architecture.md
-- docs/adr/ADR-004-progressive-complexity-strategy.md
-- docs/adr/ADR-005-json-message-format-with-records.md
-- docs/adr/ADR-006-annotation-based-agent-configuration.md
+See [ADRs](adr/README.md) for rationale and decisions:
 
 ## 12. Example Bootstrapping
 

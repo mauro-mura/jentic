@@ -22,6 +22,22 @@ ChainBehavior implements [Anthropic's Prompt Chaining pattern](https://www.anthr
 
 ## Quick Start
 
+```xml
+<dependencies>
+    <!-- Core + Runtime for basic agent applications -->
+    <dependency>
+        <groupId>dev.jentic</groupId>
+        <artifactId>jentic-runtime</artifactId>
+    </dependency>
+    
+    <!-- Add adapters for external integrations -->
+    <dependency>
+        <groupId>dev.jentic</groupId>
+        <artifactId>jentic-adapters</artifactId>
+    </dependency>
+</dependencies>
+```
+
 ```java
 LLMProvider llm = new AnthropicProvider(apiKey, "claude-sonnet-4-5-20250929");
 
@@ -279,7 +295,7 @@ void shouldGenerateBlogPost() {
 - **Retries**: Each retry adds LLM call latency
 - **Parallelization**: Steps execute sequentially (by design)
 
-For parallel execution, see [OrchestratorBehavior](../orchestrator/README.md).
+For parallel execution, see [OrchestratorBehavior](OrchestratorBehavior).
 
 ## Architecture
 

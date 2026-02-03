@@ -65,7 +65,7 @@ OrchestratorBehavior.builder(llm, workers)
 
 ## Example: CodeOrchestratorAgent
 
-See `jentic-examples/orchestrator/CodeOrchestratorAgent.java`.
+See `jentic-examples/src/main/java/dev/jentic/orchestrator/CodeOrchestratorAgent.java`.
 
 ## Configuration
 

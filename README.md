@@ -256,14 +256,14 @@ Web Console and CLI tools.
 
 Check out the `jentic-examples` module for complete examples:
 
-- Ping-Pong: `dev.jentic.examples.agent.PingPongExample`
-- Simple bootstrap: `dev.jentic.examples.agent.SimpleExample`
-- Weather Station: `dev.jentic.examples.agent.WeatherStationExample`
-- Task Manager: `dev.jentic.examples.agent.TaskManagerExample`
+- Ping-Pong: `dev.jentic.examples.PingPongExample`
+- Simple bootstrap: `dev.jentic.examples.SimpleExample`
+- Weather Station: `dev.jentic.examples.WeatherStationExample`
+- Task Manager: `dev.jentic.examples.TaskManagerExample`
 - Advanced - Conditional Behavior: `dev.jentic.examples.behaviors.ConditionalBehaviorExample`
 - Advanced - Throttled Behavior: `dev.jentic.examples.behaviors.ThrottledExample`
 - Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
-- Discovery pattern: `dev.jentic.examples.discovery.DiscoveryExample`
+- Discovery pattern: `dev.jentic.examples.DiscoveryExample`
 - E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`
 - A2A Integration: `dev.jentic.examples.a2a.A2AIntegrationExample`
 

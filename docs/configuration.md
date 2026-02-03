@@ -31,7 +31,7 @@ jentic:
     basePackage: "dev.jentic.examples"
     # Or use scanPackages for multiple packages:
     # scanPackages:
-    #   - "dev.jentic.examples.agents"
+    #   - "dev.jentic.examples"
     #   - "com.example.other"
 
   messaging:
