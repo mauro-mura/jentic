@@ -35,10 +35,10 @@ jentic:
     #   - "com.example.other"
 
   messaging:
-    provider: in-memory   # planned: jms, kafka
+    provider: in-memory   # future: jms, kafka
 
   directory:
-    provider: local       # planned: database, consul
+    provider: local       # future: database, consul
 
   scheduler:
     # default in-memory simple scheduler; future options may be added

@@ -14,11 +14,11 @@ Jentic embraces an interface‑first, modular architecture. Core contracts live 
 │   jentic-core    │    jentic-runtime       │    jentic-adapters  │
 │  (interfaces)    │ (in‑memory impls)       │ (enterprise impls)  │
 ├──────────────────┼─────────────────────────┼─────────────────────┤
-│ Agent            │ BaseAgent               │ Kafka (Planned)     │
-│ Message          │ InMemoryMessageService  │ Consul (Planned)    │
+│ Agent            │ BaseAgent               │ Kafka (future)      │
+│ Message          │ InMemoryMessageService  │ Consul (future)     │
 │ MessageService   │ LocalAgentDirectory     │ A2A Adapter         │
 │ AgentDirectory   │ SimpleBehaviorScheduler │ LLM Adapters        │
-│ Behavior         │ Behaviors (Cyclic…)     │ Redis (Planned)     │
+│ Behavior         │ Behaviors (Cyclic…)     │ Redis (future)      │
 │ BehaviorScheduler│ Discovery/Scanning      │                     │
 └──────────────────┴─────────────────────────┴─────────────────────┘
 ```
@@ -34,7 +34,7 @@ Design goals:
 
 - jentic-core: Pure interfaces, records, annotations, and exceptions. No heavy dependencies.
 - jentic-runtime: Minimal, production‑ready in‑memory implementations to get started fast.
-- jentic-adapters: Optional enterprise adapters (messaging, directory, schedulers). Planned.
+- jentic-adapters: Optional enterprise adapters (messaging, directory, schedulers). Future.
 - jentic-examples: Demonstrates usage patterns and best practices.
 
 ## 3. Core Abstractions (jentic-core)
@@ -91,7 +91,7 @@ These are deliberately small to keep adapters swappable without breaking user co
 
 ## 8. Configuration
 
-- Minimal configuration via code (builder) and/or YAML (planned). Example keys:
+- Minimal configuration via code (builder) and/or YAML. Example keys:
   - jentic.runtime.name
   - jentic.agents.auto-discovery
   - jentic.agents.base-package
