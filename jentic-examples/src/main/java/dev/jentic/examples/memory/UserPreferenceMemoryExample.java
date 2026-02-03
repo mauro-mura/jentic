@@ -141,7 +141,7 @@ public class UserPreferenceMemoryExample {
         Message historySearch = Message.builder()
             .topic("user.history.search")
             .senderId("example-client")
-            .content("user123")
+            .content("dark")
             .build();
         messageService.send(historySearch);
         sleep(300);
