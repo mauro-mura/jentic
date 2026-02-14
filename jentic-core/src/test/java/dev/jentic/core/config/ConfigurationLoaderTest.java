@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -241,6 +243,38 @@ class ConfigurationLoaderTest {
             .isInstanceOf(ConfigurationException.class)
             .hasMessageContaining("not found");
     }
+
+    @Test
+    @DisplayName("Should handle leading slash in classpath resource")
+    void shouldHandleLeadingSlashInClasspath() throws Exception {
+        JenticConfiguration config = loader.loadFromClasspath("/jentic-test.yml");
+
+        assertThat(config).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Should throw exception for non-existent classpath resource")
+    void shouldThrowExceptionForNonExistentClasspathResource() {
+        assertThatThrownBy(() -> loader.loadFromClasspath("nonexistent-resource.yml"))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("not found");
+    }
+
+    @Test
+    @DisplayName("Should throw exception for null classpath resource")
+    void shouldThrowExceptionForNullClasspathResource() {
+        assertThatThrownBy(() -> loader.loadFromClasspath(null))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("cannot be null");
+    }
+
+    @Test
+    @DisplayName("Should throw exception for empty classpath resource")
+    void shouldThrowExceptionForEmptyClasspathResource() {
+        assertThatThrownBy(() -> loader.loadFromClasspath(""))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("cannot be null or empty");
+    }
     
     // =========================================================================
     // STREAM LOADING TESTS
@@ -288,6 +322,21 @@ class ConfigurationLoaderTest {
         
         assertThat(config.runtime().name()).isEqualTo("stream-json-runtime");
         assertThat(config.agents().scanPackages()).containsExactly("com.json.stream");
+    }
+
+    @Test
+    @DisplayName("Should default to YAML when format is unknown")
+    void shouldDefaultToYamlForUnknownFormat() throws Exception {
+        String yamlContent = """
+            jentic:
+              runtime:
+                name: "unknown-format"
+            """;
+
+        InputStream stream = new ByteArrayInputStream(yamlContent.getBytes(StandardCharsets.UTF_8));
+        JenticConfiguration config = loader.loadFromStream(stream, "unknown");
+
+        assertThat(config.runtime().name()).isEqualTo("unknown-format");
     }
     
     // =========================================================================

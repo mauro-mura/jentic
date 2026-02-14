@@ -1,0 +1,14 @@
+jentic:
+  runtime:
+    name: "test-runtime"
+    environment: "test"
+    properties:
+      testMode: "true"
+      timeout: "30s"
+
+  agents:
+    autoDiscovery: true
+    scanPackages:
+      - "dev.jentic.examples"
+    properties:
+      maxConcurrent: "10"
