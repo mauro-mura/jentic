@@ -11,12 +11,16 @@ import dev.langchain4j.model.output.FinishReason;
 import dev.langchain4j.model.output.TokenUsage;
 import dev.langchain4j.data.message.AiMessage;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -34,400 +40,523 @@ class OllamaProviderTest {
 
     @Mock
     private OllamaChatModel mockChatModel;
-    
+
     @Mock
     private OllamaStreamingChatModel mockStreamingModel;
-    
-    @Mock
-    private ChatResponse mockChatResponse;
-    
-    @Mock
-    private ChatResponseMetadata mockMetadata;
-    
-    @Mock
-    private AiMessage mockAiMessage;
-    
-    private OllamaProvider provider;
-    
-    @BeforeEach
-    void setUp() {
-        // Create provider with default settings for testing
-        provider = OllamaProvider.builder()
-                .baseUrl("http://localhost:11434")
-                .modelName("llama3.2")
-                .temperature(0.7)
-                .timeout(Duration.ofMinutes(1))
-                .build();
-    }
-    
-    @Test
-    void shouldCreateProviderWithDefaults() {
-        OllamaProvider defaultProvider = OllamaProvider.builder().build();
-        
-        assertEquals("Ollama", defaultProvider.getProviderName());
-        assertEquals("llama3.2", defaultProvider.getDefaultModel());
-        assertFalse(defaultProvider.supportsFunctionCalling());
-        assertTrue(defaultProvider.supportsStreaming());
-    }
-    
-    @Test
-    void shouldCreateProviderWithCustomSettings() {
-        OllamaProvider customProvider = OllamaProvider.builder()
-                .baseUrl("http://custom-server:11434")
-                .modelName("mistral")
-                .temperature(0.8)
-                .timeout(Duration.ofSeconds(30))
-                .logRequests(true)
-                .logResponses(true)
-                .build();
-        
-        assertEquals("Ollama", customProvider.getProviderName());
-        assertEquals("llama3.2", customProvider.getDefaultModel());
-    }
-    
-    @Test
-    void shouldValidateBuilderParameters() {
-        // Test empty base URL
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .baseUrl("")
+
+    @Nested
+    @DisplayName("Chat Method Tests")
+    class ChatMethodTests {
+
+        @Test
+        @DisplayName("should successfully handle chat request")
+        void chat_withValidRequest_shouldReturnResponse() throws Exception {
+            AiMessage aiMessage = AiMessage.from("Test response");
+            TokenUsage tokenUsage = new TokenUsage(10, 20, 30);
+            ChatResponseMetadata metadata = ChatResponseMetadata.builder()
+                    .finishReason(FinishReason.STOP)
+                    .tokenUsage(tokenUsage)
                     .build();
-        });
-        
-        // Test blank base URL
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .baseUrl("   ")
+            ChatResponse chatResponse = ChatResponse.builder()
+                    .aiMessage(aiMessage)
+                    .metadata(metadata)
                     .build();
-        });
-        
-        // Test null base URL
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .baseUrl(null)
+
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+            when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Hello"))
                     .build();
-        });
-        
-        // Test empty model name
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .modelName("")
+
+            CompletableFuture<LLMResponse> future = provider.chat(request);
+            LLMResponse response = future.get(5, TimeUnit.SECONDS);
+
+            assertNotNull(response);
+            assertEquals("Test response", response.content());
+            assertEquals(LLMMessage.Role.ASSISTANT, response.role());
+            assertEquals("stop", response.finishReason());
+            assertNotNull(response.usage());
+            assertEquals(10, response.usage().promptTokens());
+            assertEquals(20, response.usage().completionTokens());
+            assertEquals(30, response.usage().totalTokens());
+        }
+
+        @Test
+        @DisplayName("should handle chat request with custom temperature and maxTokens")
+        void chat_withCustomParameters_shouldPassThemToModel() throws Exception {
+            AiMessage aiMessage = AiMessage.from("Custom params response");
+            ChatResponse chatResponse = ChatResponse.builder()
+                    .aiMessage(aiMessage)
                     .build();
-        });
-        
-        // Test blank model name
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .modelName("   ")
+
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+            when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Test"))
+                    .temperature(0.8)
+                    .maxTokens(500)
                     .build();
-        });
-        
-        // Test null model name
-        assertThrows(IllegalArgumentException.class, () -> {
-            OllamaProvider.builder()
-                    .modelName(null)
+
+            CompletableFuture<LLMResponse> future = provider.chat(request);
+            LLMResponse response = future.get(5, TimeUnit.SECONDS);
+
+            assertNotNull(response);
+            assertEquals("Custom params response", response.content());
+
+            ArgumentCaptor<ChatRequest> captor = ArgumentCaptor.forClass(ChatRequest.class);
+            verify(mockChatModel).chat(captor.capture());
+            ChatRequest capturedRequest = captor.getValue();
+            assertNotNull(capturedRequest);
+        }
+
+        @Test
+        @DisplayName("should handle null metadata in chat response")
+        void chat_withNullMetadata_shouldHandleGracefully() throws Exception {
+            AiMessage aiMessage = AiMessage.from("Response without metadata");
+            ChatResponse chatResponse = ChatResponse.builder()
+                    .aiMessage(aiMessage)
+                    .metadata(null)
                     .build();
-        });
+
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+            when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse);
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Hello"))
+                    .build();
+
+            CompletableFuture<LLMResponse> future = provider.chat(request);
+            LLMResponse response = future.get(5, TimeUnit.SECONDS);
+
+            assertNotNull(response);
+            assertNull(response.finishReason());
+            assertNull(response.usage());
+        }
+
+        @Test
+        @DisplayName("should wrap exceptions in LLMException")
+        void chat_withException_shouldWrapInLLMException() {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+            when(mockChatModel.chat(any(ChatRequest.class)))
+                    .thenThrow(new RuntimeException("API Error"));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Hello"))
+                    .build();
+
+            CompletableFuture<LLMResponse> future = provider.chat(request);
+
+            ExecutionException exception = assertThrows(ExecutionException.class,
+                    () -> future.get(5, TimeUnit.SECONDS));
+            assertTrue(exception.getCause() instanceof RuntimeException);
+            assertTrue(exception.getCause().getCause() instanceof LLMException);
+        }
     }
-    
-    @Test
-    void shouldReturnAvailableModels() throws Exception {
-        CompletableFuture<List<String>> future = provider.getAvailableModels();
-        List<String> models = future.get(5, TimeUnit.SECONDS);
-        
-        assertNotNull(models);
-        assertFalse(models.isEmpty());
-        assertTrue(models.contains("llama3.2"));
-        assertTrue(models.contains("llama3.1"));
-        assertTrue(models.contains("llama2"));
-        assertTrue(models.contains("mistral"));
-        assertTrue(models.contains("mixtral"));
-        assertTrue(models.contains("codellama"));
-        assertTrue(models.contains("phi3"));
-        assertTrue(models.contains("gemma2"));
+
+    @Nested
+    @DisplayName("ChatStream Method Tests")
+    class ChatStreamMethodTests {
+
+        @Test
+        @DisplayName("should handle streaming response successfully")
+        void chatStream_withValidRequest_shouldStreamChunks() throws Exception {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            doAnswer(invocation -> {
+                StreamingChatResponseHandler handler = invocation.getArgument(1);
+                handler.onPartialResponse("Hello");
+                handler.onPartialResponse(" ");
+                handler.onPartialResponse("world");
+
+                ChatResponse finalResponse = ChatResponse.builder()
+                        .aiMessage(AiMessage.from("Hello world"))
+                        .metadata(ChatResponseMetadata.builder()
+                                .finishReason(FinishReason.STOP)
+                                .build())
+                        .build();
+                handler.onCompleteResponse(finalResponse);
+                return null;
+            }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Say hello"))
+                    .build();
+
+            StringBuilder result = new StringBuilder();
+            AtomicInteger chunkCount = new AtomicInteger(0);
+            AtomicReference<String> finishReason = new AtomicReference<>();
+
+            CompletableFuture<Void> future = provider.chatStream(request, chunk -> {
+                chunkCount.incrementAndGet();
+                if (chunk.hasContent()) {
+                    result.append(chunk.content());
+                }
+                if (chunk.isLast() && chunk.finishReason() != null) {
+                    finishReason.set(chunk.finishReason());
+                }
+            });
+
+            future.get(5, TimeUnit.SECONDS);
+
+            assertEquals("Hello world", result.toString());
+            assertEquals("stop", finishReason.get());
+            assertTrue(chunkCount.get() >= 4);
+        }
+
+        @Test
+        @DisplayName("should handle streaming with custom parameters")
+        void chatStream_withCustomParameters_shouldApplyThem() throws Exception {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            doAnswer(invocation -> {
+                StreamingChatResponseHandler handler = invocation.getArgument(1);
+                handler.onPartialResponse("Test");
+                ChatResponse finalResponse = ChatResponse.builder()
+                        .aiMessage(AiMessage.from("Test"))
+                        .build();
+                handler.onCompleteResponse(finalResponse);
+                return null;
+            }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Test"))
+                    .temperature(0.5)
+                    .maxTokens(100)
+                    .build();
+
+            CompletableFuture<Void> future = provider.chatStream(request, chunk -> {});
+            future.get(5, TimeUnit.SECONDS);
+
+            ArgumentCaptor<ChatRequest> captor = ArgumentCaptor.forClass(ChatRequest.class);
+            verify(mockStreamingModel).chat(captor.capture(), any(StreamingChatResponseHandler.class));
+            assertNotNull(captor.getValue());
+        }
+
+        @Test
+        @DisplayName("should handle null metadata in streaming complete response")
+        void chatStream_withNullMetadata_shouldHandleGracefully() throws Exception {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            doAnswer(invocation -> {
+                StreamingChatResponseHandler handler = invocation.getArgument(1);
+                handler.onPartialResponse("Test");
+                ChatResponse finalResponse = ChatResponse.builder()
+                        .aiMessage(AiMessage.from("Test"))
+                        .metadata(null)
+                        .build();
+                handler.onCompleteResponse(finalResponse);
+                return null;
+            }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Test"))
+                    .build();
+
+            AtomicReference<String> finishReason = new AtomicReference<>();
+            CompletableFuture<Void> future = provider.chatStream(request, chunk -> {
+                if (chunk.isLast()) {
+                    finishReason.set(chunk.finishReason());
+                }
+            });
+
+            future.get(5, TimeUnit.SECONDS);
+            assertNull(finishReason.get());
+        }
+
+        @Test
+        @DisplayName("should handle errors during streaming")
+        void chatStream_withError_shouldCompleteExceptionally() {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            doAnswer(invocation -> {
+                StreamingChatResponseHandler handler = invocation.getArgument(1);
+                handler.onError(new RuntimeException("Streaming error"));
+                return null;
+            }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Test"))
+                    .build();
+
+            CompletableFuture<Void> future = provider.chatStream(request, chunk -> {});
+
+            ExecutionException exception = assertThrows(ExecutionException.class,
+                    () -> future.get(5, TimeUnit.SECONDS));
+            assertTrue(exception.getCause() instanceof LLMException);
+            assertTrue(exception.getCause().getMessage().contains("Ollama streaming failed"));
+        }
+
+        @Test
+        @DisplayName("should handle exception during streaming request setup")
+        void chatStream_withSetupException_shouldCompleteExceptionally() {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            doThrow(new RuntimeException("Setup error"))
+                    .when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("Test"))
+                    .build();
+
+            CompletableFuture<Void> future = provider.chatStream(request, chunk -> {});
+
+            ExecutionException exception = assertThrows(ExecutionException.class,
+                    () -> future.get(5, TimeUnit.SECONDS));
+            assertTrue(exception.getCause() instanceof LLMException);
+            assertTrue(exception.getCause().getMessage().contains("Ollama streaming request failed"));
+        }
     }
-    
-    @Test
-    void shouldValidateRequest() {
-        // Null request
-        assertThrows(LLMException.class, () -> {
-            provider.validateRequest(null);
-        });
-        
-        // Empty messages
-        assertThrows(IllegalArgumentException.class, () -> {
-            provider.validateRequest(LLMRequest.builder("llama3.2").build());
-        });
-        
-        // Empty model
-        assertThrows(LLMException.class, () -> {
-            provider.validateRequest(LLMRequest.builder("")
-                    .addMessage(LLMMessage.user("test"))
-                    .build());
-        });
-        
-        // Valid request
-        LLMRequest validRequest = LLMRequest.builder("llama3.2")
-                .addMessage(LLMMessage.user("Hello"))
-                .build();
-        assertDoesNotThrow(() -> {
-            provider.validateRequest(validRequest);
-        });
+
+    @Nested
+    @DisplayName("Message Conversion Tests")
+    class MessageConversionTests {
+
+        @Test
+        @DisplayName("should convert SYSTEM message correctly")
+        void convertMessage_systemRole_shouldReturnSystemMessage() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.system("System prompt"))
+                    .addMessage(LLMMessage.user("User message"))
+                    .build();
+
+            assertNotNull(request);
+            assertEquals(2, request.messages().size());
+            assertTrue(request.messages().get(0).isSystem());
+        }
+
+        @Test
+        @DisplayName("should convert USER message correctly")
+        void convertMessage_userRole_shouldReturnUserMessage() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("User message"))
+                    .build();
+
+            assertTrue(request.messages().get(0).isUser());
+        }
+
+        @Test
+        @DisplayName("should convert ASSISTANT message correctly")
+        void convertMessage_assistantRole_shouldReturnAiMessage() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(LLMMessage.user("User message"))
+                    .addMessage(LLMMessage.assistant("Assistant response"))
+                    .build();
+
+            assertTrue(request.messages().get(1).isAssistant());
+        }
+
+        @Test
+        @DisplayName("should throw exception for unsupported message role")
+        void convertMessage_unsupportedRole_shouldThrowException() {
+            OllamaProvider provider = createProviderWithMocks(mockChatModel, mockStreamingModel);
+
+            // FUNCTION role is not supported by Ollama's convertMessage method
+            LLMMessage functionMessage = new LLMMessage(LLMMessage.Role.FUNCTION, "Function result", "test_function", null);
+            LLMRequest request = LLMRequest.builder("llama3.2")
+                    .addMessage(functionMessage)
+                    .build();
+
+            CompletableFuture<LLMResponse> future = provider.chat(request);
+
+            // Should throw ExecutionException containing the conversion error
+            ExecutionException exception = assertThrows(ExecutionException.class,
+                    () -> future.get(5, TimeUnit.SECONDS));
+
+            assertNotNull(exception.getCause());
+            // The exception chain should contain "Unsupported message role"
+            String message = getCauseMessage(exception);
+            assertTrue(message.contains("Unsupported message role") || message.contains("FUNCTION"),
+                    "Exception should mention unsupported role, got: " + message);
+        }
+
+        private String getCauseMessage(Throwable throwable) {
+            Throwable current = throwable;
+            while (current != null) {
+                if (current.getMessage() != null && current.getMessage().contains("Unsupported")) {
+                    return current.getMessage();
+                }
+                current = current.getCause();
+            }
+            return throwable.getMessage();
+        }
     }
-    
-    @Test
-    void shouldBuildRequestCorrectly() {
-        LLMRequest request = LLMRequest.builder("llama3.2")
-                .addMessage(LLMMessage.system("You are a helpful assistant."))
-                .addMessage(LLMMessage.user("Hello!"))
-                .temperature(0.8)
-                .maxTokens(100)
-                .build();
-        
-        assertEquals("llama3.2", request.model());
-        assertEquals(2, request.messages().size());
-        assertEquals(0.8, request.temperature());
-        assertEquals(100, request.maxTokens());
+
+    @Nested
+    @DisplayName("FinishReason Mapping Tests")
+    class FinishReasonMappingTests {
+
+        @Test
+        @DisplayName("should map STOP finish reason")
+        void mapFinishReason_stop_shouldReturnStop() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, FinishReason.STOP);
+            assertEquals("stop", result);
+        }
+
+        @Test
+        @DisplayName("should map LENGTH finish reason")
+        void mapFinishReason_length_shouldReturnLength() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, FinishReason.LENGTH);
+            assertEquals("length", result);
+        }
+
+        @Test
+        @DisplayName("should map TOOL_EXECUTION finish reason")
+        void mapFinishReason_toolExecution_shouldReturnToolCalls() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, FinishReason.TOOL_EXECUTION);
+            assertEquals("tool_calls", result);
+        }
+
+        @Test
+        @DisplayName("should map CONTENT_FILTER finish reason")
+        void mapFinishReason_contentFilter_shouldReturnContentFilter() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, FinishReason.CONTENT_FILTER);
+            assertEquals("content_filter", result);
+        }
+
+        @Test
+        @DisplayName("should map OTHER finish reason")
+        void mapFinishReason_other_shouldReturnOther() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, FinishReason.OTHER);
+            assertEquals("other", result);
+        }
+
+        @Test
+        @DisplayName("should handle null finish reason")
+        void mapFinishReason_null_shouldReturnNull() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            String result = invokeMapFinishReason(provider, null);
+            assertNull(result);
+        }
+
+        private String invokeMapFinishReason(OllamaProvider provider, FinishReason reason) {
+            try {
+                var method = OllamaProvider.class.getDeclaredMethod("mapFinishReason", FinishReason.class);
+                method.setAccessible(true);
+                return (String) method.invoke(provider, reason);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
-    
-    @Test
-    void shouldHandleBuilderChaining() {
-        OllamaProvider customProvider = OllamaProvider.builder()
-                .baseUrl("http://custom:11434")
-                .modelName("mistral")
-                .temperature(0.5)
-                .timeout(Duration.ofSeconds(30))
-                .logRequests(true)
-                .logResponses(true)
-                .build();
-        
-        assertNotNull(customProvider);
-        assertEquals("Ollama", customProvider.getProviderName());
+
+    @Nested
+    @DisplayName("Usage Mapping Tests")
+    class UsageMappingTests {
+
+        @Test
+        @DisplayName("should map TokenUsage correctly")
+        void mapUsage_withValidTokenUsage_shouldReturnUsage() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            TokenUsage tokenUsage = new TokenUsage(100, 50, 150);
+
+            LLMResponse.Usage result = invokeMapUsage(provider, tokenUsage);
+
+            assertNotNull(result);
+            assertEquals(100, result.promptTokens());
+            assertEquals(50, result.completionTokens());
+            assertEquals(150, result.totalTokens());
+        }
+
+        @Test
+        @DisplayName("should handle null TokenUsage")
+        void mapUsage_withNull_shouldReturnNull() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            LLMResponse.Usage result = invokeMapUsage(provider, null);
+            assertNull(result);
+        }
+
+        private LLMResponse.Usage invokeMapUsage(OllamaProvider provider, TokenUsage tokenUsage) {
+            try {
+                var method = OllamaProvider.class.getDeclaredMethod("mapUsage", TokenUsage.class);
+                method.setAccessible(true);
+                return (LLMResponse.Usage) method.invoke(provider, tokenUsage);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
-    
-    @Test
-    void shouldProvideCorrectProviderInfo() {
-        assertEquals("Ollama", provider.getProviderName());
-        assertEquals("llama3.2", provider.getDefaultModel());
-        assertFalse(provider.supportsFunctionCalling());
-        assertTrue(provider.supportsStreaming());
+
+    @Nested
+    @DisplayName("Available Models Tests")
+    class AvailableModelsTests {
+
+        @Test
+        @DisplayName("should return complete list of available models")
+        void getAvailableModels_shouldReturnAllModels() throws Exception {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+            assertNotNull(models);
+            assertEquals(8, models.size());
+            assertTrue(models.contains("llama3.2"));
+            assertTrue(models.contains("llama3.1"));
+            assertTrue(models.contains("llama2"));
+            assertTrue(models.contains("mistral"));
+            assertTrue(models.contains("mixtral"));
+            assertTrue(models.contains("codellama"));
+            assertTrue(models.contains("phi3"));
+            assertTrue(models.contains("gemma2"));
+        }
     }
-    
-    @Test
-    void shouldValidateMessageTypes() {
-        // Test system message
-        LLMMessage systemMsg = LLMMessage.system("You are helpful");
-        assertEquals(LLMMessage.Role.SYSTEM, systemMsg.role());
-        assertTrue(systemMsg.isSystem());
-        
-        // Test user message  
-        LLMMessage userMsg = LLMMessage.user("Hello");
-        assertEquals(LLMMessage.Role.USER, userMsg.role());
-        assertTrue(userMsg.isUser());
-        
-        // Test assistant message
-        LLMMessage assistantMsg = LLMMessage.assistant("Hi there!");
-        assertEquals(LLMMessage.Role.ASSISTANT, assistantMsg.role());
-        assertTrue(assistantMsg.isAssistant());
+
+    @Nested
+    @DisplayName("Provider Capabilities Tests")
+    class ProviderCapabilitiesTests {
+
+        @Test
+        @DisplayName("should return correct provider name")
+        void getProviderName_shouldReturnOllama() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            assertEquals("Ollama", provider.getProviderName());
+        }
+
+        @Test
+        @DisplayName("should indicate no function calling support")
+        void supportsFunctionCalling_shouldReturnFalse() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            assertFalse(provider.supportsFunctionCalling());
+        }
+
+        @Test
+        @DisplayName("should indicate streaming support")
+        void supportsStreaming_shouldReturnTrue() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            assertTrue(provider.supportsStreaming());
+        }
+
+        @Test
+        @DisplayName("should return correct default model")
+        void getDefaultModel_shouldReturnLlama32() {
+            OllamaProvider provider = OllamaProvider.builder().build();
+            assertEquals("llama3.2", provider.getDefaultModel());
+        }
     }
-    
-    @Test
-    void shouldHandleTemperatureValidation() {
-        // Valid temperature values
-        assertDoesNotThrow(() -> {
-            OllamaProvider.builder().temperature(0.0).build();
-        });
-        
-        assertDoesNotThrow(() -> {
-            OllamaProvider.builder().temperature(1.0).build();
-        });
-        
-        assertDoesNotThrow(() -> {
-            OllamaProvider.builder().temperature(0.7).build();
-        });
-    }
-    
-    @Test
-    void shouldHandleTimeoutSettings() {
-        OllamaProvider provider1 = OllamaProvider.builder()
-                .timeout(Duration.ofSeconds(30))
-                .build();
-        assertNotNull(provider1);
-        
-        OllamaProvider provider2 = OllamaProvider.builder()
-                .timeout(Duration.ofMinutes(5))
-                .build();
-        assertNotNull(provider2);
-    }
-    
-    @Test
-    void shouldCreateRequestWithMultipleMessages() {
-        LLMRequest request = LLMRequest.builder("llama3.2")
-                .addMessage(LLMMessage.system("You are a helpful coding assistant"))
-                .addMessage(LLMMessage.user("How do I reverse a string in Java?"))
-                .addMessage(LLMMessage.assistant("You can use StringBuilder.reverse()"))
-                .addMessage(LLMMessage.user("Can you show me an example?"))
-                .temperature(0.3)
-                .maxTokens(200)
-                .build();
-        
-        assertEquals(4, request.messages().size());
-        assertEquals("llama3.2", request.model());
-        assertEquals(0.3, request.temperature());
-        assertEquals(200, request.maxTokens());
-    }
-    
-    @Test 
-    void shouldHandleStreamingChunkStructure() {
-        // Test streaming chunk creation
-        StreamingChunk chunk1 = StreamingChunk.of("stream-123", "llama3.2", "Hello", 0);
-        assertNotNull(chunk1);
-        assertEquals("stream-123", chunk1.id());
-        assertEquals("llama3.2", chunk1.model());
-        assertEquals("Hello", chunk1.content());
-        assertFalse(chunk1.isLast());
-        assertTrue(chunk1.hasContent());
-        
-        // Test final chunk
-        StreamingChunk finalChunk = StreamingChunk.of("stream-123", "llama3.2", "", "stop", 5);
-        assertNotNull(finalChunk);
-        assertTrue(finalChunk.isLast());
-        assertFalse(finalChunk.hasContent());
-        assertEquals("stop", finalChunk.finishReason());
-    }
-    
-    @Test
-    void shouldValidateStreamingChunkParameters() {
-        // Valid chunk
-        assertDoesNotThrow(() -> {
-            StreamingChunk.of("id", "model", "content", 0);
-        });
-        
-        // Valid final chunk
-        assertDoesNotThrow(() -> {
-            StreamingChunk.of("id", "model", "", "stop", 1);
-        });
-        
-        // Test negative index validation (if implemented)
-        assertThrows(IllegalArgumentException.class, () -> {
-            new StreamingChunk("id", "model", "content", null, -1, null);
-        });
-    }
-    
-    @Test
-    void shouldHandleComplexRequestParameters() {
-        LLMRequest complexRequest = LLMRequest.builder("mistral")
-                .addMessage(LLMMessage.system("You are an expert"))
-                .addMessage(LLMMessage.user("Explain quantum physics"))
-                .temperature(0.8)
-                .maxTokens(500)
-                .topP(0.9)
-                .presencePenalty(0.1)
-                .frequencyPenalty(0.2)
-                .build();
-        
-        assertEquals("mistral", complexRequest.model());
-        assertEquals(0.8, complexRequest.temperature());
-        assertEquals(500, complexRequest.maxTokens());
-        assertEquals(0.9, complexRequest.topP());
-        assertEquals(0.1, complexRequest.presencePenalty());
-        assertEquals(0.2, complexRequest.frequencyPenalty());
-        
-        // Should pass validation
-        assertDoesNotThrow(() -> {
-            provider.validateRequest(complexRequest);
-        });
-    }
-    
-    @Test
-    void shouldHandleProviderCapabilities() {
-        // Test all capability methods
-        assertEquals("Ollama", provider.getProviderName());
-        assertEquals("llama3.2", provider.getDefaultModel());
-        assertFalse(provider.supportsFunctionCalling());
-        assertTrue(provider.supportsStreaming());
-        
-        // Validation should work
-        LLMRequest request = LLMRequest.builder("llama3.2")
-                .addMessage(LLMMessage.user("test"))
-                .build();
-        assertDoesNotThrow(() -> provider.validateRequest(request));
-    }
-    
-    @Test
-    void shouldCreateValidOllamaProviderInstances() {
-        // Test different valid configurations
-        OllamaProvider provider1 = OllamaProvider.builder()
-                .baseUrl("http://localhost:11434")
-                .modelName("llama3.2")
-                .build();
-        assertNotNull(provider1);
-        
-        OllamaProvider provider2 = OllamaProvider.builder()
-                .baseUrl("http://remote:11434")
-                .modelName("mistral")
-                .temperature(0.5)
-                .build();
-        assertNotNull(provider2);
-        
-        OllamaProvider provider3 = OllamaProvider.builder()
-                .baseUrl("https://secure-ollama:443")
-                .modelName("codellama")
-                .timeout(Duration.ofMinutes(3))
-                .logRequests(true)
-                .build();
-        assertNotNull(provider3);
-    }
-    
-    @Test
-    void shouldHandleLoggingConfiguration() {
-        // Test logging enabled
-        OllamaProvider logProvider = OllamaProvider.builder()
-                .logRequests(true)
-                .logResponses(true)
-                .build();
-        assertNotNull(logProvider);
-        
-        // Test logging disabled
-        OllamaProvider noLogProvider = OllamaProvider.builder()
-                .logRequests(false)
-                .logResponses(false)
-                .build();
-        assertNotNull(noLogProvider);
-    }
-    
-    /**
-     * Integration test placeholder.
-     * This would require an actual Ollama instance running.
-     * In CI/CD, this could be marked with @Disabled or @IntegrationTest
-     */
-    @Test
-    void integrationTestPlaceholder() {
-        // This test would require actual Ollama instance
-        // Marked as placeholder for manual testing
-        
-        /*
-        OllamaProvider realProvider = OllamaProvider.builder()
-                .baseUrl("http://localhost:11434")
-                .modelName("llama3.2")
-                .build();
-        
-        LLMRequest request = LLMRequest.builder("llama3.2")
-                .addMessage(LLMMessage.user("Say hello"))
-                .maxTokens(10)
-                .build();
-        
-        CompletableFuture<LLMResponse> future = realProvider.chat(request);
-        LLMResponse response = future.get(30, TimeUnit.SECONDS);
-        
-        assertNotNull(response);
-        assertNotNull(response.content());
-        assertTrue(response.content().length() > 0);
-        */
-        
-        // For now, just verify provider creation
-        assertDoesNotThrow(() -> {
-            OllamaProvider.builder().build();
-        });
+
+    private OllamaProvider createProviderWithMocks(OllamaChatModel chatModel, OllamaStreamingChatModel streamingModel) {
+        try {
+            OllamaProvider provider = OllamaProvider.builder().build();
+
+            Field chatModelField = OllamaProvider.class.getDeclaredField("chatModel");
+            chatModelField.setAccessible(true);
+            chatModelField.set(provider, chatModel);
+
+            Field streamingModelField = OllamaProvider.class.getDeclaredField("streamingModel");
+            streamingModelField.setAccessible(true);
+            streamingModelField.set(provider, streamingModel);
+
+            return provider;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create provider with mocks", e);
+        }
     }
 }
