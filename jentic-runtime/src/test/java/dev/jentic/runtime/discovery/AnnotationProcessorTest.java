@@ -16,7 +16,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Comprehensive tests for AnnotationProcessor to achieve >80% coverage
+ * Comprehensive tests for AnnotationProcessor
  */
 class AnnotationProcessorTest {
 
