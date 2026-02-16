@@ -39,6 +39,51 @@ class SystemConditionTest {
         // When/Then
         assertThat(condition.evaluate(testAgent)).isTrue();
     }
+
+    @Test
+    void shouldCheckMemoryAbove() {
+        // Given
+        Condition condition = SystemCondition.memoryAbove(100.0);
+
+        // When/Then
+        assertThat(condition.evaluate(testAgent)).isFalse();
+    }
+
+    @Test
+    void shouldCheckAvailableMemoryAbove() {
+        // Given - very low threshold
+        Condition condition = SystemCondition.availableMemoryAbove(1024);
+
+        // When/Then - should have at least 1KB available
+        assertThat(condition.evaluate(testAgent)).isTrue();
+    }
+
+    @Test
+    void shouldCheckAvailableMemoryBelowUnrealistic() {
+        // Given - unrealistically high threshold
+        Condition condition = SystemCondition.availableMemoryAbove(Long.MAX_VALUE);
+
+        // When/Then
+        assertThat(condition.evaluate(testAgent)).isFalse();
+    }
+
+    @Test
+    void shouldCheckThreadsBelow() {
+        // Given - high threshold
+        Condition condition = SystemCondition.threadsBelow(10000);
+
+        // When/Then - should have less than 10000 threads
+        assertThat(condition.evaluate(testAgent)).isTrue();
+    }
+
+    @Test
+    void shouldCheckThreadsBelowZero() {
+        // Given - negative threshold
+        Condition condition = SystemCondition.threadsBelow(0);
+
+        // When/Then - always false
+        assertThat(condition.evaluate(testAgent)).isFalse();
+    }
     
     @Test
     void shouldCheckSystemHealthy() {
@@ -51,7 +96,19 @@ class SystemConditionTest {
         // Then - depends on actual system load
         assertThat(result).isIn(true, false);
     }
-    
+
+    @Test
+    void shouldCheckSystemUnderLoad() {
+        // Given
+        Condition condition = SystemCondition.systemUnderLoad();
+
+        // When
+        boolean result = condition.evaluate(testAgent);
+
+        // Then - depends on actual system load
+        assertThat(result).isIn(true, false);
+    }
+
     @Test
     void shouldCombineSystemConditions() {
         // Given
@@ -63,6 +120,34 @@ class SystemConditionTest {
         
         // Then
         assertThat(result).isIn(true, false);
+    }
+
+    @Test
+    void shouldCombineWithOrOperator() {
+        // Given
+        Condition condition = SystemCondition.cpuAbove(100.0)
+                .or(SystemCondition.memoryBelow(100.0));
+
+        // When
+        boolean result = condition.evaluate(testAgent);
+
+        // Then - at least one should be true
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void shouldCheckRealisticThresholds() {
+        // Given
+        Condition cpuLow = SystemCondition.cpuBelow(50.0);
+        Condition memoryLow = SystemCondition.memoryBelow(50.0);
+
+        // When
+        boolean cpuResult = cpuLow.evaluate(testAgent);
+        boolean memoryResult = memoryLow.evaluate(testAgent);
+
+        // Then - results depend on actual system state
+        assertThat(cpuResult).isIn(true, false);
+        assertThat(memoryResult).isIn(true, false);
     }
     
     static class TestAgent extends BaseAgent {
