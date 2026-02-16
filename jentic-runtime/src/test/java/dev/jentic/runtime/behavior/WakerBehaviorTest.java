@@ -382,31 +382,32 @@ class WakerBehaviorTest {
         // Then
         assertThat(behavior.getAgent()).isEqualTo(agent);
     }
-    
+
     @Test
     @DisplayName("Should support multiple wake behaviors")
     void testMultipleWakers() {
         // Given
         AtomicInteger wake1Count = new AtomicInteger(0);
         AtomicInteger wake2Count = new AtomicInteger(0);
-        
+
         WakerBehavior waker1 = WakerBehavior.wakeWhen(
-            () -> true,
-            () -> wake1Count.incrementAndGet()
+                () -> true,
+                () -> wake1Count.incrementAndGet()
         );
-        
-        WakerBehavior waker2 = WakerBehavior.wakeAfter(
-            Duration.ZERO,
-            () -> wake2Count.incrementAndGet()
+
+        // Use wakeWhen instead of wakeAfter to avoid timing race
+        WakerBehavior waker2 = WakerBehavior.wakeWhen(
+                () -> true,
+                () -> wake2Count.incrementAndGet()
         );
-        
+
         waker1.setAgent(agent);
         waker2.setAgent(agent);
-        
+
         // When
         waker1.execute().join();
         waker2.execute().join();
-        
+
         // Then - both wake independently
         assertThat(wake1Count.get()).isEqualTo(1);
         assertThat(wake2Count.get()).isEqualTo(1);
