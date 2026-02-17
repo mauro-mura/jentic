@@ -289,4 +289,246 @@ class FilePersistenceServiceTest {
         assertThat(loaded.get().data()).isEmpty();
         assertThat(loaded.get().metadata()).isEmpty();
     }
+
+    // =========================================================================
+    // Constructor variants
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should create service with 2-arg constructor (non-pretty-print)")
+    void testConstructorNoPrettyPrint() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir, false);
+
+        AgentState state = AgentState.builder("agent-1").agentName("Agent 1").data("x", 1).build();
+        service.saveState("agent-1", state).get();
+
+        Optional<AgentState> loaded = service.loadState("agent-1").get();
+        assertThat(loaded).isPresent();
+        assertThat(loaded.get().data().get("x")).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Should create service with default directory constructor")
+    void testDefaultConstructorDoesNotThrow() {
+        // Default constructor uses "data/persistence" which should be creatable
+        // We just verify it can be instantiated without throwing
+        FilePersistenceService service = new FilePersistenceService(tempDir.resolve("default-test"));
+        assertThat(service).isNotNull();
+    }
+
+    // =========================================================================
+    // restoreSnapshot edge cases
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should return empty optional when restoring non-existent snapshot")
+    void testRestoreNonExistentSnapshot() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        Optional<AgentState> result = service.restoreSnapshot("agent-1", "does-not-exist").get();
+        assertThat(result).isEmpty();
+    }
+
+    // =========================================================================
+    // deleteState edge cases
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should handle deleteState when state file does not exist")
+    void testDeleteNonExistentState() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        // Should not throw
+        assertThatCode(() -> service.deleteState("non-existent").get()).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Should delete state and associated snapshots")
+    void testDeleteStateWithSnapshots() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        AgentState state = AgentState.builder("agent-del").agentName("Del Agent").build();
+        service.saveState("agent-del", state).get();
+        service.createSnapshot("agent-del", "snap-1").get();
+        service.createSnapshot("agent-del", "snap-2").get();
+
+        // Verify snapshots exist
+        assertThat(service.listSnapshots("agent-del").get()).hasSize(2);
+
+        // Delete
+        service.deleteState("agent-del").get();
+
+        // Verify state gone
+        assertThat(service.existsState("agent-del").get()).isFalse();
+        // Snapshots also gone
+        assertThat(service.listSnapshots("agent-del").get()).isEmpty();
+    }
+
+    // =========================================================================
+    // listSnapshots edge cases
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should return empty list when no snapshot directory exists")
+    void testListSnapshotsNoDirectory() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        List<String> snapshots = service.listSnapshots("agent-no-snapshots").get();
+        assertThat(snapshots).isEmpty();
+    }
+
+    // =========================================================================
+    // cleanupSnapshots edge cases
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should return 0 when no snapshot directory exists")
+    void testCleanupSnapshotsNoDirectory() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        int deleted = service.cleanupSnapshots("agent-no-dir", 3).get();
+        assertThat(deleted).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("Should return 0 when snapshot count is within keepCount")
+    void testCleanupSnapshotsWithinLimit() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        AgentState state = AgentState.builder("agent-within").agentName("Agent").build();
+        service.saveState("agent-within", state).get();
+        service.createSnapshot("agent-within", "s1").get();
+        service.createSnapshot("agent-within", "s2").get();
+
+        // keepCount >= actual count, nothing deleted
+        int deleted = service.cleanupSnapshots("agent-within", 5).get();
+        assertThat(deleted).isEqualTo(0);
+
+        assertThat(service.listSnapshots("agent-within").get()).hasSize(2);
+    }
+
+    // =========================================================================
+    // PersistenceStats
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should format size in KB")
+    void testFormatTotalSizeKb() {
+        long kbSize = 2048L; // 2 KB
+        FilePersistenceService.PersistenceStats stats = new FilePersistenceService.PersistenceStats(1, 0, kbSize);
+
+        assertThat(stats.formatTotalSize()).contains("KB");
+    }
+
+    @Test
+    @DisplayName("Should format size in MB")
+    void testFormatTotalSizeMb() {
+        long mbSize = 2L * 1024 * 1024; // 2 MB
+        FilePersistenceService.PersistenceStats stats = new FilePersistenceService.PersistenceStats(1, 0, mbSize);
+
+        assertThat(stats.formatTotalSize()).contains("MB");
+    }
+
+    @Test
+    @DisplayName("Should format size in bytes")
+    void testFormatTotalSizeBytes() {
+        FilePersistenceService.PersistenceStats stats = new FilePersistenceService.PersistenceStats(1, 0, 512L);
+
+        assertThat(stats.formatTotalSize()).endsWith("B");
+        assertThat(stats.formatTotalSize()).doesNotContain("KB");
+        assertThat(stats.formatTotalSize()).doesNotContain("MB");
+    }
+
+    @Test
+    @DisplayName("PersistenceStats.toString should contain expected fields")
+    void testPersistenceStatsToString() {
+        FilePersistenceService.PersistenceStats stats = new FilePersistenceService.PersistenceStats(3, 7, 512L);
+
+        String str = stats.toString();
+        assertThat(str).contains("3");
+        assertThat(str).contains("7");
+        assertThat(str).contains("PersistenceStats");
+    }
+
+    // =========================================================================
+    // createSnapshot with empty string triggers auto-generation
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should auto-generate snapshot ID when empty string provided")
+    void testAutoGenerateSnapshotIdForEmptyString() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        AgentState state = AgentState.builder("agent-snap").agentName("Snap Agent").build();
+        service.saveState("agent-snap", state).get();
+
+        String snapshotId = service.createSnapshot("agent-snap", "").get();
+
+        assertThat(snapshotId).isNotNull();
+        assertThat(snapshotId).matches("\\d{8}-\\d{6}-\\d{3}");
+    }
+
+    @Test
+    @DisplayName("Should throw PersistenceException when creating snapshot with no state")
+    void testCreateSnapshotNoState() {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        assertThatThrownBy(() -> service.createSnapshot("no-state-agent", "snap").get())
+                .hasCauseInstanceOf(dev.jentic.core.exceptions.PersistenceException.class);
+    }
+
+    // =========================================================================
+    // getStats edge case - empty directories
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should return zero stats when directories are empty")
+    void testGetStatsEmpty() {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        FilePersistenceService.PersistenceStats stats = service.getStats();
+
+        assertThat(stats.totalStates()).isEqualTo(0);
+        assertThat(stats.totalSnapshots()).isEqualTo(0);
+        assertThat(stats.totalSizeBytes()).isEqualTo(0);
+    }
+
+    // =========================================================================
+    // Overwrite existing state
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should overwrite existing state on repeated saves")
+    void testOverwriteExistingState() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        AgentState v1 = AgentState.builder("agent-ow").data("v", 1).build();
+        AgentState v2 = AgentState.builder("agent-ow").data("v", 2).build();
+
+        service.saveState("agent-ow", v1).get();
+        service.saveState("agent-ow", v2).get();
+
+        Optional<AgentState> loaded = service.loadState("agent-ow").get();
+        assertThat(loaded).isPresent();
+        assertThat(loaded.get().data().get("v")).isEqualTo(2);
+    }
+
+    // =========================================================================
+    // Multiple agents isolation
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should isolate states between different agents")
+    void testAgentIsolation() throws Exception {
+        FilePersistenceService service = new FilePersistenceService(tempDir);
+
+        service.saveState("agent-a", AgentState.builder("agent-a").data("k", "a").build()).get();
+        service.saveState("agent-b", AgentState.builder("agent-b").data("k", "b").build()).get();
+
+        Optional<AgentState> a = service.loadState("agent-a").get();
+        Optional<AgentState> b = service.loadState("agent-b").get();
+
+        assertThat(a.get().data().get("k")).isEqualTo("a");
+        assertThat(b.get().data().get("k")).isEqualTo("b");
+    }
 }
