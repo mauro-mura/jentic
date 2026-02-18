@@ -412,29 +412,27 @@ class TokenBudgetManagerTest {
     
     @Test
     void release_shouldBeThreadSafe() throws InterruptedException {
-        // Given
         TokenBudgetManager budget = new TokenBudgetManager(10000);
         budget.allocate(5000);
-        
+
         int threadCount = 50;
         int tokensPerThread = 100;
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
         CountDownLatch latch = new CountDownLatch(threadCount);
-        
-        // When - release concurrently
+
         for (int i = 0; i < threadCount; i++) {
             executor.submit(() -> {
                 budget.release(tokensPerThread);
                 latch.countDown();
             });
         }
-        
+
         latch.await();
         executor.shutdown();
-        
-        // Then
-        int expectedUsed = 5000 - (threadCount * tokensPerThread);
-        assertThat(budget.getUsed()).isZero();  // Released all
+
+        // release() clamps at 0 — expectedUsed reflects the actual floor
+        int expectedUsed = Math.max(0, 5000 - (threadCount * tokensPerThread));
+        assertThat(budget.getUsed()).isEqualTo(expectedUsed);
     }
     
     // ========== TO STRING TESTS ==========
