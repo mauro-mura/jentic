@@ -10,8 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import dev.jentic.core.memory.llm.LLMMemoryManager;
-import dev.jentic.runtime.behavior.BaseBehavior;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +27,7 @@ import dev.jentic.core.memory.MemoryQuery;
 import dev.jentic.core.memory.MemoryScope;
 import dev.jentic.core.memory.MemoryStats;
 import dev.jentic.core.memory.MemoryStore;
+import dev.jentic.runtime.behavior.BaseBehavior;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
 
 /**
@@ -605,13 +604,13 @@ public abstract class BaseAgent implements Agent {
                     .registeredAt(agentDescriptor.registeredAt())
                     .build();
                 
-            agentDirectory.register(descriptor);
+            agentDirectory.register(descriptor).join();
         }
     }
     
     private void unregisterFromDirectory() {
         if (agentDirectory != null) {
-            agentDirectory.unregister(agentId);
+            agentDirectory.unregister(agentId).join();
         }
     }
     
