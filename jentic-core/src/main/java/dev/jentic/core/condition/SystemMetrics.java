@@ -36,6 +36,10 @@ public record SystemMetrics(
         com.sun.management.OperatingSystemMXBean osBean = 
             (com.sun.management.OperatingSystemMXBean) 
             java.lang.management.ManagementFactory.getOperatingSystemMXBean();
-        return osBean.getSystemCpuLoad() * 100;
+        double load = osBean.getSystemCpuLoad();
+        if (load < 0 || Double.isNaN(load)) {
+            return 0.0; // Not yet available (returns 0 = "no load")
+        }
+        return load * 100;
     }
 }
