@@ -300,11 +300,6 @@ public interface Agent {
      * <pre>{@code
      * // Remove a behavior dynamically
      * agent.removeBehavior("monitor");
-     *
-     * // Remove all behaviors matching a pattern
-     * agent.getBehaviors().stream()
-     *     .filter(b -> b.getId().startsWith("temp-"))
-     *     .forEach(b -> agent.removeBehavior(b.getId()));
      * }</pre>
      *
      * @param behaviorId the unique identifier of the behavior to remove, must not be null
