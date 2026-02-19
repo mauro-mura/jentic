@@ -279,4 +279,78 @@ class LogsCommandTest {
         // Then - verify API was called with the correct limit
         verify(command).apiGet(contains("limit=10"));
     }
+    
+    @Test
+    void shouldNotAppendAgentIdWhenEmpty() throws Exception {
+        setFollow(false);
+        setAgentId("");
+        setLines(50);
+        doReturn(mapper.readTree("{\"data\":[]}")).when(command).apiGet(anyString());
+
+        command.run();
+
+        verify(command).apiGet(argThat(url -> !url.contains("senderId")));
+    }
+
+    @Test
+    void shouldNotAppendTopicPatternWhenEmpty() throws Exception {
+        setFollow(false);
+        setTopicPattern("");
+        setLines(50);
+        doReturn(mapper.readTree("{\"data\":[]}")).when(command).apiGet(anyString());
+
+        command.run();
+
+        verify(command).apiGet(argThat(url -> !url.contains("topicPattern")));
+    }
+
+    @Test
+    void shouldBuildUrlWithAllFilters() throws Exception {
+        setFollow(false);
+        setAgentId("agent-1");
+        setTopic("sys");
+        setTopicPattern("sys.*");
+        setLines(20);
+        doReturn(mapper.readTree("{\"data\":[]}")).when(command).apiGet(anyString());
+
+        command.run();
+
+        verify(command).apiGet(argThat(url ->
+            url.contains("limit=20") &&
+            url.contains("senderId=agent-1") &&
+            url.contains("topic=sys") &&
+            url.contains("topicPattern=sys.*")));
+    }
+
+    @Test
+    void shouldHandleFollowModeConnectionFailure() throws Exception {
+        command.verbose = false;
+        setFollow(true);
+        // Point to unreachable port to trigger WebSocket connect failure
+        command.apiUrl = "http://localhost:19998";
+
+        Thread t = new Thread(command::run);
+        t.setDaemon(true);
+        t.start();
+        t.join(4000L);
+
+        // streamLogs() catches the connection error and writes to stderr in some form
+        String err = errContent.toString();
+        String out = outContent.toString();
+        assertFalse(err.isEmpty() || out.contains("Connected"),
+            "Expected an error indication, err='" + err + "' out='" + out + "'");
+    }
+
+    // helpers
+    private void setFollow(boolean value) throws Exception { setField("follow", value); }
+    private void setLines(int value) throws Exception { setField("lines", value); }
+    private void setAgentId(String value) throws Exception { setField("agentId", value); }
+    private void setTopic(String value) throws Exception { setField("topic", value); }
+    private void setTopicPattern(String value) throws Exception { setField("topicPattern", value); }
+
+    private void setField(String name, Object value) throws Exception {
+        var f = LogsCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
 }

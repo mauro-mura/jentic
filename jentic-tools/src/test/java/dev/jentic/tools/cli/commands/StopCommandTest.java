@@ -199,4 +199,58 @@ class StopCommandTest {
         String output = errContent.toString();
         assertTrue(output.contains("Failed to stop agent"));
     }
+    
+    @Test
+    void shouldCallForceEndpointWhenForceFlagSet() throws Exception {
+    	// Given
+        setField("agentId", "agent-1");
+        setField("force", true);
+        doReturn(mapper.readTree("{\"success\":true}"))
+            .when(command).apiPost("/api/agents/agent-1/stop?force=true");
+
+        // When
+        command.run();
+
+        // Then
+        verify(command).apiPost("/api/agents/agent-1/stop?force=true");
+    }
+
+    @Test
+    void shouldCallPlainEndpointWhenForceFlagNotSet() throws Exception {
+        // Given
+    	setField("agentId", "agent-1");
+        setField("force", false);
+        doReturn(mapper.readTree("{\"success\":true}"))
+            .when(command).apiPost("/api/agents/agent-1/stop");
+        
+        // When
+        command.run();
+        
+        // Then
+        verify(command).apiPost("/api/agents/agent-1/stop");
+    }
+
+    @Test
+    void shouldHandleMissingMessageFieldOnFailure() throws Exception {
+    	// Given
+        JsonNode response = mapper.readTree("{\"success\":false}");
+
+        setField("agentId", "test-agent");
+        setField("force", false);
+        doReturn(response).when(command).apiPost("/api/agents/test-agent/stop");
+
+        // When
+        command.run();
+
+        // Then
+        String output = errContent.toString();
+        assertTrue(output.contains("Unknown error"));
+    }
+
+    // helper
+    private void setField(String name, Object value) throws Exception {
+        var f = StopCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
 }

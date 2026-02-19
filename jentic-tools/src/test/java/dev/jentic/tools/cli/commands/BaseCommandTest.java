@@ -1,18 +1,15 @@
 package dev.jentic.tools.cli.commands;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -134,5 +131,64 @@ class BaseCommandTest {
         
         // Then - just verify a verbose flag works
         assertTrue(command.isVerbose());
+    }
+    
+    @Test
+    void shouldLogGetUrlToStdoutWhenVerbose() {
+    	// Given
+        TestCommand cmd = new TestCommand();
+        // Use unreachable port so the real method prints the URL then throws
+        cmd.apiUrl = "http://localhost:19996";
+        cmd.verbose = true;
+
+        // When
+        try {
+            cmd.apiGet("/probe");
+        } catch (Exception ignored) {
+            // expected: no server listening
+        }
+
+        // Then
+        String out = outContent.toString();
+        assertTrue(out.contains("GET"), "Expected 'GET' in stdout, got: " + out);
+        assertTrue(out.contains("/probe"));
+    }
+    
+    @Test
+    void shouldLogPostUrlToStdoutWhenVerbose() {
+    	// Given
+        TestCommand cmd = new TestCommand();
+        cmd.apiUrl = "http://localhost:19996";
+        cmd.verbose = true;
+
+        //When
+        try {
+            cmd.apiPost("/probe");
+        } catch (Exception ignored) {
+            // expected: no server listening
+        }
+
+        // Then
+        String out = outContent.toString();
+        assertTrue(out.contains("POST"), "Expected 'POST' in stdout, got: " + out);
+        assertTrue(out.contains("/probe"));
+    }
+
+    @Test
+    void shouldNotLogUrlWhenNotVerbose() {
+    	// Given
+        TestCommand cmd = new TestCommand();
+        cmd.apiUrl = "http://localhost:19996";
+        cmd.verbose = false;
+
+        // When
+        try {
+            cmd.apiGet("/quiet");
+        } catch (Exception ignored) {
+            // expected: no server listening
+        }
+
+        // Then
+        assertFalse(outContent.toString().contains("GET"));
     }
 }

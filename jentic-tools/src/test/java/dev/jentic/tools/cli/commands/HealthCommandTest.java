@@ -266,4 +266,63 @@ class HealthCommandTest {
         String output = outContent.toString();
         assertTrue(output.contains("Status:"));
     }
+    
+    @Test
+    void shouldWatchLoopUntilInterrupted() throws Exception {
+        stubHealth("{\"data\":{\"status\":\"UP\"}}");
+        stubStats("{\"data\":{\"runtimeName\":\"r\",\"totalAgents\":0,\"activeAgents\":0}}");
+        setWatch(true);
+        setInterval(1);
+
+        Thread t = new Thread(command::run);
+        t.setDaemon(true);
+        t.start();
+        Thread.sleep(300L);
+        t.interrupt();
+        t.join(2000L);
+
+        verify(command, atLeastOnce()).apiGet("/api/health");
+    }
+
+    @Test
+    void shouldWatchContinueAfterCheckHealthException() throws Exception {
+        doThrow(new RuntimeException("transient"))
+            .doReturn(mapper.readTree("{\"data\":{\"status\":\"UP\"}}"))
+            .when(command).apiGet("/api/health");
+        stubStats("{\"data\":{\"runtimeName\":\"r\",\"totalAgents\":0,\"activeAgents\":0}}");
+        setWatch(true);
+        setInterval(1);
+
+        Thread t = new Thread(command::run);
+        t.setDaemon(true);
+        t.start();
+        Thread.sleep(400L);
+        t.interrupt();
+        t.join(2000L);
+
+        assertTrue(errContent.toString().contains("transient"));
+    }
+
+    // helpers
+    private void stubHealth(String json) throws Exception {
+        doReturn(mapper.readTree(json)).when(command).apiGet("/api/health");
+    }
+
+    private void stubStats(String json) throws Exception {
+        doReturn(mapper.readTree(json)).when(command).apiGet("/api/stats");
+    }
+
+    private void setWatch(boolean value) throws Exception {
+        setField("watch", value);
+    }
+
+    private void setInterval(int value) throws Exception {
+        setField("interval", value);
+    }
+
+    private void setField(String name, Object value) throws Exception {
+        var f = HealthCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
 }

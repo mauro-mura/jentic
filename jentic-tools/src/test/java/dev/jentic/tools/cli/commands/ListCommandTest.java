@@ -172,4 +172,60 @@ class ListCommandTest {
         String output = errContent.toString();
         assertTrue(output.contains("Failed to list agents"));
     }
+    
+    @Test
+    void shouldHandleNonArrayDataGracefully() throws Exception {
+    	// Given
+        // data field exists but is not an array
+        String json = "{\"data\": {\"unexpected\": \"object\"}}";
+        doReturn(mapper.readTree(json)).when(command).apiGet("/api/agents");
+
+        // When
+        command.run();
+
+        // Then
+        // Should not crash – either prints "No agents" or an empty table
+        String out = outContent.toString();
+        assertFalse(out.isEmpty());
+    }
+
+    @Test
+    void shouldRenderBehaviorCountInTable() throws Exception {
+    	// Given
+        String json = """
+            {
+                "data": [
+                    {"id":"long-id-abc123","name":"BusyAgent","running":true,"behaviorCount":7}
+                ]
+            }
+            """;
+        doReturn(mapper.readTree(json)).when(command).apiGet("/api/agents");
+
+        // When
+        command.run();
+
+        // Then
+        String output = outContent.toString();
+        assertTrue(output.contains("BusyAgent"));
+        assertTrue(output.contains("7"));
+    }
+
+    @Test
+    void shouldDisplayTotalAgentCount() throws Exception {
+    	// Given
+        String json = """
+            {"data":[
+                {"id":"a1","name":"A","running":true,"behaviorCount":0},
+                {"id":"a2","name":"B","running":false,"behaviorCount":0},
+                {"id":"a3","name":"C","running":true,"behaviorCount":0}
+            ]}
+            """;
+        doReturn(mapper.readTree(json)).when(command).apiGet("/api/agents");
+
+        // When
+        command.run();
+
+        // Then
+        assertTrue(outContent.toString().contains("3 agent(s)"));
+    }
 }

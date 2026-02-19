@@ -196,4 +196,51 @@ class ConfigCommandTest {
         String output = errContent.toString();
         assertTrue(output.contains("Configuration error"));
     }
+    
+    @Test
+    void shouldShowConfigContentWhenVerbose() throws Exception {
+        Path configFile = tempDir.resolve("jentic.yaml");
+        String content = "jentic:\n  runtime:\n    name: verbose-test\n";
+        Files.writeString(configFile, content);
+
+        command.verbose = true;
+        setField("configPath", configFile);
+        setField("action", "show");
+
+        command.run();
+
+        assertTrue(outContent.toString().contains("jentic"));
+    }
+
+    @Test
+    void shouldValidateAndSucceedWithMinimalValidYaml() throws Exception {
+        Path configFile = tempDir.resolve("jentic.yaml");
+        Files.writeString(configFile, "jentic:\n  runtime:\n    name: minimal\n");
+
+        setField("configPath", configFile);
+        setField("action", "validate");
+
+        command.run();
+
+        // No error output expected
+        String err = errContent.toString();
+        assertFalse(err.contains("Configuration error"), "Unexpected error: " + err);
+    }
+
+    @Test
+    void shouldShowDefaultConfigBodyWhenNoFileExists() throws Exception {
+        setField("action", "show");
+
+        command.run();
+
+        // Default config block should contain "jentic-runtime"
+        assertTrue(outContent.toString().contains("jentic-runtime"));
+    }
+
+    // helper
+    private void setField(String name, Object value) throws Exception {
+        var f = ConfigCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
 }

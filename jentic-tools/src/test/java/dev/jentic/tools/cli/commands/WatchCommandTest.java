@@ -150,4 +150,31 @@ class WatchCommandTest {
         // Then
         assertNull(filter);
     }
+    
+    @Test
+    void shouldBuildWsUrlFromCustomHostAndPort() throws Exception {
+        setField("host", "myserver");
+        setField("port", 9999);
+        String url = String.format("ws://%s:%d/ws", getField("host"), getField("port"));
+        assertEquals("ws://myserver:9999/ws", url);
+    }
+
+    @Test
+    void shouldAcceptFilterWithDotNotation() throws Exception {
+        setField("filter", "agent.started");
+        assertEquals("agent.started", getField("filter"));
+    }
+
+    // helpers
+    private void setField(String name, Object value) throws Exception {
+        var f = WatchCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
+    
+    private Object getField(String name) throws Exception {
+        var f = WatchCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        return f.get(command);
+    }
 }

@@ -179,4 +179,22 @@ class StartCommandTest {
         assertTrue(output.contains("Failed to start agent"));
         assertTrue(output.contains("Unknown error"));
     }
+    
+    @Test
+    void shouldIncludeAgentIdInSuccessMessage() throws Exception {
+        setField("agentId", "my-agent");
+        doReturn(mapper.readTree("{\"success\":true}"))
+            .when(command).apiPost("/api/agents/my-agent/start");
+
+        command.run();
+
+        assertTrue(outContent.toString().contains("my-agent"));
+    }
+
+    // helper
+    private void setField(String name, Object value) throws Exception {
+        var f = StartCommand.class.getDeclaredField(name);
+        f.setAccessible(true);
+        f.set(command, value);
+    }
 }
