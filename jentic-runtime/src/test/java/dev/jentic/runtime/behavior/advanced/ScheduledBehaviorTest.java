@@ -311,13 +311,13 @@ class ScheduledBehaviorTest {
         CountDownLatch latch = new CountDownLatch(1);
         AtomicLong executionStartTime = new AtomicLong();
 
-        // Track actual execution time instead of assuming sleep duration
+        // FIX: Track actual execution time instead of assuming sleep duration
         behavior = new ScheduledBehavior("timing-test", "* * * * * *") {
             @Override
             protected void scheduledAction() throws Exception {
                 long start = System.currentTimeMillis();
                 executionStartTime.set(start);
-                Thread.sleep(100);  // Increased from 50ms for more reliable timing
+                Thread.sleep(100);  // FIX: Increased from 50ms for more reliable timing
                 latch.countDown();
             }
         };
@@ -326,12 +326,22 @@ class ScheduledBehaviorTest {
 
         assertTrue(latch.await(3, TimeUnit.SECONDS));
 
+        // Wait for metrics to be updated (race condition between execution completion and metrics calculation)
+        long avgTime = 0;
+        long deadline = System.currentTimeMillis() + 2000;
+        while (avgTime == 0 && System.currentTimeMillis() < deadline) {
+            avgTime = (long) behavior.getAverageExecutionTimeMs();
+            if (avgTime == 0) {
+                Thread.sleep(50);
+            }
+        }
+
+        // More lenient check with tolerance for system variations
         // Expect at least 70ms (allowing 30% margin below 100ms sleep)
-        long avgTime = (long) behavior.getAverageExecutionTimeMs();
         assertTrue(avgTime >= 70,
                 String.format("Expected execution time >= 70ms but was %dms (with 100ms sleep)", avgTime));
 
-        // Also check upper bound to catch timing anomalies
+        // FIX: Also check upper bound to catch timing anomalies
         assertTrue(avgTime <= 500,
                 String.format("Execution time suspiciously high: %dms (expected ~100ms)", avgTime));
     }
@@ -507,10 +517,19 @@ class ScheduledBehaviorTest {
         behavior.execute().join();
         assertTrue(latch.await(2, TimeUnit.SECONDS));
 
-        assertNotNull(behavior.getLastExecutionTime());
+        // Wait for the lastExecutionTime to be set (race condition between action completion and time setting)
+        ZonedDateTime lastExec = null;
+        long deadline = System.currentTimeMillis() + 2000;
+        while (lastExec == null && System.currentTimeMillis() < deadline) {
+            lastExec = behavior.getLastExecutionTime();
+            if (lastExec == null) {
+                Thread.sleep(50);
+            }
+        }
+
+        assertNotNull(lastExec, "lastExecutionTime should be set after execution");
 
         // More lenient time check with tolerance
-        ZonedDateTime lastExec = behavior.getLastExecutionTime();
         ZonedDateTime now = ZonedDateTime.now();
         assertTrue(lastExec.isBefore(now.plusSeconds(2)),
                 "Last execution time should be before now + 2s tolerance");
