@@ -32,7 +32,7 @@ jobs:
         run: mvn -B verify -DskipTests
       
       - name: Generate coverage report
-        run: mvn -B jacoco:report
+        run: mvn -B org.jacoco:jacoco-maven-plugin:report
       
       - name: Build summary
         if: always()
