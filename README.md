@@ -46,7 +46,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>0.7.0-SNAPSHOT</version>
+            <version>0.7.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -83,7 +83,7 @@ If you prefer explicit version management:
     <dependency>
         <groupId>dev.jentic</groupId>
         <artifactId>jentic-runtime</artifactId>
-        <version>0.7.0-SNAPSHOT</version>
+        <version>0.7.0</version>
     </dependency>
 </dependencies>
 ```
@@ -183,7 +183,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -194,7 +194,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -206,7 +206,7 @@ Enterprise-grade implementations (Kafka, Consul) are planned.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-adapters</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
@@ -217,7 +217,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-tools</artifactId>
-    <version>0.7.0-SNAPSHOT</version>
+    <version>0.7.0</version>
 </dependency>
 ```
 
