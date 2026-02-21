@@ -10,37 +10,45 @@ jobs:
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-      
+
       - name: Build with Maven
         run: mvn -B clean compile
-      
-      - name: Run tests
-        run: mvn -B test
-      
-      - name: Verify build
-        run: mvn -B verify -DskipTests
-      
-      - name: Generate coverage report
-        run: mvn -B org.jacoco:jacoco-maven-plugin:report
-      
+
+      - name: Run tests and coverage
+        run: mvn -B verify jacoco:report
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            jentic-core/target/site/jacoco/
+            jentic-runtime/target/site/jacoco/
+            jentic-adapters/target/site/jacoco/
+            jentic-tools/target/site/jacoco/
+          retention-days: 30
+
       - name: Build summary
         if: always()
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f "jentic-core/target/site/jacoco/index.html" ]; then
-            echo "✅ Coverage reports generated successfully" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ Coverage reports not found" >> $GITHUB_STEP_SUMMARY
-          fi
+          for module in jentic-core jentic-runtime jentic-adapters jentic-tools; do
+            if [ -f "$module/target/site/jacoco/index.html" ]; then
+              echo "✅ $module coverage report generated" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️ $module coverage report not found" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
