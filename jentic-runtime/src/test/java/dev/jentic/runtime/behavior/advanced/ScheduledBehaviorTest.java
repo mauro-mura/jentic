@@ -281,20 +281,21 @@ class ScheduledBehaviorTest {
     @Test
     @Timeout(10)
     void testExecutionMetrics() throws Exception {
-        CountDownLatch latch = new CountDownLatch(2);
+        CountDownLatch successLatch = new CountDownLatch(2);
 
         behavior = new ScheduledBehavior("metrics-test", "* * * * * *") {
             @Override
             protected void scheduledAction() {
                 executionCount.incrementAndGet();
-                latch.countDown();
             }
         };
 
+        // Use onSuccess callback: it fires AFTER successfulExecutions is incremented
+        behavior.onSuccess(b -> successLatch.countDown());
+
         behavior.execute().join();
 
-        // Wait for actual executions using latch instead of fixed sleep
-        assertTrue(latch.await(5, TimeUnit.SECONDS), "Expected 2 executions within 5 seconds");
+        assertTrue(successLatch.await(5, TimeUnit.SECONDS), "Expected 2 successful executions within 5 seconds");
 
         // Use >= instead of exact match to handle timing variations
         assertTrue(behavior.getTotalExecutions() >= 2,
