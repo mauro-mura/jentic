@@ -21,95 +21,88 @@ import dev.jentic.core.AgentStatus;
  * Tracks agent states and provides lifecycle events to listeners.
  */
 public class LifecycleManager {
-    
+
     private static final Logger log = LoggerFactory.getLogger(LifecycleManager.class);
-    
+
     private final Map<String, AgentStatus> agentStates = new ConcurrentHashMap<>();
     private final List<LifecycleListener> listeners = new CopyOnWriteArrayList<>();
-    
+
     /**
-     * Start an agent with timeout and state tracking
+     * Start an agent with timeout and state tracking.
+     * <p>
+     * STARTING is set synchronously before returning the future, so callers
+     * can observe STARTING immediately after this method returns.
+     * Chaining directly on agent.start() avoids the ForkJoinPool work-stealing
+     * race that arose from wrapping agent.start().join() in a second runAsync.
      */
     public CompletableFuture<Void> startAgent(Agent agent, Duration timeout) {
         String agentId = agent.getAgentId();
         log.info("Starting agent: {} with timeout: {}", agentId, timeout);
 
-        // Make STARTING visible immediately to callers and listeners
+        // Set STARTING synchronously before any async work begins
         updateStatus(agentId, AgentStatus.STARTING);
-        
-        return CompletableFuture.runAsync(() -> {
-            try {
-                agent.start()
-                    .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
-                    .join();
-                
-                updateStatus(agentId, AgentStatus.RUNNING);
-                log.info("Agent started successfully: {}", agentId);
-                
-            } catch (CompletionException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof TimeoutException) {
-                    log.error("Agent startup timeout after {}: {}", timeout, agentId);
-                    updateStatus(agentId, AgentStatus.ERROR);
-                    throw new LifecycleException(agentId, "Startup timeout after " + timeout);
-                } else {
-                    log.error("Agent startup failed: {}", agentId, cause);
-                    updateStatus(agentId, AgentStatus.CRASHED);
-                    throw new LifecycleException(agentId, "Startup failed");
-                }
-            } catch (Exception e) {
-                log.error("Unexpected error during agent startup: {}", agentId, e);
-                updateStatus(agentId, AgentStatus.ERROR);
-                throw new LifecycleException(agentId, "Unexpected startup error", e);
-            }
-        });
+
+        return agent.start()
+                .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
+                .handle((result, ex) -> {
+                    if (ex == null) {
+                        updateStatus(agentId, AgentStatus.RUNNING);
+                        log.info("Agent started successfully: {}", agentId);
+                        return (Void) null;
+                    }
+                    Throwable cause = (ex instanceof CompletionException) ? ex.getCause() : ex;
+                    if (cause instanceof TimeoutException) {
+                        log.error("Agent startup timeout after {}: {}", timeout, agentId);
+                        updateStatus(agentId, AgentStatus.ERROR);
+                        throw new LifecycleException(agentId, "Startup timeout after " + timeout);
+                    } else {
+                        log.error("Agent startup failed: {}", agentId, cause);
+                        updateStatus(agentId, AgentStatus.CRASHED);
+                        throw new LifecycleException(agentId, "Startup failed");
+                    }
+                });
     }
-    
+
     /**
-     * Stop an agent with timeout and state tracking
+     * Stop an agent with timeout and state tracking.
+     * <p>
+     * STOPPING is set synchronously before returning the future.
      */
     public CompletableFuture<Void> stopAgent(Agent agent, Duration timeout) {
         String agentId = agent.getAgentId();
         log.info("Stopping agent: {} with timeout: {}", agentId, timeout);
 
-        // Make STOPPING visible immediately to callers and listeners
+        // Set STOPPING synchronously before any async work begins
         updateStatus(agentId, AgentStatus.STOPPING);
-        
-        return CompletableFuture.runAsync(() -> {
-            try {
-                agent.stop()
-                    .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
-                    .join();
-                
-                updateStatus(agentId, AgentStatus.STOPPED);
-                log.info("Agent stopped successfully: {}", agentId);
-                
-            } catch (CompletionException e) {
-                Throwable cause = e.getCause();
-                if (cause instanceof TimeoutException) {
-                    log.error("Agent shutdown timeout after {}: {}", timeout, agentId);
-                    updateStatus(agentId, AgentStatus.ERROR);
-                    throw new LifecycleException(agentId, "Shutdown timeout after " + timeout);
-                } else {
-                    log.error("Agent shutdown failed: {}", agentId, cause);
-                    updateStatus(agentId, AgentStatus.ERROR);
-                    throw new LifecycleException(agentId, "Shutdown failed");
-                }
-            } catch (Exception e) {
-                log.error("Unexpected error during agent shutdown: {}", agentId, e);
-                updateStatus(agentId, AgentStatus.ERROR);
-                throw new LifecycleException(agentId, "Unexpected shutdown error", e);
-            }
-        });
+
+        return agent.stop()
+                .orTimeout(timeout.toMillis(), TimeUnit.MILLISECONDS)
+                .handle((result, ex) -> {
+                    if (ex == null) {
+                        updateStatus(agentId, AgentStatus.STOPPED);
+                        log.info("Agent stopped successfully: {}", agentId);
+                        return (Void) null;
+                    }
+                    Throwable cause = (ex instanceof CompletionException) ? ex.getCause() : ex;
+                    if (cause instanceof TimeoutException) {
+                        log.error("Agent shutdown timeout after {}: {}", timeout, agentId);
+                        updateStatus(agentId, AgentStatus.ERROR);
+                        throw new LifecycleException(agentId, "Shutdown timeout after " + timeout);
+                    } else {
+                        log.error("Agent shutdown failed: {}", agentId, cause);
+                        updateStatus(agentId, AgentStatus.ERROR);
+                        throw new LifecycleException(agentId, "Shutdown failed");
+                    }
+                });
     }
-    
+
     /**
      * Get current status of an agent
      */
     public AgentStatus getAgentStatus(String agentId) {
         return agentStates.getOrDefault(agentId, AgentStatus.UNKNOWN);
     }
-    
+
     /**
      * Check if agent is in a terminal error state
      */
@@ -117,7 +110,7 @@ public class LifecycleManager {
         AgentStatus status = getAgentStatus(agentId);
         return status == AgentStatus.ERROR || status == AgentStatus.CRASHED;
     }
-    
+
     /**
      * Reset agent from error state to stopped
      */
@@ -128,7 +121,7 @@ public class LifecycleManager {
             log.info("Reset agent {} from {} to STOPPED", agentId, currentStatus);
         }
     }
-    
+
     /**
      * Add lifecycle listener
      */
@@ -136,7 +129,7 @@ public class LifecycleManager {
         listeners.add(listener);
         log.debug("Added lifecycle listener: {}", listener.getClass().getSimpleName());
     }
-    
+
     /**
      * Remove lifecycle listener
      */
@@ -144,25 +137,20 @@ public class LifecycleManager {
         listeners.remove(listener);
         log.debug("Removed lifecycle listener: {}", listener.getClass().getSimpleName());
     }
-    
+
     /**
      * Get all current agent states
      */
     public Map<String, AgentStatus> getAllAgentStates() {
         return Map.copyOf(agentStates);
     }
-    
-    private AgentStatus updateStatus(String agentId, AgentStatus newStatus) {
+
+    private void updateStatus(String agentId, AgentStatus newStatus) {
         AgentStatus oldStatus = agentStates.put(agentId, newStatus);
-        
         log.debug("Agent {} status changed: {} -> {}", agentId, oldStatus, newStatus);
-        
-        // Notify listeners
         notifyListeners(agentId, oldStatus, newStatus);
-        
-        return oldStatus;
     }
-    
+
     private void notifyListeners(String agentId, AgentStatus oldStatus, AgentStatus newStatus) {
         for (LifecycleListener listener : listeners) {
             try {
