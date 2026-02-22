@@ -61,7 +61,8 @@ class LifecycleManagerTest {
     @Test
     void shouldTrackAgentStatusDuringShutdown() {
         // Given
-        TestAgent agent = new TestAgent("test-agent", "Test Agent");
+        CountDownLatch stoppingObserved = new CountDownLatch(1); // released by test after checking STOPPING
+        StoppingLatchAgent agent = new StoppingLatchAgent("test-agent", "Test Agent", stoppingObserved);
 
         // Start an agent first
         lifecycleManager.startAgent(agent, Duration.ofSeconds(5)).join();
@@ -70,9 +71,11 @@ class LifecycleManagerTest {
         // When
         CompletableFuture<Void> stopFuture = lifecycleManager.stopAgent(agent, Duration.ofSeconds(5));
 
-        // Then
-        // Should immediately be in STOPPING state
+        // Then - STOPPING is set synchronously by LifecycleManager before agent.stop() executes
         assertThat(lifecycleManager.getAgentStatus("test-agent")).isEqualTo(AgentStatus.STOPPING);
+
+        // Allow the agent's onStop() to proceed
+        stoppingObserved.countDown();
 
         stopFuture.join();
 
@@ -298,6 +301,31 @@ class LifecycleManagerTest {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Interrupted during slow stop", e);
+            }
+        }
+    }
+
+    /**
+     * Agent that blocks in onStop() until the provided latch is released.
+     * Used to reliably observe the STOPPING state in tests.
+     */
+    static class StoppingLatchAgent extends BaseAgent {
+        private final CountDownLatch proceedLatch;
+
+        StoppingLatchAgent(String agentId, String agentName, CountDownLatch proceedLatch) {
+            super(agentId, agentName);
+            this.proceedLatch = proceedLatch;
+        }
+
+        @Override
+        protected void onStop() {
+            try {
+                if (!proceedLatch.await(10, TimeUnit.SECONDS)) {
+                    throw new RuntimeException("StoppingLatchAgent: timed out waiting for proceed latch");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("StoppingLatchAgent: interrupted during onStop", e);
             }
         }
     }
