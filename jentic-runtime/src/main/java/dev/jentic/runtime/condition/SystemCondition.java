@@ -9,17 +9,17 @@ import dev.jentic.core.condition.SystemMetrics;
 public class SystemCondition {
     
     /**
-     * Check if CPU usage is below threshold
+     * Check if CPU usage is below a threshold
      */
     public static Condition cpuBelow(double threshold) {
         return agent -> {
             SystemMetrics metrics = SystemMetrics.current();
-            return metrics.cpuUsage() < threshold;
+            return metrics.cpuUsage() <= threshold;
         };
     }
     
     /**
-     * Check if CPU usage is above threshold
+     * Check if CPU usage is above a threshold
      */
     public static Condition cpuAbove(double threshold) {
         return agent -> {
@@ -29,17 +29,17 @@ public class SystemCondition {
     }
     
     /**
-     * Check if memory usage is below threshold (percentage)
+     * Check if memory usage is below a threshold (percentage)
      */
     public static Condition memoryBelow(double threshold) {
         return agent -> {
             SystemMetrics metrics = SystemMetrics.current();
-            return metrics.memoryUsage() < threshold;
+            return metrics.memoryUsage() <= threshold;
         };
     }
     
     /**
-     * Check if memory usage is above threshold (percentage)
+     * Check if memory usage is above a threshold (percentage)
      */
     public static Condition memoryAbove(double threshold) {
         return agent -> {
@@ -49,7 +49,7 @@ public class SystemCondition {
     }
     
     /**
-     * Check if available memory is above threshold (bytes)
+     * Check if available memory is above a threshold (bytes)
      */
     public static Condition availableMemoryAbove(long bytes) {
         return agent -> {
@@ -59,7 +59,7 @@ public class SystemCondition {
     }
     
     /**
-     * Check if active threads are below threshold
+     * Check if active threads are below a threshold
      */
     public static Condition threadsBelow(int threshold) {
         return agent -> {
