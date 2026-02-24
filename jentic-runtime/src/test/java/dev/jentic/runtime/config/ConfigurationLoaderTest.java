@@ -1,11 +1,12 @@
-package dev.jentic.core.config;
+package dev.jentic.runtime.config;
 
-import dev.jentic.core.exceptions.ConfigurationException;
 import dev.jentic.core.JenticConfiguration;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import dev.jentic.core.config.ConfigurationLoader;
+import dev.jentic.core.exceptions.ConfigurationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -30,7 +31,7 @@ class ConfigurationLoaderTest {
     
     @BeforeEach
     void setUp() {
-        loader = new ConfigurationLoader();
+        loader = new DefaultConfigurationLoader();
     }
     
     // =========================================================================

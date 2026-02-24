@@ -1,4 +1,4 @@
-package dev.jentic.core.config;
+package dev.jentic.runtime.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -8,7 +8,7 @@ import dev.jentic.core.JenticConfiguration;
  * Wrapper for YAML/JSON configuration files.
  * Represents the root structure with "jentic:" element.
  */
-record JenticConfigurationWrapper(
+public record JenticConfigurationWrapper(
     @JsonProperty("jentic") JenticConfiguration jentic
 ) {
     

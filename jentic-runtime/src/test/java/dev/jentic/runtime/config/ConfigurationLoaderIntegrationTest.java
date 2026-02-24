@@ -1,6 +1,7 @@
-package dev.jentic.core.config;
+package dev.jentic.runtime.config;
 
 import dev.jentic.core.JenticConfiguration;
+import dev.jentic.core.config.ConfigurationLoader;
 import dev.jentic.core.exceptions.ConfigurationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,7 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -24,7 +24,7 @@ class ConfigurationLoaderIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        loader = new ConfigurationLoader();
+        loader = new DefaultConfigurationLoader();
     }
 
     @Test
@@ -197,7 +197,7 @@ class ConfigurationLoaderIntegrationTest {
             assertThat(config).isNotNull();
 
         } catch (Exception e) {
-            // Expected - we can't easily simulate working directory
+            // Expected - we can't easily simulate a working directory
             assertThat(e).isNotNull();
         }
     }

@@ -32,6 +32,7 @@ import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.agent.LLMAgent;
+import dev.jentic.runtime.config.DefaultConfigurationLoader;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.discovery.AgentFactory;
 import dev.jentic.runtime.discovery.AgentScanner;
@@ -548,12 +549,12 @@ public class JenticRuntime {
         /**
          * Load configuration from YAML/JSON file
          *
-         * @param configPath path to configuration file
+         * @param configPath path to a configuration file
          * @return this builder
          * @throws ConfigurationException if loading fails
          */
-        public Builder fromConfig(String configPath) throws ConfigurationException {
-            ConfigurationLoader loader = new ConfigurationLoader();
+        public Builder fromFilesystemConfig(String configPath) throws ConfigurationException {
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadFromFile(configPath);
             loader.validate(this.configuration);
             log.info("Loaded configuration from file: {}", configPath);
@@ -561,14 +562,14 @@ public class JenticRuntime {
         }
 
         /**
-         * Load configuration from classpath resource
+         * Load configuration from a classpath resource
          *
          * @param resourcePath classpath resource path
          * @return this builder
          * @throws ConfigurationException if loading fails
          */
         public Builder fromClasspathConfig(String resourcePath) throws ConfigurationException {
-            ConfigurationLoader loader = new ConfigurationLoader();
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadFromClasspath(resourcePath);
             loader.validate(this.configuration);
             log.info("Loaded configuration from classpath: {}", resourcePath);
@@ -588,12 +589,12 @@ public class JenticRuntime {
         }
 
         /**
-         * Load default configuration (jentic.yml from filesystem or classpath)
+         * Load the default configuration (jentic.yml from filesystem or classpath)
          *
          * @return this builder
          */
         public Builder withDefaultConfig() {
-            ConfigurationLoader loader = new ConfigurationLoader();
+            ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadDefault();
             try {
                 loader.validate(this.configuration);

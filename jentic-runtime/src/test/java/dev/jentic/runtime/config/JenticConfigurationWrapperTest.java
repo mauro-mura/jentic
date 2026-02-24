@@ -1,4 +1,4 @@
-package dev.jentic.core.config;
+package dev.jentic.runtime.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
