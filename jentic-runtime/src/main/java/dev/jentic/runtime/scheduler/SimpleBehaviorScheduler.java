@@ -62,7 +62,14 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                     // Event-driven behaviors are not scheduled, they respond to events
                     log.debug("Event-driven behavior registered: {}", behavior.getBehaviorId());
                 }
-                case CUSTOM -> scheduleCustom(behavior);
+                // BATCH, CONDITIONAL, THROTTLED, RETRY, CIRCUIT_BREAKER, SCHEDULED, PIPELINE,
+                // SEQUENTIAL, PARALLEL, FSM all manage their own execution loop internally;
+                // the scheduler drives them via the CUSTOM polling loop so execute() is called.
+                case BATCH, CONDITIONAL, THROTTLED, RETRY, CIRCUIT_BREAKER,
+                     SCHEDULED, PIPELINE, SEQUENTIAL, PARALLEL, FSM,
+                     CUSTOM -> scheduleCustom(behavior);
+                default -> log.warn("Unhandled BehaviorType '{}' for behavior '{}', skipping scheduling",
+                        behavior.getType(), behavior.getBehaviorId());
             }
         });
     }
