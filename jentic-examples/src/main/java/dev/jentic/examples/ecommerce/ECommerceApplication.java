@@ -1,13 +1,8 @@
 package dev.jentic.examples.ecommerce;
 
-import dev.jentic.core.AgentDirectory;
-import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.Message;
 import dev.jentic.core.MessageService;
 import dev.jentic.runtime.JenticRuntime;
-import dev.jentic.runtime.directory.LocalAgentDirectory;
-import dev.jentic.runtime.messaging.InMemoryMessageService;
-import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,28 +20,17 @@ public class ECommerceApplication {
         log.info("Using: FSM + Parallel Validators + Sequential Fulfillment");
         log.info("=".repeat(80) + "\n");
 
-        // Create infrastructure services manually (to send messages from main)
-        MessageService messageService = new InMemoryMessageService();
-        AgentDirectory agentDirectory = new LocalAgentDirectory();
-        BehaviorScheduler behaviorScheduler = new SimpleBehaviorScheduler();
-
-        // Start scheduler
-        behaviorScheduler.start().get();
-
-        // Create JenticRuntime with shared services
         JenticRuntime runtime = JenticRuntime.builder()
-                .messageService(messageService)
-                .agentDirectory(agentDirectory)
-                .behaviorScheduler(behaviorScheduler)
                 .scanPackage("dev.jentic.examples.ecommerce")
                 .build();
 
-        // Start runtime (discovers and starts all @JenticAgent classes)
         log.info("🚀 Starting Jentic Runtime...\n");
         runtime.start().get(10, TimeUnit.SECONDS);
 
         // Wait for agents to be ready
         Thread.sleep(2000);
+
+        MessageService messageService = runtime.getMessageService();
 
         // =====================================================================
         // SCENARIO 1: Valid Order
@@ -111,7 +95,6 @@ public class ECommerceApplication {
         log.info("=".repeat(80) + "\n");
 
         runtime.stop().get(10, TimeUnit.SECONDS);
-        behaviorScheduler.stop().get();
 
         log.info("✅ Application terminated successfully\n");
     }
