@@ -14,7 +14,7 @@ Jentic is a contemporary multi-agent framework that modernizes the concepts pion
 Jentic reimagines multi-agent systems with modern Java practices:
 
 - **Start Simple, Scale Smart**: Begin with in-memory implementations, evolve to enterprise solutions
-- **Interface-First Design**: Clean abstractions that enable seamless technology transitions  
+- **Interface-First Design**: Clean abstractions that enable seamless technology transitions
 - **Cloud-Native Ready**: Container-friendly, microservices-oriented, Kubernetes-native
 - **Developer Experience**: Hot reload, clear APIs, minimal configuration
 - **Virtual Threads**: Leverage Java 21's Project Loom for efficient concurrency
@@ -54,17 +54,17 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
 </dependencyManagement>
 
 <dependencies>
-    <!-- Core + Runtime for basic agent applications -->
-    <dependency>
-        <groupId>dev.jentic</groupId>
-        <artifactId>jentic-runtime</artifactId>
-    </dependency>
-    
-    <!-- Optional: Add adapters for external integrations -->
-    <dependency>
-        <groupId>dev.jentic</groupId>
-        <artifactId>jentic-adapters</artifactId>
-    </dependency>
+<!-- Core + Runtime for basic agent applications -->
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-runtime</artifactId>
+</dependency>
+
+<!-- Optional: Add adapters for external integrations -->
+<dependency>
+    <groupId>dev.jentic</groupId>
+    <artifactId>jentic-adapters</artifactId>
+</dependency>
 </dependencies>
 ```
 
@@ -93,15 +93,15 @@ If you prefer explicit version management:
 ```java
 @JenticAgent("hello-agent")
 public class HelloAgent extends BaseAgent {
-    
+
     @JenticBehavior(type = CYCLIC, interval = "5s")
     public void sayHello() {
         messageService.send(Message.builder()
-            .topic("greetings")
-            .content("Hello from " + getAgentId())
-            .build());
+                .topic("greetings")
+                .content("Hello from " + getAgentId())
+                .build());
     }
-    
+
     @JenticMessageHandler("greetings")
     public void handleGreeting(Message message) {
         log.info("Received: {}", message.getContent());
@@ -115,9 +115,9 @@ public class HelloAgent extends BaseAgent {
 public class HelloWorld {
     public static void main(String[] args) {
         var runtime = JenticRuntime.builder()
-            .scanPackage("com.example.agents")
-            .build();
-            
+                .scanPackage("com.example.agents")
+                .build();
+
         runtime.start();
     }
 }
@@ -162,14 +162,14 @@ Simple YAML configuration:
 jentic:
   runtime:
     name: my-agent-system
-  
+
   agents:
     autoDiscovery: true
     basePackage: "com.example.agents"
-  
+
   messaging:
     provider: in-memory  # Evolution: jms, kafka
-    
+
   directory:
     provider: local      # Evolution: database, consul
 ```
@@ -254,18 +254,29 @@ Web Console and CLI tools.
 
 ## 📚 Examples
 
-Check out the `jentic-examples` module for complete examples:
+The `jentic-examples` module contains a structured **learning path** from first steps to
+production systems. See **[jentic-examples/README.md](jentic-examples/README.md)** for the
+full guide.
 
-- Ping-Pong: `dev.jentic.examples.PingPongExample`
-- Simple bootstrap: `dev.jentic.examples.SimpleExample`
-- Weather Station: `dev.jentic.examples.WeatherStationExample`
-- Task Manager: `dev.jentic.examples.TaskManagerExample`
-- Advanced - Conditional Behavior: `dev.jentic.examples.behaviors.ConditionalBehaviorExample`
-- Advanced - Throttled Behavior: `dev.jentic.examples.behaviors.ThrottledExample`
-- Filtering: `dev.jentic.examples.filtering.MessageFilterExample`
-- Discovery pattern: `dev.jentic.examples.DiscoveryExample`
-- E-Commerce orchestration demo: `dev.jentic.examples.ecommerce.ECommerceApplication`
-- A2A Integration: `dev.jentic.examples.a2a.A2AIntegrationExample`
+Quick-start examples to run immediately:
+
+```bash
+# Level 0 — first agent exchange
+mvn exec:java -pl jentic-examples \
+  -Dexec.mainClass="dev.jentic.examples.PingPongExample"
+
+# Level 1 — retry behavior with backoff strategies
+mvn exec:java -pl jentic-examples \
+  -Dexec.mainClass="dev.jentic.examples.behaviors.RetryExample"
+
+# Level 5 — e-commerce FSM + parallel validators
+mvn exec:java -pl jentic-examples \
+  -Dexec.mainClass="dev.jentic.examples.ecommerce.ECommerceApplication"
+
+# Level 4 — LLM multi-agent (requires OPENAI_API_KEY)
+mvn exec:java -pl jentic-examples \
+  -Dexec.mainClass="dev.jentic.examples.llm.LLMDirectMessagingExample"
+```
 
 ## 🤝 Contributing
 
@@ -282,8 +293,8 @@ cd jentic
 mvn clean test
 
 # Run examples
-cd jentic-examples
-mvn exec:java -Dexec.mainClass="dev.jentic.examples.PingPongExample"
+mvn exec:java -pl jentic-examples \
+  -Dexec.mainClass="dev.jentic.examples.PingPongExample"
 ```
 
 ## 📖 Documentation
