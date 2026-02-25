@@ -62,12 +62,18 @@ public class SimpleBehaviorScheduler implements BehaviorScheduler {
                     // Event-driven behaviors are not scheduled, they respond to events
                     log.debug("Event-driven behavior registered: {}", behavior.getBehaviorId());
                 }
-                // BATCH, CONDITIONAL, THROTTLED, RETRY, CIRCUIT_BREAKER, SCHEDULED, PIPELINE,
-                // SEQUENTIAL, PARALLEL, FSM all manage their own execution loop internally;
-                // the scheduler drives them via the CUSTOM polling loop so execute() is called.
-                case BATCH, CONDITIONAL, THROTTLED, RETRY, CIRCUIT_BREAKER,
-                     SCHEDULED, PIPELINE, SEQUENTIAL, PARALLEL, FSM,
-                     CUSTOM -> scheduleCustom(behavior);
+                // BATCH needs continuous polling to drain its internal queue.
+                case BATCH -> scheduleCustom(behavior);
+                // CONDITIONAL and THROTTLED override execute() and carry their own interval.
+                case CONDITIONAL, THROTTLED, CUSTOM -> scheduleCustom(behavior);
+                // On-demand behaviors: triggered explicitly via execute(); registering is enough
+                // so the framework calls setAgent(). They must NOT be auto-scheduled in a loop.
+                case RETRY, CIRCUIT_BREAKER, PIPELINE, SEQUENTIAL, PARALLEL, FSM -> {
+                    log.debug("On-demand behavior registered (not auto-scheduled): {}", behavior.getBehaviorId());
+                }
+                // SCHEDULED manages its own internal ScheduledExecutorService but needs execute()
+                // called once to start the cron loop.
+                case SCHEDULED -> scheduleOneShot(behavior);
                 default -> log.warn("Unhandled BehaviorType '{}' for behavior '{}', skipping scheduling",
                         behavior.getType(), behavior.getBehaviorId());
             }
