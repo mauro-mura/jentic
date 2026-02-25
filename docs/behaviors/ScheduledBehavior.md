@@ -4,9 +4,7 @@
 
 **ScheduledBehavior** provides cron-like scheduling capabilities for Jentic agents, enabling time-based task execution with full timezone support, missed execution handling, and comprehensive metrics.
 
-**Status**: ✅ Production Ready  
-**Since**: v0.2.0  
-**Package**: `dev.jentic.runtime.behavior.advanced`
+**Since**: v0.2.0 | **Type**: `BehaviorType.SCHEDULED` | **Package**: `dev.jentic.runtime.behavior.advanced`
 
 ---
 

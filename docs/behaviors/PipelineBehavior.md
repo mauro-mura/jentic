@@ -1,4 +1,4 @@
-# 🔄 PipelineBehavior - Complete Documentation
+# PipelineBehavior
 
 ## Overview
 

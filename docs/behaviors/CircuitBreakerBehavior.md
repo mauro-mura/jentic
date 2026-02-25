@@ -701,10 +701,14 @@ protected String executeAction() throws Exception {
 - [RetryBehavior](RetryBehavior.md) - Automatic retry logic
 - [ThrottledBehavior](ThrottledBehavior.md) - Rate limiting
 - [BatchBehavior](BatchBehavior.md) - Bulk processing
-- [Behavior Overview](../README.md) - All available behaviors
+- [Behavior Overview](README.md) - All available behaviors
 
 ---
 
 **Version**: 0.2.0  
 **Since**: Jentic 0.2.0  
 **Status**: Production Ready ✅
+
+=== docs/behaviors/PipelineBehavior.md ===
+# 🔄 PipelineBehavior - Complete Documentation
+

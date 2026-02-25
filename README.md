@@ -305,12 +305,29 @@ mvn exec:java -pl jentic-examples \
 - [Configuration Reference](docs/configuration.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
-### Advanced Behaviors
-- [Batch Behavior](docs/behaviors/BatchBehavior.md) - Process messages in batches
-- [Circuit Breaker](docs/behaviors/CircuitBreakerBehavior.md) - Fault tolerance patterns
-- [Pipeline Behavior](docs/behaviors/PipelineBehavior.md) - Sequential processing chains
-- [Retry Behavior](docs/behaviors/RetryBehavior.md) - Automatic retry mechanisms
-- [Scheduled Behavior](docs/behaviors/ScheduledBehavior.md) - Time-based execution
+### Behaviors
+
+**Base Types**
+- [OneShotBehavior](docs/behaviors/OneShotBehavior.md) - Execute once and stop
+- [CyclicBehavior](docs/behaviors/CyclicBehavior.md) - Repeat at a fixed interval
+- [EventDrivenBehavior](docs/behaviors/EventDrivenBehavior.md) - React to incoming messages
+- [WakerBehavior](docs/behaviors/WakerBehavior.md) - Wake on condition or time
+- [ScheduledBehavior](docs/behaviors/ScheduledBehavior.md) - Cron-based time scheduling
+
+**Composite / Control Flow**
+- [SequentialBehavior](docs/behaviors/SequentialBehavior.md) - Step-by-step execution
+- [ParallelBehavior](docs/behaviors/ParallelBehavior.md) - Concurrent child behaviors
+- [FSMBehavior](docs/behaviors/FSMBehavior.md) - Finite State Machine with guarded transitions
+
+**Advanced Patterns**
+- [ConditionalBehavior](docs/behaviors/ConditionalBehavior.md) - Gate execution on a condition
+- [ThrottledBehavior](docs/behaviors/ThrottledBehavior.md) - Rate-limited execution
+- [BatchBehavior](docs/behaviors/BatchBehavior.md) - Process items in bulk batches
+- [CircuitBreakerBehavior](docs/behaviors/CircuitBreakerBehavior.md) - Fault tolerance circuit breaker
+- [PipelineBehavior](docs/behaviors/PipelineBehavior.md) - Multi-stage data transformation
+- [RetryBehavior](docs/behaviors/RetryBehavior.md) - Automatic retry with back-off
+
+See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 
 ## 💡 Why Jentic?
 
@@ -344,3 +361,4 @@ Apache License 2.0 - see [LICENSE](LICENSE) file for details.
 ## 🤖 Development
 
 Developed with AI-assisted code generation and design using Claude AI.
+

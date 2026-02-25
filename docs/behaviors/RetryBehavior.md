@@ -1,4 +1,4 @@
-# 🔄 RetryBehavior - Complete Implementation Guide
+# RetryBehavior 
 
 ## 📋 Overview
 

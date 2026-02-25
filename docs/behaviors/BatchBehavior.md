@@ -1,4 +1,4 @@
-# BatchBehavior - Comprehensive Documentation
+# BatchBehavior
 
 ## Overview
 
