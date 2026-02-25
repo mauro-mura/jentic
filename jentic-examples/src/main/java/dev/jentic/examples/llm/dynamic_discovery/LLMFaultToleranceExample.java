@@ -13,22 +13,21 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * Research Team Example - Dynamic Agent Discovery
- * 
- * Features:
- * - Dynamic discovery of specialist agents from AgentDirectory
- * - Query by capabilities (not hardcoded agent IDs)
- * - Adaptive task delegation based on available agents
- * - Fault tolerance (handles missing specialists)
- * - Runtime agent registration/unregistration support
- * 
- * Architecture:
- * Coordinator queries AgentDirectory to find:
- * - Agents with type="specialist"
- * - Agents with specific capabilities (technical-analysis, market-analysis, etc.)
- * - Only RUNNING agents
+ * LLM multi-agent example — dynamic discovery with fault tolerance.
+ *
+ * Demonstrates a coordinator that queries AgentDirectory for all running
+ * specialist agents at task-delegation time, adapts to whatever agents are
+ * available, and gracefully handles specialists going offline mid-run.
+ * Agents are auto-discovered via scanPackages().
+ *
+ * The second scenario explicitly stops a specialist before the request to
+ * show that the coordinator produces a partial report rather than failing.
+ *
+ * Pattern: scanPackages, runtime agent status queries, adaptive delegation.
+ * See LLMDirectMessagingExample for the simpler point-to-point baseline.
+ * See LLMCapabilityDiscoveryExample for structured capability-based routing.
  */
-public class ResearchTeamDynamicExample {
+public class LLMFaultToleranceExample {
     
     public static void main(String[] args) throws Exception {
         String apiKey = System.getenv("OPENAI_API_KEY");
