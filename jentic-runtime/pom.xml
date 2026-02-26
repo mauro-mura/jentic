@@ -47,4 +47,62 @@
 	        </plugin>
 	    </plugins>
 	</build>
+	
+	<!--
+        Run mutation coverage with:
+            mvn -pl jentic-runtime -P mutation-testing org.pitest:pitest-maven:mutationCoverage
+        Report generated at: jentic-runtime/target/pit-reports/index.html
+    -->
+    <profiles>
+        <profile>
+            <id>mutation-testing</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>${pitest.version}</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>${pitest.junit5.version}</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <targetClasses>
+                                <param>dev.jentic.runtime.agent.BaseAgent</param>
+                                <param>dev.jentic.runtime.behavior.BaseBehavior</param>
+                                <param>dev.jentic.runtime.behavior.advanced.*</param>
+                                <param>dev.jentic.runtime.behavior.composite.*</param>
+                                <param>dev.jentic.runtime.condition.*</param>
+                                <param>dev.jentic.runtime.messaging.*</param>
+                            </targetClasses>
+                            <targetTests>
+                                <param>dev.jentic.runtime.*Test</param>
+                                <param>dev.jentic.runtime.**.*Test</param>
+                            </targetTests>
+                            <excludedClasses>
+                                <!-- LLMAgent: depends on external LLM provider, not unit-testable -->
+                                <param>dev.jentic.runtime.agent.LLMAgent</param>
+                                <!-- ScheduledBehavior: timing-sensitive, PITest timing distorts results -->
+                                <param>dev.jentic.runtime.behavior.advanced.ScheduledBehavior</param>
+                            </excludedClasses>
+                            <mutators>
+                                <mutator>DEFAULTS</mutator>
+                            </mutators>
+                            <mutationThreshold>60</mutationThreshold>
+                            <coverageThreshold>80</coverageThreshold>
+                            <threads>4</threads>
+                            <outputFormats>
+                                <outputFormat>HTML</outputFormat>
+                            </outputFormats>
+                            <timestampedReports>false</timestampedReports>
+                            <failWhenNoMutations>true</failWhenNoMutations>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

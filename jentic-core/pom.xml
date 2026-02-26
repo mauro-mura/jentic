@@ -45,4 +45,72 @@
 	        </plugin>
 	    </plugins>
 	</build>
+	
+	<!--
+        Run mutation coverage with:
+            mvn -pl jentic-core -P mutation-testing org.pitest:pitest-maven:mutationCoverage
+        Report generated at: jentic-core/target/pit-reports/index.html
+    -->
+    <profiles>
+        <profile>
+            <id>mutation-testing</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <version>${pitest.version}</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.pitest</groupId>
+                                <artifactId>pitest-junit5-plugin</artifactId>
+                                <version>${pitest.junit5.version}</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <!--
+                                Scope: only classes with real logic.
+                                Excluded: pure annotation types, enums with no methods,
+                                          WebConsole (I/O), ConfigurationLoader (file I/O).
+                            -->
+                            <targetClasses>
+                                <param>dev.jentic.core.Message</param>
+                                <param>dev.jentic.core.AgentQuery</param>
+                                <param>dev.jentic.core.AgentDescriptor</param>
+                                <param>dev.jentic.core.condition.Condition</param>
+                                <param>dev.jentic.core.condition.ConditionContext</param>
+                                <param>dev.jentic.core.filter.MessageFilter</param>
+                                <param>dev.jentic.core.composite.CompositeBehavior</param>
+                                <param>dev.jentic.core.memory.*</param>
+                                <param>dev.jentic.core.ratelimit.*</param>
+                            </targetClasses>
+                            <targetTests>
+                                <param>dev.jentic.core.*Test</param>
+                                <param>dev.jentic.core.**.*Test</param>
+                            </targetTests>
+                            <excludedClasses>
+                                <!-- Annotations have no mutable bytecode -->
+                                <param>dev.jentic.core.annotations.*</param>
+                                <!-- Pure I/O, no unit-testable logic -->
+                                <param>dev.jentic.core.config.ConfigurationLoader</param>
+                                <param>dev.jentic.core.console.*</param>
+                            </excludedClasses>
+                            <mutators>
+                                <mutator>DEFAULTS</mutator>
+                            </mutators>
+                            <!-- Initial conservative threshold; raise progressively -->
+                            <mutationThreshold>60</mutationThreshold>
+                            <coverageThreshold>80</coverageThreshold>
+                            <threads>4</threads>
+                            <outputFormats>
+                                <outputFormat>HTML</outputFormat>
+                            </outputFormats>
+                            <timestampedReports>false</timestampedReports>
+                            <failWhenNoMutations>true</failWhenNoMutations>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
