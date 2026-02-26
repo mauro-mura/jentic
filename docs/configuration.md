@@ -1,80 +1,155 @@
 # Configuration Reference
 
-Jentic supports simple configuration via code (builder) and YAML files. This page documents the current configuration keys and formats.
+Jentic supports configuration via YAML files and programmatic builders. This page documents the current configuration keys and formats.
 
 ## Loading Configuration
 
-Use `ConfigurationLoader` from `jentic-core` to load configuration from various sources:
-
-```java
-import dev.jentic.core.config.ConfigurationLoader;
-
-var loader = new ConfigurationLoader();
-var config = loader.loadDefault();                 // classpath:jentic.yml or jentic.yaml if present
-// or
-var config = loader.loadFromFile("./jentic.yml"); // explicit file path
-// or
-var config = loader.loadFromClasspath("jentic-test.yml"); // from classpath
-```
-
-Environment variable substitution is supported using `${ENV_VAR}` syntax inside YAML content.
-
-## YAML Structure
-
-```yaml
-jentic:
-  runtime:
-    name: my-agent-system
-
-  agents:
-    autoDiscovery: true
-    basePackage: "dev.jentic.examples"
-    # Or use scanPackages for multiple packages:
-    # scanPackages:
-    #   - "dev.jentic.examples"
-    #   - "com.example.other"
-
-  messaging:
-    provider: in-memory   # future: jms, kafka
-
-  directory:
-    provider: local       # future: database, consul
-
-  scheduler:
-    # default in-memory simple scheduler; future options may be added
-    mode: simple
-```
-
-Notes:
-- Keys map to `dev.jentic.core.JenticConfiguration` via `JenticConfigurationWrapper`.
-- Unknown keys are ignored by the loader.
-
-## Programmatic Configuration
-
-You can configure the runtime without YAML:
+`ConfigurationLoader` is an interface in `jentic-core`. The default implementation is `DefaultConfigurationLoader` in `jentic-runtime`. The recommended way to load configuration is via the `JenticRuntime` builder:
 
 ```java
 import dev.jentic.runtime.JenticRuntime;
 
-public class App {
-    public static void main(String[] args) {
-        var runtime = JenticRuntime.builder()
-            .scanPackage("dev.jentic.examples")
-            .build();
+// Load from filesystem path
+var runtime = JenticRuntime.builder()
+    .fromFilesystemConfig("./jentic.yml")
+    .build();
 
-        runtime.start();
-    }
-}
+// Load from classpath resource
+var runtime = JenticRuntime.builder()
+    .fromClasspathConfig("jentic-test.yml")
+    .build();
+
+// Load default (see discovery order below)
+var runtime = JenticRuntime.builder()
+    .withDefaultConfig()
+    .build();
+
+// Provide a pre-built configuration object
+JenticConfiguration config = JenticConfiguration.defaults();
+var runtime = JenticRuntime.builder()
+    .withConfiguration(config)
+    .build();
 ```
+
+If none of the config builder methods are called, `JenticRuntime` starts with built-in defaults.
+
+### Direct loader usage
+
+If you need the `JenticConfiguration` object without building a runtime:
+
+```java
+import dev.jentic.runtime.config.DefaultConfigurationLoader;
+
+var loader = new DefaultConfigurationLoader();
+var config = loader.loadDefault();
+// or
+var config = loader.loadFromFile("./jentic.yml");
+// or
+var config = loader.loadFromClasspath("jentic-test.yml");
+```
+
+### Default discovery order (`loadDefault`)
+
+1. `jentic.yml` in the current working directory (filesystem)
+2. `jentic.yml` on the classpath
+
+Built-in defaults are used if neither is found.
+
+### Environment variable substitution
+
+`${ENV_VAR}` syntax is supported inside YAML values.
+
+---
+
+## YAML Structure
+
+The root element is `jentic:`. All sub-sections are optional and fall back to defaults if omitted.
+
+```yaml
+jentic:
+  runtime:
+    name: my-agent-system          # default: jentic-runtime
+    environment: production        # default: development
+    properties:                    # optional arbitrary key/value pairs
+      custom-key: custom-value
+
+  agents:
+    autoDiscovery: true            # default: true
+    basePackage: "dev.example"     # single package (added to scan list)
+    scanPackages:                  # list of packages to scan
+      - "dev.example.agents"
+      - "com.other.agents"
+    scanPaths:                     # legacy alias, merged with scanPackages
+      - "dev.example.legacy"
+
+  messaging:
+    provider: inmemory             # default: inmemory | future: jms, kafka
+    properties: {}                 # optional provider-specific properties
+
+  directory:
+    provider: local                # default: local | future: database, consul
+    properties: {}                 # optional provider-specific properties
+
+  scheduler:
+    provider: simple               # default: simple
+    threadPoolSize: 10             # default: 10
+    properties: {}                 # optional provider-specific properties
+```
+
+Notes:
+- Keys map to `dev.jentic.core.JenticConfiguration` via `dev.jentic.runtime.config.JenticConfigurationWrapper`.
+- `basePackage` and `scanPaths` are merged into `scanPackages` at load time.
+- Unknown keys are ignored by the loader.
+
+---
+
+## Programmatic Configuration
+
+You can configure the runtime entirely in code without a YAML file:
+
+```java
+import dev.jentic.runtime.JenticRuntime;
+
+var runtime = JenticRuntime.builder()
+    .scanPackage("dev.example.agents")   // add one package
+    .scanPackages("dev.example.other")   // varargs variant
+    .build();
+
+runtime.start();
+```
+
+For full control over configuration values:
+
+```java
+import dev.jentic.core.JenticConfiguration;
+
+var config = new JenticConfiguration(
+    new JenticConfiguration.RuntimeConfig("my-system", "production", null),
+    new JenticConfiguration.AgentsConfig(true, null, null, List.of("dev.example"), null),
+    JenticConfiguration.MessagingConfig.defaults(),
+    JenticConfiguration.DirectoryConfig.defaults(),
+    JenticConfiguration.SchedulerConfig.defaults()
+);
+
+var runtime = JenticRuntime.builder()
+    .withConfiguration(config)
+    .build();
+```
+
+---
 
 ## Persistence
 
-`jentic-runtime` provides a file-based persistence service suitable for development/testing. Configure persistence at the agent or service level as needed. For now, persistence is enabled programmatically via `PersistenceManager`.
+`jentic-runtime` provides a file-based persistence service suitable for development/testing. Persistence is enabled programmatically via `PersistenceManager`.
+
+---
 
 ## Logging
 
-Logging uses SLF4J. In tests/examples, Logback is included; provide your own `logback.xml` or `logback-test.xml` as desired.
+Logging uses SLF4J. In tests/examples, Logback is included; provide your own `logback.xml` or `logback-test.xml` as needed.
+
+---
 
 ## Example File
 
-See `jentic-examples/src/main/resources/jentic-test.yml` for a working example used in tests/examples.
+See `jentic-runtime/src/test/resources/jentic-test.yml` for a working example.
