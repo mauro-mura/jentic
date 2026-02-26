@@ -8,34 +8,83 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Configure persistence behavior for an agent
+ * Configures the persistence behavior for an agent class.
+ *
+ * <p>Place this annotation on any class that extends {@code BaseAgent} to control
+ * <em>when</em> the runtime saves the fields marked with {@link JenticPersist}
+ * and how snapshots are managed.
+ *
+ * <h3>Example — periodic auto-save every 30 seconds</h3>
+ * <pre>{@code
+ * @JenticAgent("order-processor")
+ * @JenticPersistenceConfig(
+ *     strategy = PersistenceStrategy.PERIODIC,
+ *     interval  = "30s"
+ * )
+ * public class OrderProcessorAgent extends BaseAgent {
+ *
+ *     @JenticPersist(required = true)
+ *     private String currentOrderId;
+ *
+ *     @JenticPersist
+ *     private int retryCount = 0;
+ * }
+ * }</pre>
+ *
+ * <h3>Example — save on stop and hourly snapshots, keep last 24</h3>
+ * <pre>{@code
+ * @JenticPersistenceConfig(
+ *     strategy         = PersistenceStrategy.ON_STOP,
+ *     autoSnapshot     = true,
+ *     snapshotInterval = "1h",
+ *     maxSnapshots     = 24
+ * )
+ * public class CriticalAgent extends BaseAgent { ... }
+ * }</pre>
+ *
+ * <p>When this annotation is absent the agent uses {@link PersistenceStrategy#MANUAL}
+ * (no automatic persistence; the agent must call {@code persistState()} explicitly).
+ *
+ * @since 0.2.0
+ * @see JenticPersist
+ * @see PersistenceStrategy
  */
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JenticPersistenceConfig {
-    
+
     /**
-     * Persistence strategy to use
+     * Determines when the runtime automatically saves agent state.
+     * Defaults to {@link PersistenceStrategy#MANUAL} — the agent is responsible
+     * for calling {@code persistState()} at the appropriate time.
      */
     PersistenceStrategy strategy() default PersistenceStrategy.MANUAL;
-    
+
     /**
-     * Interval for periodic persistence (e.g., "30s", "5m")
+     * Save interval used by {@link PersistenceStrategy#PERIODIC} and
+     * {@link PersistenceStrategy#DEBOUNCED}. Accepts human-readable durations
+     * such as {@code "30s"}, {@code "5m"}, {@code "1h"}.
+     * Ignored for other strategies.
      */
     String interval() default "60s";
-    
+
     /**
-     * Whether to create snapshots automatically
+     * When {@code true}, the runtime creates point-in-time snapshots on the
+     * schedule defined by {@link #snapshotInterval()}. Snapshots allow rolling
+     * back to a previous state independently of the normal save cycle.
      */
     boolean autoSnapshot() default false;
-    
+
     /**
-     * Snapshot interval (e.g., "1h", "1d")
+     * How often an automatic snapshot is taken. Accepts human-readable durations
+     * such as {@code "1h"}, {@code "1d"}. Only relevant when {@link #autoSnapshot()}
+     * is {@code true}.
      */
     String snapshotInterval() default "1h";
-    
+
     /**
-     * Maximum number of snapshots to keep
+     * Maximum number of automatic snapshots to retain. Older snapshots are
+     * deleted once this limit is exceeded (FIFO eviction).
      */
     int maxSnapshots() default 10;
 }
