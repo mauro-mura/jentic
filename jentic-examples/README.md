@@ -96,7 +96,7 @@ End-to-end examples that combine multiple patterns.
 | Example | Main class | Demonstrates |
 |---------|-----------|-------------|
 | `ECommerceApplication` | `dev.jentic.examples.ecommerce.ECommerceApplication` | FSM order lifecycle + parallel validators + sequential fulfillment |
-| `SupportChatbotExample` | `dev.jentic.examples.support.SupportChatbotExample` | LLM + RAG + multi-agent synthesis + A2A protocol |
+| `SupportChatbotExample` | `dev.jentic.examples.support.SupportChatbotExample` | LLM + RAG + multi-agent synthesis + A2A protocol — [details](src/main/java/dev/jentic/examples/support/README.md) |
 | `EvaluationFrameworkExample` | `dev.jentic.examples.eval.EvaluationFrameworkExample` | Agent evaluation harness |
 
 ---

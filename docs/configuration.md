@@ -1,4 +1,4 @@
-# Configuration Reference
+# Configuration Guide
 
 Jentic supports configuration via YAML files and programmatic builders. This page documents the current configuration keys and formats.
 

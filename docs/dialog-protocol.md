@@ -1,4 +1,4 @@
-# Jentic Dialogue Protocol
+# Dialogue Protocol
 
 > Semantic communication layer for agent-to-agent interaction.
 

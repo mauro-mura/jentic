@@ -130,15 +130,17 @@ Jentic follows a modular, interface-first architecture:
 For details, read the Architecture Guide at docs/architecture.md.
 
 ```
-┌──────────────────┬─────────────────┬─────────────────┐
-│   jentic-core    │ jentic-runtime  │ jentic-adapters │
-│   (interfaces)   │ (basic impls)   │ (enterprise)    │
-├──────────────────┼─────────────────┼─────────────────┤
-│ Agent            │ BaseAgent       │ KafkaMessage    │
-│ MessageService   │ InMemoryMessage │ ConsulDirectory │
-│ AgentDirectory   │ LocalDirectory  │ QuartzScheduler │
-│ BehaviorScheduler│ SimpleScheduler │ RedisMessage    │
-└──────────────────┴─────────────────┴─────────────────┘
+┌──────────────────┬─────────────────┬──────────────────────┐
+│   jentic-core    │ jentic-runtime  │  jentic-adapters     │
+│   (interfaces)   │ (basic impls)   │  (integrations)      │
+├──────────────────┼─────────────────┼──────────────────────┤
+│ Agent            │ BaseAgent       │ OpenAIProvider       │
+│ MessageService   │ LLMAgent        │ AnthropicProvider    │
+│ AgentDirectory   │ InMemoryMessage │ OllamaProvider       │
+│ BehaviorScheduler│ LocalDirectory  │ A2A Adapter          │
+│ LLMProvider      │ SimpleScheduler │ (Kafka, Consul…      │
+│ MemoryStore      │ InMemoryStore   │  future)             │
+└──────────────────┴─────────────────┴──────────────────────┘
 ```
 
 ### Core Components
@@ -200,7 +202,6 @@ Basic implementations for getting started quickly.
 
 ### jentic-adapters
 Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
-Enterprise-grade implementations (Kafka, Consul) are planned.
 
 ```xml
 <dependency>
@@ -231,7 +232,7 @@ Web Console and CLI tools.
 - [x] Behavior types: Cyclic, One-shot, Event-driven, Waker
 - [x] Composite behaviors: Sequential, Parallel, FSM
 - [x] Advanced behaviors: Conditional, Throttled
-- [x] Message filtering (topic, header, predicate, composite)
+- [x] Message filtering (topic, header, content, predicate, composite)
 - [x] Rate limiting (token bucket, sliding window)
 - [x] File-based persistence utilities
 - [x] YAML configuration support
@@ -239,13 +240,14 @@ Web Console and CLI tools.
 - [x] CLI tools
 - [x] A2A (Agent-to-Agent) protocol support
 - [x] LLM integration (OpenAI, Anthropic, Ollama)
+- [x] LLM integration with memory management (context window strategies)
+- [x] Dialogue protocol (Request, Query, Contract-Net)
+- [x] Conditions system (AgentCondition, SystemCondition, TimeCondition)
 
-### Planned (V1.0)
+### Future
 - [ ] JMS message integration
 - [ ] Database-backed agent directory
 - [ ] Docker containerization
-
-### Future
 - [ ] Kafka message streaming
 - [ ] Consul service discovery
 - [ ] Agent migration
@@ -302,7 +304,11 @@ mvn exec:java -pl jentic-examples \
 ### Core Documentation
 - [Architecture Guide](docs/architecture.md)
 - [Agent Development Guide](docs/agent-development.md)
-- [Configuration Reference](docs/configuration.md)
+- [Configuration Guide](docs/configuration.md)
+- [Dialogue Protocol](docs/dialog-protocol.md)
+- [LLM Integration Guide](docs/llm-integration.md)
+- [Memory Guide](docs/memory.md)
+- [Message Filtering Guide](docs/message-filtering.md)
 - [Architecture Decision Records](docs/adr/README.md)
 
 ### Behaviors
@@ -347,18 +353,3 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 ## 📄 License
 
 Apache License 2.0 - see [LICENSE](LICENSE) file for details.
-
-## 🙋 Support
-
-- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
-
-## 🏆 Acknowledgments
-
-- **JADE Framework**: For pioneering multi-agent systems in Java
-- **Spring Framework**: For inspiration on clean architecture patterns
-- **Project Loom**: For making concurrent programming accessible
-
-## 🤖 Development
-
-Developed with AI-assisted code generation and design using Claude AI.
-
