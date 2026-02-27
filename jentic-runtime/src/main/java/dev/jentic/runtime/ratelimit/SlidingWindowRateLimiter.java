@@ -31,7 +31,7 @@ public class SlidingWindowRateLimiter implements RateLimiter {
     }
     
     @Override
-    public boolean tryAcquire() {
+    public synchronized boolean tryAcquire() {
         long now = System.currentTimeMillis();
         long windowStart = now - rateLimit.period().toMillis();
         
