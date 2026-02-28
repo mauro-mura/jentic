@@ -193,10 +193,6 @@
 				    <groupId>org.apache.maven.plugins</groupId>
 				    <artifactId>maven-javadoc-plugin</artifactId>
 				    <version>3.12.0</version>
-				    <configuration>
-				        <!-- suppress warnings on record @param if not fixing P3 -->
-				        <doclint>all,-missing</doclint>
-				    </configuration>
 				</plugin>
             </plugins>
         </pluginManagement>
