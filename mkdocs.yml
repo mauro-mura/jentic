@@ -1,0 +1,74 @@
+site_name: Jentic Framework
+site_url: https://jentic.dev/docs
+site_description: Pragmatic Multi-Agent Framework for Java
+site_author: Jentic Team
+repo_url: https://github.com/mauro-mura/jentic
+repo_name: mauro-mura/jentic
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - toc:
+      permalink: true
+
+# ADRs are excluded — kept only in the repository for internal reference
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Configuration: configuration.md
+  - Agent Development: agent-development.md
+  - Behaviors:
+    - Overview: behaviors/README.md
+    - Cyclic: behaviors/CyclicBehavior.md
+    - OneShot: behaviors/OneShotBehavior.md
+    - Waker: behaviors/WakerBehavior.md
+    - Scheduled: behaviors/ScheduledBehavior.md
+    - EventDriven: behaviors/EventDrivenBehavior.md
+    - FSM: behaviors/FSMBehavior.md
+    - Conditional: behaviors/ConditionalBehavior.md
+    - Sequential: behaviors/SequentialBehavior.md
+    - Parallel: behaviors/ParallelBehavior.md
+    - Pipeline: behaviors/PipelineBehavior.md
+    - Batch: behaviors/BatchBehavior.md
+    - Retry: behaviors/RetryBehavior.md
+    - Throttled: behaviors/ThrottledBehavior.md
+    - CircuitBreaker: behaviors/CircuitBreakerBehavior.md
+  - Messaging:
+    - Message Filtering: message-filtering.md
+    - Dialog Protocol: dialog-protocol.md
+  - LLM Integration:
+    - Overview: llm-integration.md
+    - Memory Management: memory.md
+  - API Reference: api/index.html

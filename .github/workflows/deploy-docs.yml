@@ -1,0 +1,51 @@
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Generate JavaDoc
+        run: mvn javadoc:aggregate -DskipTests -q
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install MkDocs
+        run: pip install mkdocs mkdocs-material
+
+      - name: Copy JavaDoc into docs
+        run: |
+          mkdir -p docs/api
+          cp -r target/site/apidocs/. docs/api/
+
+      - name: Build site
+        run: mkdocs build --strict
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          protocol: ftps
+          port: 21
+          security: loose
+          local-dir: ./site/
+          server-dir: /www.jentic.dev/docs
+          exclude: |
+            **/.git*
+            **/.github*
