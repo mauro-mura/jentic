@@ -571,4 +571,4 @@ void agentRespondsToUserMessage() {
 - [Agent Development Guide](agent-development.md) — LLMAgent lifecycle and behaviors
 - [Architecture Guide](architecture.md) — module overview and concurrency model
 - [Dialogue Protocol](dialog-protocol.md) — A2A and structured agent communication
-- [jentic-examples/README.md](../jentic-examples/README.md) — runnable LLM examples
+- `jentic-examples/README.md` — runnable LLM examples

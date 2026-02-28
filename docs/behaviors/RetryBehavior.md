@@ -779,9 +779,9 @@ String getMetricsSummary()
 ## 🎓 Learning Resources
 
 ### Documentation
-- [JavaDoc](./RetryBehavior.java) - Complete API documentation
-- [Tests](./RetryBehaviorTest.java) - 26 test examples
-- [Example](./RetryExample.java) - 4 real-world scenarios
+- `RetryBehavior.java` — Complete API documentation (see source)
+- `RetryBehaviorTest.java` — 26 test examples (see source)
+- `RetryExample.java` — 4 real-world scenarios (see source)
 
 ### Related Patterns
 - **Circuit Breaker**: Prevent cascading failures

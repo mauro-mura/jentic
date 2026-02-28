@@ -40,7 +40,7 @@ mvn exec:java -pl jentic-examples \
   -Dexec.mainClass="dev.jentic.examples.llm.LLMDirectMessagingExample"
 ```
 
-The full learning path (Level 0 → Level 5) is in [jentic-examples/README.md](../jentic-examples/README.md).
+The full learning path (Level 0 → Level 5) is in `jentic-examples/README.md`.
 
 ## 4. Add Jentic to Your Project
 
