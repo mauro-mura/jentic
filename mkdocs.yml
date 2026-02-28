@@ -42,6 +42,10 @@ markdown_extensions:
   - toc:
       permalink: true
 
+validation:
+  nav:
+    omitted_files: ignore
+
 # ADRs are excluded — kept only in the repository for internal reference
 nav:
   - Home: index.md
