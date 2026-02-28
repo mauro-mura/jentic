@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * By default, the persistence key matches the Java member name; set {@link #value()}
  * to override it (useful when the serialized schema must remain stable across renames).
  *
- * <h3>Field usage</h3>
+ * <h2>Field usage</h2>
  * <pre>{@code
  * @JenticPersist
  * private int processedCount = 0;
@@ -28,7 +28,7 @@ import java.lang.annotation.Target;
  * private String apiKey;
  * }</pre>
  *
- * <h3>Method usage</h3>
+ * <h2>Method usage</h2>
  * <p>When placed on a getter/setter pair, the framework will call the getter on save
  * and the setter on restore.
  *

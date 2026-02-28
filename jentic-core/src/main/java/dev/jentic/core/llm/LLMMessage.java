@@ -24,6 +24,11 @@ import java.util.Objects;
  * LLMMessage assistantMsg = LLMMessage.assistant("2+2 equals 4.");
  * }</pre>
  * 
+ * @param role the role of the message (system, user, assistant, or function)
+ * @param content the textual content of the message
+ * @param name optional name identifier for the message sender
+ * @param functionCalls optional list of function calls (for assistant role)
+ * 
  * @since 0.3.0
  */
 public record LLMMessage(

@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  * <em>when</em> the runtime saves the fields marked with {@link JenticPersist}
  * and how snapshots are managed.
  *
- * <h3>Example — periodic auto-save every 30 seconds</h3>
+ * <h2>Example — periodic auto-save every 30 seconds</h2>
  * <pre>{@code
  * @JenticAgent("order-processor")
  * @JenticPersistenceConfig(
@@ -31,7 +31,7 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  *
- * <h3>Example — save on stop and hourly snapshots, keep last 24</h3>
+ * <h2>Example — save on stop and hourly snapshots, keep last 24</h2>
  * <pre>{@code
  * @JenticPersistenceConfig(
  *     strategy         = PersistenceStrategy.ON_STOP,

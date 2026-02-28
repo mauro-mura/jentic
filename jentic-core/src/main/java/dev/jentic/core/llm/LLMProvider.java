@@ -50,9 +50,7 @@ public interface LLMProvider {
      * a request containing messages and configuration, and returns a response
      * asynchronously.
      * 
-     * @param request the LLM request containing messages and configuration
      * @return CompletableFuture containing the LLM response
-     * @throws LLMException if the request fails or is invalid
      */
     CompletableFuture<LLMResponse> chat(LLMRequest request);
     
@@ -72,10 +70,7 @@ public interface LLMProvider {
      * });
      * }</pre>
      * 
-     * @param request the LLM request containing messages and configuration
-     * @param chunkHandler consumer that receives each chunk of the response
      * @return CompletableFuture that completes when streaming is finished
-     * @throws LLMException if the request fails or streaming is not supported
      */
     CompletableFuture<Void> chatStream(LLMRequest request, Consumer<StreamingChunk> chunkHandler);
     
@@ -86,7 +81,6 @@ public interface LLMProvider {
      * Model names are provider-specific (e.g., "gpt-4", "claude-3-opus", "llama2").
      * 
      * @return CompletableFuture containing list of available model names
-     * @throws LLMException if unable to retrieve model list
      */
     CompletableFuture<List<String>> getAvailableModels();
     

@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * 
  * <p><strong>Primary Use Cases:</strong>
  * <table border="1">
+ *   <caption>Primary use cases for condition context</caption>
  *   <tr>
  *     <th>Use Case</th>
  *     <th>Description</th>

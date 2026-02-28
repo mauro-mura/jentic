@@ -13,7 +13,7 @@ import static dev.jentic.core.dialogue.protocol.ProtocolState.*;
  * Contract Net Protocol for task delegation and negotiation.
  * 
  * <p>Flow:
- * <pre>
+ * <pre>{@code
  * Initiator                    Participants
  *     |                             |
  *     |-------- CFP --------------->| (broadcast)
@@ -26,7 +26,7 @@ import static dev.jentic.core.dialogue.protocol.ProtocolState.*;
  *     |                             |
  *     |<------- INFORM/FAILURE -----|
  *     |                             |
- * </pre>
+ * }</pre>
  * 
  * @since 0.5.0
  */

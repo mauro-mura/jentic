@@ -56,7 +56,7 @@ public class TokenBudgetManager {
      * Create a token budget manager with the specified budget.
      * 
      * @param totalBudget the total token budget
-     * @throws IllegalArgumentException if totalBudget <= 0
+     * @throws IllegalArgumentException if totalBudget {@literal <=} 0
      */
     public TokenBudgetManager(int totalBudget) {
         if (totalBudget <= 0) {
@@ -119,7 +119,7 @@ public class TokenBudgetManager {
      * 
      * @param tokens the number of tokens to check
      * @return true if allocation would succeed
-     * @throws IllegalArgumentException if tokens < 0
+     * @throws IllegalArgumentException if tokens {@literal <} 0
      */
     public boolean canAllocate(int tokens) {
         if (tokens < 0) {
@@ -136,7 +136,7 @@ public class TokenBudgetManager {
      * 
      * @param tokens the number of tokens to allocate
      * @return true if allocation succeeded, false if budget insufficient
-     * @throws IllegalArgumentException if tokens < 0
+     * @throws IllegalArgumentException if tokens {@literal <} 0
      */
     public boolean allocate(int tokens) {
         if (tokens < 0) {
@@ -166,7 +166,7 @@ public class TokenBudgetManager {
      * Allocate tokens or throw exception if insufficient budget.
      * 
      * @param tokens the number of tokens to allocate
-     * @throws IllegalArgumentException if tokens < 0
+     * @throws IllegalArgumentException if tokens {@literal <} 0
      * @throws InsufficientBudgetException if budget insufficient
      */
     public void allocateOrThrow(int tokens) {
@@ -185,7 +185,7 @@ public class TokenBudgetManager {
      * become available for re-allocation.
      * 
      * @param tokens the number of tokens to release
-     * @throws IllegalArgumentException if tokens < 0
+     * @throws IllegalArgumentException if tokens {@literal <} 0
      */
     public void release(int tokens) {
         if (tokens < 0) {

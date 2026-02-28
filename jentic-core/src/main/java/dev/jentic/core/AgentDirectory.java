@@ -23,6 +23,7 @@ import java.util.concurrent.CompletableFuture;
  *
  * <p><strong>Implementation Strategies:</strong>
  * <table border="1">
+ *   <caption>Directory implementation strategies</caption>
  *   <tr>
  *     <th>Strategy</th>
  *     <th>Use Case</th>

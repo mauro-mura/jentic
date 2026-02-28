@@ -29,6 +29,10 @@ import java.util.Objects;
  * }
  * }</pre>
  * 
+ * @param id the unique identifier for this function call
+ * @param name the name of the function to be called
+ * @param arguments the arguments for the function as a JSON string
+ * 
  * @since 0.3.0
  */
 public record FunctionCall(

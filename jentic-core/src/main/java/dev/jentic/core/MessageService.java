@@ -21,6 +21,7 @@ import java.util.function.Predicate;
  *
  * <p><strong>Implementation Strategies:</strong>
  * <table border="1">
+ *   <caption>Message service implementation strategies</caption>
  *   <tr>
  *     <th>Strategy</th>
  *     <th>Characteristics</th>

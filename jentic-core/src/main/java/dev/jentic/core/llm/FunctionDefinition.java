@@ -20,6 +20,10 @@ import java.util.Objects;
  *     .build();
  * }</pre>
  * 
+ * @param name the name of the function
+ * @param description a description of what the function does
+ * @param parameters the JSON Schema defining the function's parameters
+ * 
  * @since 0.3.0
  */
 public record FunctionDefinition(

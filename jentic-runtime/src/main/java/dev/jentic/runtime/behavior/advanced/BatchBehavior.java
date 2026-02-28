@@ -379,7 +379,7 @@ public abstract class BatchBehavior<T> extends BaseBehavior {
     }
     
     /**
-     * Get number of partial batches processed (size < maxBatchSize)
+     * Get number of partial batches processed (size {@literal <} maxBatchSize)
      */
     public long getPartialBatchesProcessed() {
         return partialBatchesProcessed.get();

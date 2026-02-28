@@ -30,6 +30,14 @@ import java.util.*;
  *     .build();
  * }</pre>
  * 
+ * @param content the actual memory content (text, data, etc.)
+ * @param metadata additional attributes for filtering and organization
+ * @param createdAt timestamp when the memory was created
+ * @param expiresAt optional expiration time for automatic cleanup
+ * @param ownerId agent that created this memory
+ * @param sharedWith agents that have access to this memory
+ * @param tokenCount estimated token count for LLM context
+ * 
  * @since 0.6.0
  */
 public record MemoryEntry(

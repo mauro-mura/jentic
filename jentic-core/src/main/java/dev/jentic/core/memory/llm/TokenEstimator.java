@@ -160,7 +160,7 @@ public interface TokenEstimator {
      * @param model the model identifier
      * @param usedTokens tokens already used in prompt
      * @return tokens remaining, or -1 if window size unknown
-     * @throws IllegalArgumentException if model is null or usedTokens < 0
+     * @throws IllegalArgumentException if model is null or usedTokens {@literal <} 0
      */
     default int getRemainingTokens(String model, int usedTokens) {
         if (usedTokens < 0) {

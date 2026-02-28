@@ -13,7 +13,7 @@ import static dev.jentic.core.dialogue.protocol.ProtocolState.*;
  * Request protocol for action execution.
  * 
  * <p>Flow:
- * <pre>
+ * <pre>{@code
  * Initiator                    Participant
  *     |                             |
  *     |-------- REQUEST ----------->|
@@ -22,7 +22,7 @@ import static dev.jentic.core.dialogue.protocol.ProtocolState.*;
  *     |                             |
  *     |<------- INFORM/FAILURE -----|
  *     |                             |
- * </pre>
+ * }</pre>
  * 
  * @since 0.5.0
  */

@@ -69,14 +69,14 @@ public class SystemCondition {
     }
     
     /**
-     * System is healthy (CPU < 80%, Memory < 80%)
+     * System is healthy (CPU {@literal <} 80%, Memory {@literal <} 80%)
      */
     public static Condition systemHealthy() {
         return cpuBelow(80.0).and(memoryBelow(80.0));
     }
     
     /**
-     * System is under load (CPU > 70% OR Memory > 70%)
+     * System is under load (CPU {@literal >} 70% OR Memory {@literal >} 70%)
      */
     public static Condition systemUnderLoad() {
         return cpuAbove(70.0).or(memoryAbove(70.0));

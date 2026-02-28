@@ -13,14 +13,14 @@ import static dev.jentic.core.dialogue.protocol.ProtocolState.*;
  * Query protocol for information retrieval.
  * 
  * <p>Flow:
- * <pre>
+ * <pre>{@code
  * Initiator                    Participant
  *     |                             |
  *     |-------- QUERY ------------->|
  *     |                             |
  *     |<------- INFORM/REFUSE ------|
  *     |                             |
- * </pre>
+ * }</pre>
  * 
  * @since 0.5.0
  */

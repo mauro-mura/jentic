@@ -17,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * 
  * <p><strong>Core Responsibilities:</strong>
  * <table border="1">
+ *   <caption>Scheduler core responsibilities</caption>
  *   <tr>
  *     <th>Responsibility</th>
  *     <th>Description</th>
@@ -77,6 +78,7 @@ import java.util.concurrent.CompletableFuture;
  * Different use cases may require different scheduler implementations:
  * 
  * <table border="1">
+ *   <caption>Scheduler implementation strategies</caption>
  *   <tr>
  *     <th>Strategy</th>
  *     <th>Characteristics</th>
@@ -181,7 +183,7 @@ import java.util.concurrent.CompletableFuture;
  * <ul>
  *   <li><strong>Thread Pool Sizing</strong> - Balance between parallelism and overhead.
  *       Too few threads = behaviors wait; too many = context switching overhead.</li>
- *   <li><strong>Scheduling Overhead</strong> - Very short intervals (< 100ms) can
+ *   <li><strong>Scheduling Overhead</strong> - Very short intervals ({@literal <} 100ms) can
  *       saturate the scheduler. Consider event-driven or batching approaches.</li>
  *   <li><strong>Behavior Duration</strong> - Long-running behaviors can block others.
  *       Use async operations or dedicated executors for I/O-intensive behaviors.</li>

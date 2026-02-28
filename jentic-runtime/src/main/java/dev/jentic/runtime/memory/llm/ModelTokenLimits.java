@@ -174,7 +174,7 @@ public final class ModelTokenLimits {
      * 
      * @param model the model identifier
      * @param limit the context window size in tokens
-     * @throws IllegalArgumentException if model is null or limit <= 0
+     * @throws IllegalArgumentException if model is null or limit {@literal <=} 0
      */
     public static void register(String model, int limit) {
         if (model == null || model.trim().isEmpty()) {

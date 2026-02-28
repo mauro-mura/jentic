@@ -4,7 +4,7 @@ package dev.jentic.core.persistence;
  * Mixin interface for agents that support state persistence.
  *
  * <p>Agents implementing this interface participate in the Jentic persistence
- * lifecycle: the framework (via {@link PersistenceManager} or equivalent)
+ * lifecycle: the framework (via a persistence manager or equivalent)
  * calls {@link #captureState()} to snapshot the agent's state and
  * {@link #restoreState(AgentState)} to recover it after a restart or failure.
  *

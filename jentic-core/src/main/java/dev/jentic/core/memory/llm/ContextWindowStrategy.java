@@ -116,7 +116,7 @@ public interface ContextWindowStrategy {
      * @param maxTokens maximum tokens for selected messages
      * @param estimator token estimator to use
      * @return selected messages that fit in budget (oldest to newest)
-     * @throws IllegalArgumentException if any parameter is null or maxTokens <= 0
+     * @throws IllegalArgumentException if any parameter is null or maxTokens {@literal <=} 0
      */
     List<LLMMessage> selectMessages(
         List<LLMMessage> allMessages,

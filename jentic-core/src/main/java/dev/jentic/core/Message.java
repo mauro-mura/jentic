@@ -27,6 +27,7 @@ import java.util.UUID;
  *
  * <p><strong>Message Components:</strong>
  * <table border="1">
+ *   <caption>Message core components and properties</caption>
  *   <tr>
  *     <th>Component</th>
  *     <th>Purpose</th>

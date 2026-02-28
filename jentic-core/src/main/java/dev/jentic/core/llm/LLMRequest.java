@@ -22,6 +22,19 @@ import java.util.Objects;
  *     .build();
  * }</pre>
  * 
+ * @param model the model to use (e.g., "gpt-4", "claude-3-opus")
+ * @param messages list of messages in the conversation
+ * @param temperature sampling temperature (0.0 to 2.0)
+ * @param maxTokens maximum tokens to generate in response
+ * @param functions optional list of function definitions for tool use
+ * @param functionCall optional control for specific function calling
+ * @param topP nucleus sampling parameter (0.0 to 1.0)
+ * @param n number of responses to generate
+ * @param stop optional list of stop sequences
+ * @param presencePenalty presence penalty (-2.0 to 2.0)
+ * @param frequencyPenalty frequency penalty (-2.0 to 2.0)
+ * @param additionalParameters provider-specific extra parameters
+ * 
  * @since 0.3.0
  */
 public record LLMRequest(

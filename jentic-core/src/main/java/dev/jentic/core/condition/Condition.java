@@ -21,6 +21,7 @@ import dev.jentic.core.Agent;
  * 
  * <p><strong>Common Use Cases:</strong>
  * <table border="1">
+ *   <caption>Common condition usage scenarios</caption>
  *   <tr>
  *     <th>Use Case</th>
  *     <th>Example Condition</th>
@@ -333,6 +334,7 @@ public interface Condition {
      * 
      * <p><strong>Truth Table:</strong>
      * <table border="1">
+     *   <caption>Truth table for logical AND operation</caption>
      *   <tr><th>this</th><th>other</th><th>result</th></tr>
      *   <tr><td>false</td><td>-</td><td>false</td></tr>
      *   <tr><td>true</td><td>false</td><td>false</td></tr>
@@ -400,6 +402,7 @@ public interface Condition {
      * 
      * <p><strong>Truth Table:</strong>
      * <table border="1">
+     *   <caption>Truth table for logical OR operation</caption>
      *   <tr><th>this</th><th>other</th><th>result</th></tr>
      *   <tr><td>true</td><td>-</td><td>true</td></tr>
      *   <tr><td>false</td><td>true</td><td>true</td></tr>
@@ -445,7 +448,7 @@ public interface Condition {
      *     .and(TimeCondition.businessHours())
      *     .or(emergencyMode);
      * 
-     * // Process if: (CPU < 80% OR Memory < 80%) AND queue not empty
+     * // Process if: (CPU &lt; 80% OR Memory &lt; 80%) AND queue not empty
      * Condition shouldProcess = cpuLow.or(memoryLow).and(queueNotEmpty);
      * }</pre>
      * 
@@ -469,6 +472,7 @@ public interface Condition {
      * 
      * <p><strong>Truth Table:</strong>
      * <table border="1">
+     *   <caption>Truth table for logical NOT operation</caption>
      *   <tr><th>this</th><th>result</th></tr>
      *   <tr><td>true</td><td>false</td></tr>
      *   <tr><td>false</td><td>true</td></tr>

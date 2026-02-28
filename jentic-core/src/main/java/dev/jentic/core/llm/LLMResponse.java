@@ -20,6 +20,16 @@ import java.util.Objects;
  * });
  * }</pre>
  * 
+ * @param id unique identifier for the response
+ * @param model the model that generated the response
+ * @param content the generated textual content
+ * @param role the role assigned to the response message (usually ASSISTANT)
+ * @param functionCalls list of function calls requested by the model
+ * @param finishReason the reason why generation finished (e.g., "stop", "length")
+ * @param usage token usage statistics for the request
+ * @param created timestamp when the response was created
+ * @param metadata additional provider-specific metadata
+ * 
  * @since 0.3.0
  */
 public record LLMResponse(

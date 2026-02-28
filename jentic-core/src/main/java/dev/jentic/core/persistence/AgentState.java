@@ -15,6 +15,7 @@ import java.util.Map;
  *
  * <p><strong>State Components:</strong>
  * <table border="1">
+ *   <caption>Agent state components and properties</caption>
  *   <tr>
  *     <th>Component</th>
  *     <th>Purpose</th>

@@ -121,7 +121,7 @@ public interface LLMMemoryManager {
      * @param maxTokens maximum tokens for the context
      * @param strategy strategy for selecting messages
      * @return future with list of messages that fit in budget
-     * @throws IllegalArgumentException if maxTokens <= 0 or strategy is null
+     * @throws IllegalArgumentException if maxTokens {@literal <=} 0 or strategy is null
      */
     CompletableFuture<List<LLMMessage>> getConversationHistory(
         int maxTokens,
@@ -195,7 +195,7 @@ public interface LLMMemoryManager {
      * @param query the search query
      * @param maxTokens maximum tokens for retrieved context
      * @return future with relevant memory entries
-     * @throws IllegalArgumentException if query is null or maxTokens <= 0
+     * @throws IllegalArgumentException if query is null or maxTokens {@literal <=} 0
      */
     CompletableFuture<List<MemoryEntry>> retrieveRelevantContext(
         String query,
@@ -217,7 +217,7 @@ public interface LLMMemoryManager {
      * 
      * @param messagesToSummarize number of oldest messages to summarize
      * @return future with summary text
-     * @throws IllegalArgumentException if messagesToSummarize <= 0
+     * @throws IllegalArgumentException if messagesToSummarize {@literal <=} 0
      * @throws IllegalStateException if not enough messages to summarize
      */
     CompletableFuture<String> summarizeOldMessages(int messagesToSummarize);

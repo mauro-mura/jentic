@@ -22,6 +22,13 @@ import java.util.Objects;
  * });
  * }</pre>
  * 
+ * @param id unique identifier for the streaming session or chunk
+ * @param model the model name generating the response
+ * @param content the incremental textual content in this chunk
+ * @param finishReason the reason why generation finished (null if not finished)
+ * @param index the position of this chunk in the stream (0-indexed)
+ * @param created timestamp when the chunk was created
+ * 
  * @since 0.3.0
  */
 public record StreamingChunk(

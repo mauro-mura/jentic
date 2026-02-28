@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
  * patterns:
  * 
  * <table border="1">
+ *   <caption>Behavior execution strategies and use cases</caption>
  *   <tr>
  *     <th>Type</th>
  *     <th>Execution Pattern</th>
@@ -464,6 +465,7 @@ public interface Behavior {
      * 
      * <p><strong>Type Impact on Scheduling:</strong>
      * <table border="1">
+     *   <caption>Behavior scheduling characteristics by type</caption>
      *   <tr>
      *     <th>Type</th>
      *     <th>Scheduling</th>

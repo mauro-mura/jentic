@@ -31,6 +31,7 @@ import dev.jentic.core.memory.llm.ContextWindowStrategy;
  * 
  * <p><b>Strategy Comparison:</b>
  * <table border="1">
+ *   <caption>Comparison of context window strategies</caption>
  *   <tr>
  *     <th>Strategy</th>
  *     <th>Algorithm</th>
