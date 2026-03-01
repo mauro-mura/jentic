@@ -45,7 +45,7 @@ jobs:
           port: 21
           security: loose
           local-dir: ./site/
-          server-dir: /www.jentic.dev/docs
+          server-dir: /www.jentic.dev/docs/
           exclude: |
             **/.git*
             **/.github*
