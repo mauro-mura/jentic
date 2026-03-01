@@ -302,7 +302,7 @@ mvn exec:java -pl jentic-examples \
 ## 📖 Documentation
 
 ### Core Documentation
-- [Documentation Index](docs/README.md)
+- [Documentation Index](docs/index.md)
 - [Architecture Guide](docs/architecture.md)
 - [Agent Development Guide](docs/agent-development.md)
 - [Configuration Guide](docs/configuration.md)
