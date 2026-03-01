@@ -24,8 +24,11 @@ jobs:
         with:
           python-version: '3.x'
 
+      # TODO: migrate to Zensical (https://zensical.org) once it reaches stable (>=1.0).
+      # Zensical is the successor to Material for MkDocs (maintenance mode since Nov 2025).
+      # mkdocs.yml is compatible with minimal changes.
       - name: Install MkDocs
-        run: pip install mkdocs mkdocs-material
+        run: pip install mkdocs-material==9.7.2
 
       - name: Copy JavaDoc into docs
         run: |
