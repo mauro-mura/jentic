@@ -46,7 +46,7 @@ Use the Jentic BOM (Bill of Materials) to manage module versions consistently:
         <dependency>
             <groupId>dev.jentic</groupId>
             <artifactId>jentic-bom</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>0.9.0</version>
             <type>pom</type>
             <scope>import</scope>
         </dependency>
@@ -83,7 +83,7 @@ If you prefer explicit version management:
     <dependency>
         <groupId>dev.jentic</groupId>
         <artifactId>jentic-runtime</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>0.9.0</version>
     </dependency>
 </dependencies>
 ```
@@ -185,7 +185,7 @@ Core interfaces and abstractions. No implementations, just contracts.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-core</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -196,7 +196,7 @@ Basic implementations for getting started quickly.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-runtime</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -207,7 +207,7 @@ Implementation for LLMs (OpenAI, Anthropic, Ollama) and Dialogue Protocol (A2A).
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-adapters</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
@@ -218,7 +218,7 @@ Web Console and CLI tools.
 <dependency>
     <groupId>dev.jentic</groupId>
     <artifactId>jentic-tools</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>0.9.0</version>
 </dependency>
 ```
 
