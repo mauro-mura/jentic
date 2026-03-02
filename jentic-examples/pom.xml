@@ -15,6 +15,10 @@
     <name>Jentic Examples</name>
     <description>Example agents and use cases</description>
 
+	<properties>
+	    <maven.javadoc.skip>true</maven.javadoc.skip>
+	</properties>
+
     <dependencies>
         <dependency>
             <groupId>dev.jentic</groupId>
