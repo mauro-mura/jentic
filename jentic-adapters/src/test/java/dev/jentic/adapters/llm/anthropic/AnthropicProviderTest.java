@@ -1,20 +1,361 @@
 package dev.jentic.adapters.llm.anthropic;
 
-import dev.jentic.adapters.llm.LLMProviderFactory;
-import dev.jentic.core.llm.*;
-import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import dev.jentic.adapters.llm.LLMProviderFactory;
+import dev.jentic.core.llm.FunctionDefinition;
+import dev.jentic.core.llm.LLMMessage;
+import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.llm.LLMRequest;
+import dev.jentic.core.llm.LLMResponse;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.anthropic.AnthropicChatModel;
+import dev.langchain4j.model.anthropic.AnthropicStreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.ChatResponseMetadata;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
+import dev.langchain4j.model.output.FinishReason;
+import dev.langchain4j.model.output.TokenUsage;
 
 @ExtendWith(MockitoExtension.class)
 class AnthropicProviderTest {
 
+	@Mock
+    private AnthropicChatModel mockChatModel;
+
+    @Mock
+    private AnthropicStreamingChatModel mockStreamingModel;
+
+    // -----------------------------------------------------------------------
+    // Factory helper
+    // -----------------------------------------------------------------------
+
+    private AnthropicProvider createProviderWithMocks() {
+        try {
+            AnthropicProvider provider = AnthropicProvider.builder()
+                    .apiKey("test-anthropic-key")
+                    .build();
+
+            Field chatModelField = AnthropicProvider.class.getDeclaredField("chatModel");
+            chatModelField.setAccessible(true);
+            chatModelField.set(provider, mockChatModel);
+
+            Field streamingModelField = AnthropicProvider.class.getDeclaredField("streamingModel");
+            streamingModelField.setAccessible(true);
+            streamingModelField.set(provider, mockStreamingModel);
+
+            return provider;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to inject mocks into AnthropicProvider", e);
+        }
+    }
+
+    private ChatResponse buildResponse(String text, FinishReason reason, TokenUsage usage) {
+        ChatResponseMetadata.Builder metaBuilder = ChatResponseMetadata.builder()
+                .id("resp-" + java.util.UUID.randomUUID());
+        if (reason != null) metaBuilder.finishReason(reason);
+        if (usage != null) metaBuilder.tokenUsage(usage);
+
+        return ChatResponse.builder()
+                .aiMessage(AiMessage.from(text))
+                .metadata(metaBuilder.build())
+                .build();
+    }
+
+    // -----------------------------------------------------------------------
+    // chat() - SYSTEM message (case SYSTEM branch in convertMessages)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chat_withSystemMessage_shouldConvertToSystemMessage() throws Exception {
+        ChatResponse response = buildResponse("Ready", null, null);
+        when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.system("You are helpful"))
+                .addMessage(LLMMessage.user("Hello"))
+                .build();
+
+        LLMResponse result = provider.chat(request).get(5, TimeUnit.SECONDS);
+        assertNotNull(result);
+    }
+
+    // -----------------------------------------------------------------------
+    // chat() - USER message (case USER branch)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chat_withUserMessage_shouldReturnContent() throws Exception {
+        TokenUsage usage = new TokenUsage(20, 30, 50);
+        ChatResponse response = buildResponse("Claude response", FinishReason.STOP, usage);
+        when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Tell me something"))
+                .build();
+
+        LLMResponse result = provider.chat(request).get(5, TimeUnit.SECONDS);
+
+        assertNotNull(result);
+        assertEquals("Claude response", result.content());
+        assertNotNull(result.usage());
+        assertEquals(20, result.usage().promptTokens());
+    }
+
+    // -----------------------------------------------------------------------
+    // chat() - ASSISTANT message (case ASSISTANT branch)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chat_withAssistantMessage_shouldConvertToAiMessage() throws Exception {
+        ChatResponse response = buildResponse("Continuation", null, null);
+        when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("First turn"))
+                .addMessage(LLMMessage.assistant("My previous response"))
+                .addMessage(LLMMessage.user("Continue"))
+                .build();
+
+        LLMResponse result = provider.chat(request).get(5, TimeUnit.SECONDS);
+        assertNotNull(result);
+    }
+
+    // -----------------------------------------------------------------------
+    // chat() - function calling branch
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chat_withFunctions_shouldPassToolSpecifications() throws Exception {
+        ChatResponse response = buildResponse("Used function", null, null);
+        when(mockChatModel.chat(any(ChatRequest.class))).thenReturn(response);
+
+        AnthropicProvider provider = createProviderWithMocks();
+        FunctionDefinition func = FunctionDefinition.builder("search")
+                .description("Search the web")
+                .stringParameter("query", "Search query", true)
+                .build();
+
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Search for AI news"))
+                .functions(List.of(func))
+                .build();
+
+        LLMResponse result = provider.chat(request).get(5, TimeUnit.SECONDS);
+        assertNotNull(result);
+        verify(mockChatModel).chat(any(ChatRequest.class));
+    }
+
+    // -----------------------------------------------------------------------
+    // chat() - exception handling
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chat_withException_shouldPropagateAsExecutionException() {
+        when(mockChatModel.chat(any(ChatRequest.class)))
+                .thenThrow(new RuntimeException("Anthropic API down"));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Test"))
+                .build();
+
+        CompletableFuture<LLMResponse> future = provider.chat(request);
+        assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    }
+
+    // -----------------------------------------------------------------------
+    // chatStream() - onCompleteResponse with content
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chatStream_withContent_shouldDeliverChunks() throws Exception {
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(1);
+            handler.onCompleteResponse(buildResponse("Streamed answer", FinishReason.STOP, null));
+            return null;
+        }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Stream"))
+                .build();
+
+        StringBuilder received = new StringBuilder();
+        CompletableFuture<Void> future = provider.chatStream(request, chunk -> {
+            if (chunk.hasContent()) received.append(chunk.content());
+        });
+
+        future.get(5, TimeUnit.SECONDS);
+        assertFalse(received.toString().isEmpty());
+    }
+
+    // -----------------------------------------------------------------------
+    // chatStream() - onCompleteResponse with empty content
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chatStream_withEmptyContent_shouldSkipContentChunk() throws Exception {
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(1);
+            handler.onCompleteResponse(buildResponse("", null, null));
+            return null;
+        }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Empty"))
+                .build();
+
+        provider.chatStream(request, chunk -> {}).get(5, TimeUnit.SECONDS);
+    }
+
+    // -----------------------------------------------------------------------
+    // chatStream() - null completeResponse (covers null-check ternary branches)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chatStream_withNullResponse_shouldUseDefaults() throws Exception {
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(1);
+            handler.onCompleteResponse(null);
+            return null;
+        }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Null test"))
+                .build();
+
+        provider.chatStream(request, chunk -> {}).get(5, TimeUnit.SECONDS);
+    }
+
+    // -----------------------------------------------------------------------
+    // chatStream() - onError path
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chatStream_withError_shouldCompleteExceptionally() {
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(1);
+            handler.onError(new RuntimeException("Streaming failed"));
+            return null;
+        }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("Error test"))
+                .build();
+
+        CompletableFuture<Void> future = provider.chatStream(request, chunk -> {});
+        assertThrows(ExecutionException.class, () -> future.get(5, TimeUnit.SECONDS));
+    }
+
+    // -----------------------------------------------------------------------
+    // chatStream() - with functions
+    // -----------------------------------------------------------------------
+
+    @Test
+    void chatStream_withFunctions_shouldPassToolSpecs() throws Exception {
+        doAnswer(invocation -> {
+            StreamingChatResponseHandler handler = invocation.getArgument(1);
+            handler.onCompleteResponse(buildResponse("Used tool", null, null));
+            return null;
+        }).when(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+
+        AnthropicProvider provider = createProviderWithMocks();
+        FunctionDefinition func = FunctionDefinition.builder("get_time")
+                .description("Get current time")
+                .build();
+
+        LLMRequest request = LLMRequest.builder("claude-3-5-sonnet-20241022")
+                .addMessage(LLMMessage.user("What time is it?"))
+                .functions(List.of(func))
+                .build();
+
+        provider.chatStream(request, chunk -> {}).get(5, TimeUnit.SECONDS);
+        verify(mockStreamingModel).chat(any(ChatRequest.class), any(StreamingChatResponseHandler.class));
+    }
+
+    // -----------------------------------------------------------------------
+    // getAvailableModels() and getProviderName()
+    // -----------------------------------------------------------------------
+
+    @Test
+    void getAvailableModels_shouldReturnClaudeModels() throws Exception {
+        AnthropicProvider provider = AnthropicProvider.builder().apiKey("test-key").build();
+        List<String> models = provider.getAvailableModels().get(5, TimeUnit.SECONDS);
+
+        assertNotNull(models);
+        assertFalse(models.isEmpty());
+        assertTrue(models.stream().anyMatch(m -> m.contains("claude")));
+    }
+
+    @Test
+    void getProviderName_shouldReturnAnthropic() {
+        AnthropicProvider provider = AnthropicProvider.builder().apiKey("test-key").build();
+        assertEquals("Anthropic", provider.getProviderName());
+    }
+
+    // -----------------------------------------------------------------------
+    // Builder validation
+    // -----------------------------------------------------------------------
+
+    @Test
+    void builder_withNullApiKey_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                AnthropicProvider.builder().build());
+    }
+
+    @Test
+    void builder_withBlankApiKey_shouldThrow() {
+        assertThrows(IllegalArgumentException.class, () ->
+                AnthropicProvider.builder().apiKey("  ").build());
+    }
+
+    @Test
+    void builder_withAllOptions_shouldBuild() {
+        assertDoesNotThrow(() ->
+                AnthropicProvider.builder()
+                        .apiKey("valid-key")
+                        .modelName("claude-3-5-haiku-20241022")
+                        .temperature(0.5)
+                        .maxTokens(2048)
+                        .logRequests(true)
+                        .logResponses(true)
+                        .build());
+    }
+    
     @Nested
     @DisplayName("Builder Tests")
     class BuilderTests {

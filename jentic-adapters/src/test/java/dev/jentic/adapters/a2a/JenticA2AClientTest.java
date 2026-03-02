@@ -313,6 +313,80 @@ class JenticA2AClientTest {
             );
         }
     }
+    
+    // -----------------------------------------------------------------------
+    // A2AClientException constructors
+    // -----------------------------------------------------------------------
+
+    @Test
+    void exceptionWithMessageOnly_shouldHaveNullErrorCode() {
+        var ex = new JenticA2AClient.A2AClientException("simple error");
+        assertThat(ex.getMessage()).isEqualTo("simple error");
+        assertThat(ex.getErrorCode()).isNull();
+        assertThat(ex.getCause()).isNull();
+    }
+
+    @Test
+    void exceptionWithCode_shouldStoreCode() {
+        var ex = new JenticA2AClient.A2AClientException("rate limited", 429);
+        assertThat(ex.getMessage()).isEqualTo("rate limited");
+        assertThat(ex.getErrorCode()).isEqualTo(429);
+    }
+
+    @Test
+    void exceptionWithCause_shouldWrapCause() {
+        RuntimeException cause = new RuntimeException("network failure");
+        var ex = new JenticA2AClient.A2AClientException("wrapped", cause);
+        assertThat(ex.getMessage()).isEqualTo("wrapped");
+        assertThat(ex.getCause()).isSameAs(cause);
+        assertThat(ex.getErrorCode()).isNull();
+    }
+
+    // -----------------------------------------------------------------------
+    // StatusCallback - functional interface
+    // -----------------------------------------------------------------------
+
+    @Test
+    void statusCallback_shouldBeInvocable() {
+        StringBuilder log = new StringBuilder();
+        JenticA2AClient.StatusCallback cb = (state, msg) -> log.append(state).append(":").append(msg);
+
+        cb.onStatus("WORKING", "Processing...");
+
+        assertThat(log.toString()).isEqualTo("WORKING:Processing...");
+    }
+
+    // -----------------------------------------------------------------------
+    // sendWithStreaming with invalid URL + null callback
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sendWithStreaming_withNullCallback_shouldFailGracefully() {
+        DialogueMessage msg = DialogueMessage.builder()
+                .conversationId("c")
+                .senderId("s")
+                .receiverId("r")
+                .performative(Performative.REQUEST)
+                .content("test")
+                .build();
+
+        CompletableFuture<DialogueMessage> future = client.sendWithStreaming(
+                "http://invalid-host.test", msg, "local", null);
+
+        assertThat(future).isNotNull();
+        assertThatThrownBy(() -> future.get(3, java.util.concurrent.TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class);
+    }
+
+    // -----------------------------------------------------------------------
+    // isA2AAgent - wraps getAgentCard, always false for invalid URL
+    // -----------------------------------------------------------------------
+
+    @Test
+    void isA2AAgent_withInvalidUrl_returnsFalse() throws Exception {
+        CompletableFuture<Boolean> result = client.isA2AAgent("http://non-existent-a2a.test");
+        assertThat(result.get(3, java.util.concurrent.TimeUnit.SECONDS)).isFalse();
+    }
 
     // Helper class for testing object content serialization
     private record TestData(String field1, int field2) {}

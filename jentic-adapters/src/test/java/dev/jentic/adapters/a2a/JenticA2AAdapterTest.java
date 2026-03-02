@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -178,5 +179,157 @@ class JenticA2AAdapterTest {
     @Test
     void shouldProvideExternalClient() {
         assertThat(adapter.getExternalClient()).isNotNull();
+    }
+    
+    // -----------------------------------------------------------------------
+    // sendWithStreaming - non-external URL routes to send()
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sendWithStreaming_internalAgent_shouldRouteToSend() throws Exception {
+        // Given
+        AgentDescriptor internal = AgentDescriptor.builder("internal-agent").build();
+        when(agentDirectory.findById("internal-agent"))
+                .thenReturn(CompletableFuture.completedFuture(Optional.of(internal)));
+
+        Message responseMsg = Message.builder()
+                .id("resp-1")
+                .senderId("internal-agent")
+                .receiverId("local-agent")
+                .content("Done")
+                .header("conversationId", "conv-stream")
+                .header("performative", "INFORM")
+                .build();
+        when(messageService.sendAndWait(any(Message.class), anyLong()))
+                .thenReturn(CompletableFuture.completedFuture(responseMsg));
+
+        DialogueMessage request = DialogueMessage.builder()
+                .conversationId("conv-stream")
+                .senderId("local-agent")
+                .receiverId("internal-agent")
+                .performative(Performative.REQUEST)
+                .content("stream task")
+                .build();
+
+        // When - internal agent → sendWithStreaming falls through to send()
+        DialogueMessage response = adapter.sendWithStreaming(request, (state, msg) -> {})
+                .get(5, TimeUnit.SECONDS);
+
+        // Then
+        assertThat(response.performative()).isEqualTo(Performative.INFORM);
+    }
+
+    @Test
+    void sendWithStreaming_unknownAgent_shouldFail() {
+        // Given - not internal, not URL → send() will fail
+        when(agentDirectory.findById("unknown"))
+                .thenReturn(CompletableFuture.completedFuture(Optional.empty()));
+
+        DialogueMessage request = DialogueMessage.builder()
+                .receiverId("unknown")
+                .senderId("local-agent")
+                .performative(Performative.REQUEST)
+                .content("task")
+                .build();
+
+        // sendWithStreaming routes to send() which fails for unknown
+        CompletableFuture<DialogueMessage> future = adapter.sendWithStreaming(request, null);
+
+        assertThatThrownBy(() -> future.get(5, TimeUnit.SECONDS))
+                .isInstanceOf(ExecutionException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void sendWithStreaming_externalUrl_shouldAttemptExternalCall() {
+        // External URL → goes to externalClient.sendWithStreaming which fails for invalid URL
+        DialogueMessage request = DialogueMessage.builder()
+                .receiverId("http://invalid-a2a-agent.test")
+                .senderId("local-agent")
+                .performative(Performative.REQUEST)
+                .content("task")
+                .build();
+
+        CompletableFuture<DialogueMessage> future = adapter.sendWithStreaming(request, (state, msg) -> {});
+
+        // Should fail but not throw synchronously
+        assertThat(future).isNotNull();
+        assertThatThrownBy(() -> future.get(3, TimeUnit.SECONDS))
+                .isInstanceOf(Exception.class);
+    }
+
+    // -----------------------------------------------------------------------
+    // getExternalAgentCard - invalid URL fails
+    // -----------------------------------------------------------------------
+
+    @Test
+    void getExternalAgentCard_withInvalidUrl_shouldFail() {
+        CompletableFuture<?> future = adapter.getExternalAgentCard("http://invalid-agent-url.test");
+
+        assertThat(future).isNotNull();
+        assertThatThrownBy(() -> future.get(3, TimeUnit.SECONDS))
+                .isInstanceOf(Exception.class);
+    }
+
+    // -----------------------------------------------------------------------
+    // Cache clear is idempotent
+    // -----------------------------------------------------------------------
+
+    @Test
+    void clearCache_shouldBeIdempotent() {
+        adapter.clearCache();
+        adapter.clearCache();
+        // No exception → pass
+    }
+
+    // -----------------------------------------------------------------------
+    // validateExternalAgent - fails for invalid URL
+    // -----------------------------------------------------------------------
+
+    @Test
+    void validateExternalAgent_withInvalidUrl_shouldReturnFalse() throws Exception {
+        CompletableFuture<Boolean> result = adapter.validateExternalAgent("http://not-a-real-agent.test");
+
+        assertThat(result.get(3, TimeUnit.SECONDS)).isFalse();
+    }
+
+    // -----------------------------------------------------------------------
+    // Accessors
+    // -----------------------------------------------------------------------
+
+    @Test
+    void shouldReturnExternalClient() {
+        assertThat(adapter.getExternalClient()).isNotNull();
+    }
+
+    // -----------------------------------------------------------------------
+    // sendInternal directly
+    // -----------------------------------------------------------------------
+
+    @Test
+    void sendInternal_shouldDelegateToMessageService() throws Exception {
+        // Given
+        Message responseMsg = Message.builder()
+                .id("r-1")
+                .senderId("agent-a")
+                .receiverId("local-agent")
+                .header("conversationId", "c-1")
+                .header("performative", "AGREE")
+                .build();
+        when(messageService.sendAndWait(any(Message.class), anyLong()))
+                .thenReturn(CompletableFuture.completedFuture(responseMsg));
+
+        DialogueMessage request = DialogueMessage.builder()
+                .conversationId("c-1")
+                .senderId("local-agent")
+                .receiverId("agent-a")
+                .performative(Performative.REQUEST)
+                .build();
+
+        // When
+        DialogueMessage response = adapter.sendInternal(request).get(5, TimeUnit.SECONDS);
+
+        // Then
+        assertThat(response.performative()).isEqualTo(Performative.AGREE);
     }
 }
