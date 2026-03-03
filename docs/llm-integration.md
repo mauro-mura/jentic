@@ -2,7 +2,8 @@
 
 This guide covers the complete integration of Large Language Models into Jentic agents: provider setup, the core API, function calling, LLM-aware agents, memory management, error handling, and testing patterns.
 
-The LLM subsystem spans two modules:
+The LLM subsystem spans three modules:
+
 - **`jentic-core`** (`dev.jentic.core.llm`, `dev.jentic.core.memory.llm`) — provider-agnostic interfaces and records
 - **`jentic-adapters`** (`dev.jentic.adapters.llm`) — concrete provider implementations
 - **`jentic-runtime`** (`dev.jentic.runtime.agent.LLMAgent`, `dev.jentic.runtime.memory.llm`) — LLM-aware base agent and memory management
