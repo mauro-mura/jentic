@@ -86,7 +86,7 @@ class SequentialBehaviorTest {
         sequentialBehavior.addChildBehavior(createTestBehavior("step3", 20));
 
         // When
-        CompletableFuture<Void> future = sequentialBehavior.execute();
+        sequentialBehavior.execute();
 
         // Wait for async completion - failure doesn't stop the chain
         Thread.sleep(200);
@@ -99,16 +99,19 @@ class SequentialBehaviorTest {
     @Test
     @DisplayName("Should timeout on slow step")
     void shouldTimeoutOnSlowStep() throws Exception {
-        // Given
+    	// Given
+        // step2 sleeps for 5000ms but will be timed out at 100ms.
+        // Using a very long sleep for step2 ensures the underlying thread cannot complete
+        // and add "step2" to executionOrder before the assertion, even on very slow CI.
         Duration timeout = Duration.ofMillis(100);
         sequentialBehavior = new SequentialBehavior("test-sequential", false, timeout);
 
         sequentialBehavior.addChildBehavior(createTestBehavior("step1", 20));
-        sequentialBehavior.addChildBehavior(createTestBehavior("step2", 500)); // Will timeout
+        sequentialBehavior.addChildBehavior(createTestBehavior("step2", 5000)); // Will timeout, thread lives long
         sequentialBehavior.addChildBehavior(createTestBehavior("step3", 20));
 
         // When
-        CompletableFuture<Void> future = sequentialBehavior.execute();
+        sequentialBehavior.execute();
 
         // Wait longer for the sequence to complete all steps despite timeout
         Thread.sleep(400);
