@@ -1,22 +1,28 @@
 package dev.jentic.runtime.behavior.composite;
 
-import dev.jentic.core.Behavior;
-import dev.jentic.core.BehaviorType;
-import dev.jentic.core.composite.CompletionStrategy;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.assertj.core.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import dev.jentic.core.Behavior;
+import dev.jentic.core.BehaviorType;
+import dev.jentic.core.composite.CompletionStrategy;
 
 @DisplayName("Parallel Behavior Tests")
 class ParallelBehaviorTest {
+	
+	// Dedicated thread pool avoids FJP common-pool starvation on constrained CI runners
+    private static final ExecutorService TEST_EXECUTOR = Executors.newCachedThreadPool();
     
     private ParallelBehavior parallelBehavior;
     private ConcurrentHashMap<String, Long> executionTimestamps;
@@ -308,7 +314,7 @@ class ParallelBehaviorTest {
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
-            });
+            }, TEST_EXECUTOR);
         }
         
         @Override
