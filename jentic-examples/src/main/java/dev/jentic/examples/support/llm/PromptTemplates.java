@@ -1,11 +1,10 @@
 package dev.jentic.examples.support.llm;
 
-import dev.jentic.examples.support.context.ConversationContext;
-import dev.jentic.examples.support.knowledge.KnowledgeDocument;
-import dev.jentic.examples.support.model.SupportIntent;
-
 import java.util.List;
-import java.util.stream.Collectors;
+
+import dev.jentic.core.knowledge.KnowledgeDocument;
+import dev.jentic.examples.support.context.ConversationContext;
+import dev.jentic.examples.support.model.SupportIntent;
 
 /**
  * Prompt templates for LLM-based response generation.
@@ -45,7 +44,7 @@ public final class PromptTemplates {
     /**
      * Builds the user prompt with context and retrieved documents.
      */
-    public static String buildUserPrompt(String userQuery, List<KnowledgeDocument> documents) {
+    public static String buildUserPrompt(String userQuery, List<KnowledgeDocument<SupportIntent>> documents) {
         StringBuilder sb = new StringBuilder();
         
         // Add knowledge context
@@ -79,7 +78,7 @@ public final class PromptTemplates {
      */
     public static String buildContextualPrompt(
             String userQuery, 
-            List<KnowledgeDocument> documents,
+            List<KnowledgeDocument<SupportIntent>> documents,
             ConversationContext context) {
         
         StringBuilder sb = new StringBuilder();

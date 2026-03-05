@@ -1,31 +1,36 @@
 package dev.jentic.examples.support;
 
-import dev.jentic.core.Message;
-import dev.jentic.core.MessageHandler;
-import dev.jentic.examples.support.a2a.A2AHttpServer;
-import dev.jentic.examples.support.agents.CollaborativeRouterAgent;
-import dev.jentic.examples.support.context.ConversationContextManager;
-import dev.jentic.examples.support.knowledge.EmbeddingConfig;
-import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
-import dev.jentic.examples.support.knowledge.KnowledgeStore;
-import dev.jentic.examples.support.knowledge.QueryExpander;
-import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
-import dev.jentic.examples.support.llm.LLMConfig;
-import dev.jentic.examples.support.llm.LLMResponseGenerator;
-import dev.jentic.examples.support.model.SupportResponse;
-import dev.jentic.examples.support.production.*;
-import dev.jentic.examples.support.production.LanguageDetector.Language;
-import dev.jentic.examples.support.service.MockUserDataService;
-import dev.jentic.runtime.JenticRuntime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import dev.jentic.core.Message;
+import dev.jentic.core.MessageHandler;
+import dev.jentic.core.knowledge.KnowledgeStore;
+import dev.jentic.examples.support.a2a.A2AHttpServer;
+import dev.jentic.examples.support.agents.CollaborativeRouterAgent;
+import dev.jentic.examples.support.context.ConversationContextManager;
+import dev.jentic.examples.support.knowledge.EmbeddingConfig;
+import dev.jentic.examples.support.knowledge.HybridKnowledgeStore;
+import dev.jentic.examples.support.knowledge.SupportKnowledgeData;
+import dev.jentic.examples.support.llm.LLMConfig;
+import dev.jentic.examples.support.llm.LLMResponseGenerator;
+import dev.jentic.examples.support.model.SupportResponse;
+import dev.jentic.examples.support.production.AnalyticsService;
+import dev.jentic.examples.support.production.ConversationRepository;
+import dev.jentic.examples.support.production.LanguageDetector;
+import dev.jentic.examples.support.production.LanguageDetector.Language;
+import dev.jentic.examples.support.production.LocalizationService;
+import dev.jentic.examples.support.production.RateLimiter;
+import dev.jentic.examples.support.service.MockUserDataService;
+import dev.jentic.runtime.JenticRuntime;
+import dev.jentic.runtime.knowledge.QueryExpander;
 
 /**
  * FinanceCloud Support Chatbot Example - Phase 7+

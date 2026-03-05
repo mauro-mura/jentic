@@ -1,6 +1,9 @@
 package dev.jentic.examples.support.knowledge;
 
+import dev.jentic.core.knowledge.KnowledgeDocument;
+import dev.jentic.core.knowledge.KnowledgeStore;
 import dev.jentic.examples.support.model.SupportIntent;
+import dev.jentic.runtime.knowledge.InMemoryKnowledgeStore;
 
 import java.util.List;
 import java.util.Set;
@@ -15,10 +18,10 @@ public final class SupportKnowledgeData {
     /**
      * Returns all FAQ documents for the knowledge store.
      */
-    public static List<KnowledgeDocument> getAllDocuments() {
+    public static List<KnowledgeDocument<SupportIntent>> getAllDocuments() {
         return List.of(
             // === ACCOUNT ===
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "acc-001",
                 "How to create an account",
                 """
@@ -36,7 +39,7 @@ public final class SupportKnowledgeData {
                 Set.of("create", "register", "signup", "new account", "join", "start")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "acc-002",
                 "How to update profile information",
                 """
@@ -52,7 +55,7 @@ public final class SupportKnowledgeData {
                 Set.of("profile", "update", "edit", "change", "name", "email", "phone", "personal")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "acc-003",
                 "How to close my account",
                 """
@@ -71,7 +74,7 @@ public final class SupportKnowledgeData {
             ),
             
             // === SECURITY ===
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "sec-001",
                 "How to reset my password",
                 """
@@ -88,7 +91,7 @@ public final class SupportKnowledgeData {
                 Set.of("password", "reset", "forgot", "change password", "login", "cant login")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "sec-002",
                 "How to enable two-factor authentication (2FA)",
                 """
@@ -106,7 +109,7 @@ public final class SupportKnowledgeData {
                 Set.of("2fa", "two factor", "authenticator", "security", "verification", "otp")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "sec-003",
                 "How to manage trusted devices",
                 """
@@ -124,7 +127,7 @@ public final class SupportKnowledgeData {
             ),
             
             // === TRANSACTIONS ===
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "txn-001",
                 "How to view transaction history",
                 """
@@ -141,7 +144,7 @@ public final class SupportKnowledgeData {
                 Set.of("transactions", "history", "activity", "payments", "purchases", "view")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "txn-002",
                 "How to export transactions",
                 """
@@ -159,7 +162,7 @@ public final class SupportKnowledgeData {
                 Set.of("export", "download", "csv", "pdf", "statement", "report")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "txn-003",
                 "How to dispute a transaction",
                 """
@@ -179,7 +182,7 @@ public final class SupportKnowledgeData {
             ),
             
             // === BUDGET ===
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "bud-001",
                 "How to create a budget",
                 """
@@ -197,7 +200,7 @@ public final class SupportKnowledgeData {
                 Set.of("budget", "create", "limit", "spending", "monthly", "category")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "bud-002",
                 "How budget alerts work",
                 """
@@ -220,7 +223,7 @@ public final class SupportKnowledgeData {
             ),
             
             // === FAQ / GENERAL ===
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "faq-001",
                 "Which banks are supported",
                 """
@@ -240,7 +243,7 @@ public final class SupportKnowledgeData {
                 Set.of("bank", "supported", "connect", "link", "institution", "chase", "integration")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "faq-002",
                 "Is my data secure",
                 """
@@ -259,7 +262,7 @@ public final class SupportKnowledgeData {
                 Set.of("security", "safe", "data", "privacy", "encryption", "secure", "plaid")
             ),
             
-            new KnowledgeDocument(
+            new KnowledgeDocument<>(
                 "faq-003",
                 "Subscription plans and pricing",
                 """
@@ -294,8 +297,8 @@ public final class SupportKnowledgeData {
      * Initializes a KnowledgeStore with all sample documents.
      * Uses InMemoryKnowledgeStore (simple keyword matching).
      */
-    public static KnowledgeStore createPopulatedStore() {
-        KnowledgeStore store = new InMemoryKnowledgeStore();
+    public static KnowledgeStore<SupportIntent> createPopulatedStore() {
+        KnowledgeStore<SupportIntent> store = new InMemoryKnowledgeStore<SupportIntent>();
         getAllDocuments().forEach(store::add);
         return store;
     }

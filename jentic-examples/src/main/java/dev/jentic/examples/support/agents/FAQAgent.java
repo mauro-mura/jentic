@@ -7,9 +7,9 @@ import dev.jentic.core.dialogue.DialogueMessage;
 import dev.jentic.core.dialogue.Performative;
 import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentConsultation;
 import dev.jentic.examples.support.agents.CollaborativeRouterAgent.AgentContribution;
-import dev.jentic.examples.support.knowledge.KnowledgeDocument;
-import dev.jentic.examples.support.knowledge.KnowledgeStore;
-import dev.jentic.examples.support.knowledge.QueryExpander;
+import dev.jentic.core.knowledge.KnowledgeDocument;
+import dev.jentic.core.knowledge.KnowledgeStore;
+import dev.jentic.runtime.knowledge.QueryExpander;
 import dev.jentic.examples.support.llm.LLMResponseGenerator;
 import dev.jentic.examples.support.model.SupportIntent;
 import dev.jentic.examples.support.model.SupportQuery;
@@ -39,7 +39,7 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
     private static final int TOP_K = 3;
     private static final double MIN_CONFIDENCE = 0.15;
     
-    private final KnowledgeStore knowledgeStore;
+    private final KnowledgeStore<SupportIntent> knowledgeStore;
     private final LLMResponseGenerator llmGenerator;
     private final QueryExpander queryExpander;
     private final DialogueCapability dialogue;
@@ -47,21 +47,21 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
     /**
      * Constructor without LLM or query expansion.
      */
-    public FAQAgent(KnowledgeStore knowledgeStore) {
+    public FAQAgent(KnowledgeStore<SupportIntent> knowledgeStore) {
         this(knowledgeStore, null, null);
     }
     
     /**
      * Constructor with LLM support.
      */
-    public FAQAgent(KnowledgeStore knowledgeStore, LLMResponseGenerator llmGenerator) {
+    public FAQAgent(KnowledgeStore<SupportIntent> knowledgeStore, LLMResponseGenerator llmGenerator) {
         this(knowledgeStore, llmGenerator, null);
     }
     
     /**
      * Full constructor with all features.
      */
-    public FAQAgent(KnowledgeStore knowledgeStore, LLMResponseGenerator llmGenerator, 
+    public FAQAgent(KnowledgeStore<SupportIntent> knowledgeStore, LLMResponseGenerator llmGenerator,
             QueryExpander queryExpander) {
         super("faq-agent", "FAQ Handler");
         this.knowledgeStore = knowledgeStore;
@@ -145,20 +145,20 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
         // Expand query if available
         String searchQuery = queryText;
         if (queryExpander != null) {
-            var expansion = queryExpander.expandWithDetails(queryText);
-            if (expansion.wasExpanded()) {
-                searchQuery = expansion.expandedQuery();
+            String expanded = queryExpander.expand(queryText);
+            if (!expanded.equals(queryText)) {
+                searchQuery = expanded;
             }
         }
         
         // Search knowledge base
-        List<KnowledgeDocument> matches = knowledgeStore.search(searchQuery, TOP_K);
+        List<KnowledgeDocument<SupportIntent>> matches = knowledgeStore.search(searchQuery, TOP_K);
         
         if (matches.isEmpty()) {
             return cannotContribute("No relevant FAQ articles found for: " + queryText);
         }
         
-        KnowledgeDocument bestMatch = matches.get(0);
+        KnowledgeDocument<SupportIntent> bestMatch = matches.get(0);
         double confidence = bestMatch.relevanceScore(queryText);
         
         if (confidence < MIN_CONFIDENCE) {
@@ -221,21 +221,21 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
         // Expand query with synonyms if expander available
         String searchQuery = queryText;
         if (queryExpander != null) {
-            var expansion = queryExpander.expandWithDetails(queryText);
-            if (expansion.wasExpanded()) {
-                searchQuery = expansion.expandedQuery();
+            String expanded = queryExpander.expand(queryText);
+            if (!expanded.equals(queryText)) {
+                searchQuery = expanded;
                 log.debug("Query expanded: '{}' -> '{}'", queryText, searchQuery);
             }
         }
         
         // Search knowledge base with expanded query
-        List<KnowledgeDocument> matches = knowledgeStore.search(searchQuery, TOP_K);
+        List<KnowledgeDocument<SupportIntent>> matches = knowledgeStore.search(searchQuery, TOP_K);
         
         SupportResponse response;
         if (matches.isEmpty()) {
             response = createNoMatchResponse(query);
         } else {
-            KnowledgeDocument bestMatch = matches.get(0);
+            KnowledgeDocument<SupportIntent> bestMatch = matches.get(0);
             double confidence = bestMatch.relevanceScore(queryText);
             
             if (confidence < MIN_CONFIDENCE) {
@@ -282,8 +282,8 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
      * Creates response from matched document.
      * Uses LLM if available, otherwise falls back to template.
      */
-    private SupportResponse createResponse(SupportQuery query, KnowledgeDocument match,
-            double confidence, List<KnowledgeDocument> alternatives) {
+    private SupportResponse createResponse(SupportQuery query, KnowledgeDocument<SupportIntent> match,
+            double confidence, List<KnowledgeDocument<SupportIntent>> alternatives) {
         
         String text;
         
@@ -318,7 +318,7 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
     /**
      * Template-based response from document.
      */
-    private String createTemplateResponse(KnowledgeDocument match, List<KnowledgeDocument> alternatives) {
+    private String createTemplateResponse(KnowledgeDocument<SupportIntent> match, List<KnowledgeDocument<SupportIntent>> alternatives) {
         StringBuilder text = new StringBuilder();
         text.append("**").append(match.title()).append("**\n\n");
         text.append(match.content());
@@ -383,7 +383,7 @@ public class FAQAgent extends BaseAgent implements ConsultableAgent {
      * Response when matches have low confidence.
      */
     private SupportResponse createLowConfidenceResponse(SupportQuery query,
-            List<KnowledgeDocument> matches) {
+            List<KnowledgeDocument<SupportIntent>> matches) {
         
         StringBuilder text = new StringBuilder();
         text.append("I'm not sure I understood your question correctly. ");

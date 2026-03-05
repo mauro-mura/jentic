@@ -4,7 +4,7 @@ import dev.jentic.core.llm.LLMProvider;
 import dev.jentic.core.llm.LLMRequest;
 import dev.jentic.core.llm.LLMResponse;
 import dev.jentic.examples.support.context.ConversationContext;
-import dev.jentic.examples.support.knowledge.KnowledgeDocument;
+import dev.jentic.core.knowledge.KnowledgeDocument;
 import dev.jentic.examples.support.model.SupportIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,7 @@ public class LLMResponseGenerator {
      * @param intent classified intent
      * @return generated response text
      */
-    public String generate(String userQuery, List<KnowledgeDocument> documents, SupportIntent intent) {
+    public String generate(String userQuery, List<KnowledgeDocument<SupportIntent>> documents, SupportIntent intent) {
         return generate(userQuery, documents, intent, null);
     }
     
@@ -61,7 +61,7 @@ public class LLMResponseGenerator {
      */
     public String generate(
             String userQuery, 
-            List<KnowledgeDocument> documents, 
+            List<KnowledgeDocument<SupportIntent>> documents, 
             SupportIntent intent,
             ConversationContext context) {
         
@@ -110,7 +110,7 @@ public class LLMResponseGenerator {
      */
     public CompletableFuture<String> generateAsync(
             String userQuery, 
-            List<KnowledgeDocument> documents, 
+            List<KnowledgeDocument<SupportIntent>> documents, 
             SupportIntent intent) {
         
         if (provider == null) {
@@ -147,13 +147,13 @@ public class LLMResponseGenerator {
     /**
      * Fallback response using document templates.
      */
-    private String generateFallbackResponse(String userQuery, List<KnowledgeDocument> documents) {
+    private String generateFallbackResponse(String userQuery, List<KnowledgeDocument<SupportIntent>> documents) {
         if (documents == null || documents.isEmpty()) {
             return generateNoMatchFallback(userQuery);
         }
         
         // Use best matching document
-        KnowledgeDocument best = documents.get(0);
+        KnowledgeDocument<SupportIntent> best = documents.get(0);
         
         StringBuilder sb = new StringBuilder();
         sb.append("**").append(best.title()).append("**\n\n");
