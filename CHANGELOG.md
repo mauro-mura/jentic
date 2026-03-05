@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Update of LLM integration guide with new summarization and knowledge store features.
+- Updated Logback to version `1.5.32`.
+- Updated AssertJ to version `3.27.7`.
 
 ## [0.9.0] - 2026-03-04
 
