@@ -2,6 +2,7 @@ package dev.jentic.runtime.discovery;
 
 import dev.jentic.core.*;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.context.AgentContext;
 import dev.jentic.core.exceptions.AgentException;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.agent.BaseAgent;
@@ -424,5 +425,99 @@ class AgentFactoryTest {
         public int getUsedConstructorParams() {
             return usedConstructorParams;
         }
+    }
+
+    // =========================================================================
+    // PLAIN AGENT (no BaseAgent) TESTS
+    // =========================================================================
+
+    @Test
+    @DisplayName("Should create agent that does not extend BaseAgent, injecting AgentContext")
+    void shouldCreatePlainAgentWithAgentContext() throws AgentException {
+        PlainAgentWithContext agent = factory.createAgent(PlainAgentWithContext.class);
+
+        assertThat(agent).isNotNull();
+        assertThat(agent.getAgentId()).isEqualTo("plain-context-agent");
+        assertThat(agent.getContext()).isNotNull();
+        assertThat(agent.getContext().messageService()).isSameAs(messageService);
+        assertThat(agent.getContext().agentDirectory()).isSameAs(agentDirectory);
+        assertThat(agent.getContext().behaviorScheduler()).isSameAs(behaviorScheduler);
+        assertThat(agent.getContext().memoryStore()).isSameAs(memoryStore);
+    }
+
+    @Test
+    @DisplayName("Should create plain agent injecting individual services (no AgentContext)")
+    void shouldCreatePlainAgentWithIndividualServices() throws AgentException {
+        PlainAgentWithServices agent = factory.createAgent(PlainAgentWithServices.class);
+
+        assertThat(agent).isNotNull();
+        assertThat(agent.getAgentId()).isEqualTo("plain-services-agent");
+        assertThat(agent.getMessageService()).isSameAs(messageService);
+    }
+
+    @Test
+    @DisplayName("AgentContext should not be registered when required services are null")
+    void shouldNotRegisterAgentContextWhenServicesAreNull() throws AgentException {
+        // Factory without agentDirectory — AgentContext cannot be built
+        AgentFactory partialFactory = new AgentFactory(messageService, null, null, null);
+
+        // Plain agent that needs AgentContext: no suitable constructor should be found
+        assertThatThrownBy(() -> partialFactory.createAgent(PlainAgentWithContext.class))
+                .isInstanceOf(AgentException.class)
+                .hasMessageContaining("Failed to create agent");
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper classes — plain Agent implementors (no BaseAgent)
+    // -------------------------------------------------------------------------
+
+    /** Minimal Agent stub used by plain agent test helpers. */
+    abstract static class AbstractPlainAgent implements Agent {
+
+        private final String agentId;
+
+        protected AbstractPlainAgent(String agentId) {
+            this.agentId = agentId;
+        }
+
+        @Override public String getAgentId() { return agentId; }
+        @Override public String getAgentName() { return agentId; }
+        @Override public boolean isRunning() { return false; }
+        @Override public java.util.concurrent.CompletableFuture<Void> start() {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+        @Override public java.util.concurrent.CompletableFuture<Void> stop() {
+            return java.util.concurrent.CompletableFuture.completedFuture(null);
+        }
+        @Override public void addBehavior(dev.jentic.core.Behavior behavior) {}
+        @Override public void removeBehavior(String behaviorId) {}
+        @Override public MessageService getMessageService() { return null; }
+    }
+
+    @JenticAgent("plain-context-agent")
+    static class PlainAgentWithContext extends AbstractPlainAgent {
+
+        private final AgentContext context;
+
+        public PlainAgentWithContext(AgentContext context) {
+            super("plain-context-agent");
+            this.context = context;
+        }
+
+        public AgentContext getContext() { return context; }
+    }
+
+    @JenticAgent("plain-services-agent")
+    static class PlainAgentWithServices extends AbstractPlainAgent {
+
+        private final MessageService msgService;
+
+        public PlainAgentWithServices(MessageService messageService) {
+            super("plain-services-agent");
+            this.msgService = messageService;
+        }
+
+        @Override
+        public MessageService getMessageService() { return msgService; }
     }
 }

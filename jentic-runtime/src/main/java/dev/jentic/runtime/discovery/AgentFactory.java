@@ -1,9 +1,18 @@
 package dev.jentic.runtime.discovery;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +24,7 @@ import dev.jentic.core.AgentStatus;
 import dev.jentic.core.BehaviorScheduler;
 import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.context.AgentContext;
 import dev.jentic.core.exceptions.AgentException;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.runtime.agent.BaseAgent;
@@ -22,6 +32,14 @@ import dev.jentic.runtime.agent.BaseAgent;
 /**
  * Factory for creating agent instances from annotated classes.
  * Handles dependency injection and configuration.
+ *
+ * <p>Supports two agent styles:
+ * <ul>
+ *   <li><b>BaseAgent subclass</b> (classic): services injected via setters after instantiation.</li>
+ *   <li><b>Plain Agent implementor</b>: services injected via constructor.
+ *       Declare an {@link AgentContext} parameter to receive all core services at once,
+ *       or individual service parameters ({@link MessageService}, {@link AgentDirectory}, etc.).</li>
+ * </ul>
  */
 public class AgentFactory {
 
@@ -43,12 +61,18 @@ public class AgentFactory {
         this.memoryStore = memoryStore;
         this.availableServices = new HashMap<>();
 
-        // Register core services
+        // Register individual core services
         this.availableServices.put(MessageService.class, messageService);
         this.availableServices.put(AgentDirectory.class, agentDirectory);
         this.availableServices.put(BehaviorScheduler.class, behaviorScheduler);
         if (memoryStore != null) {
             this.availableServices.put(MemoryStore.class, memoryStore);
+        }
+
+        // Register AgentContext so non-BaseAgent agents can receive all services at once
+        if (messageService != null && agentDirectory != null && behaviorScheduler != null) {
+            this.availableServices.put(AgentContext.class,
+                    new AgentContext(messageService, agentDirectory, behaviorScheduler, memoryStore));
         }
     }
 
@@ -85,7 +109,11 @@ public class AgentFactory {
     }
 
     /**
-     * Create a single agent instance
+     * Create a single agent instance.
+     *
+     * <p>If the agent extends {@link BaseAgent}, services are injected via setters
+     * (backwards-compatible path). Otherwise services must have been injected via
+     * constructor (plain {@link Agent} implementors).
      */
     public <T extends Agent> T createAgent(Class<T> agentClass) throws AgentException {
         try {
@@ -94,10 +122,10 @@ public class AgentFactory {
             // Try constructor-based dependency injection
             T agent = tryConstructorInjection(agentClass);
 
-            // Configure agent services if it's a BaseAgent
+            // Configure agent services if it's a BaseAgent (setter-injection path)
             if (agent instanceof BaseAgent baseAgent) {
                 configureBaseAgent(baseAgent);
-                
+
                 // Set descriptor with annotation metadata
                 AgentDescriptor descriptor = createDescriptor(agentClass, agent);
                 baseAgent.setAgentDescriptor(descriptor);
@@ -170,9 +198,9 @@ public class AgentFactory {
         baseAgent.setBehaviorScheduler(behaviorScheduler);
 
         if (memoryStore != null) {
-        	baseAgent.setMemoryStore(memoryStore);
+            baseAgent.setMemoryStore(memoryStore);
         }
-        
+
         log.debug("Configured BaseAgent: {}", baseAgent.getAgentId());
     }
 
@@ -205,23 +233,215 @@ public class AgentFactory {
                     .build();
         }
 
-        // Create descriptor from annotation
-        AgentDescriptor.AgentDescriptorBuilder builder = AgentDescriptor.builder(agent.getAgentId())
-                .agentName(agent.getAgentName())
-                .agentType(annotation.type().isEmpty() ? agentClass.getSimpleName() : annotation.type())
-                .status(AgentStatus.STOPPED);
+        String agentId = annotation.value().trim().isEmpty() ? agent.getAgentId() : annotation.value().trim();
+        String agentType = annotation.type().trim().isEmpty() ? agentClass.getSimpleName() : annotation.type().trim();
 
-        // Add capabilities
-        for (String capability : annotation.capabilities()) {
-            if (!capability.trim().isEmpty()) {
-                builder.capability(capability.trim());
+        Set<String> capabilities = java.util.Arrays.stream(annotation.capabilities())
+                .filter(c -> !c.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toSet());
+
+        Map<String, String> metadata = new HashMap<>();
+        metadata.put("class", agentClass.getName());
+        metadata.put("autoStart", String.valueOf(annotation.autoStart()));
+
+        return AgentDescriptor.builder(agentId)
+                .agentName(agent.getAgentName())
+                .agentType(agentType)
+                .capabilities(capabilities)
+                .status(AgentStatus.STOPPED)
+                .metadata(metadata)
+                .build();
+    }
+
+    /**
+     * Scan for agent classes in the given packages
+     *
+     * @param packageNames packages to scan
+     * @return set of classes annotated with @JenticAgent
+     */
+    public Set<Class<? extends Agent>> scanForAgents(String... packageNames) {
+        Set<Class<? extends Agent>> agentClasses = new HashSet<>();
+
+        for (String packageName : packageNames) {
+            if (packageName == null || packageName.trim().isEmpty()) {
+                continue;
+            }
+
+            log.debug("Scanning package for agents: {}", packageName);
+
+            try {
+                Set<Class<?>> classes = scanPackage(packageName);
+
+                for (Class<?> clazz : classes) {
+                    if (isAgentClass(clazz)) {
+                        @SuppressWarnings("unchecked")
+                        Class<? extends Agent> agentClass = (Class<? extends Agent>) clazz;
+                        agentClasses.add(agentClass);
+                        log.info("Discovered agent class: {}", clazz.getName());
+                    }
+                }
+
+            } catch (Exception e) {
+                log.error("Error scanning package: {}", packageName, e);
             }
         }
 
-        // Add metadata
-        builder.metadata("class", agentClass.getName())
-                .metadata("autoStart", String.valueOf(annotation.autoStart()));
+        log.info("Agent discovery completed. Found {} agent classes", agentClasses.size());
+        return agentClasses;
+    }
 
-        return builder.build();
+    /**
+     * Check if a class is a valid agent class
+     */
+    private boolean isAgentClass(Class<?> clazz) {
+        return clazz.isAnnotationPresent(JenticAgent.class) &&
+                Agent.class.isAssignableFrom(clazz) &&
+                !clazz.isInterface();
+    }
+
+    /**
+     * Scan all classes in a package
+     */
+    private Set<Class<?>> scanPackage(String packageName) throws IOException, ClassNotFoundException {
+        Set<Class<?>> classes = new HashSet<>();
+        String packagePath = packageName.replace('.', '/');
+
+        // Try multiple classloaders
+        ClassLoader[] loaders = {
+                Thread.currentThread().getContextClassLoader(),
+                getClass().getClassLoader(),
+                ClassLoader.getSystemClassLoader()
+        };
+
+        for (ClassLoader classLoader : loaders) {
+            if (classLoader == null) continue;
+
+            Enumeration<URL> resources = classLoader.getResources(packagePath);
+
+            if (!resources.hasMoreElements()) {
+                log.debug("No resources found for package {} with classloader {}",
+                        packageName, classLoader.getClass().getName());
+                continue;
+            }
+
+            while (resources.hasMoreElements()) {
+                URL resource = resources.nextElement();
+                String protocol = resource.getProtocol();
+
+                if ("file".equals(protocol)) {
+                    classes.addAll(scanFileSystem(resource, packageName));
+                } else if ("jar".equals(protocol)) {
+                    classes.addAll(scanJarFile(resource, packagePath));
+                } else {
+                    log.warn("Unsupported resource protocol for package scanning: {}", protocol);
+                }
+            }
+
+            if (!classes.isEmpty()) break; // Found classes, stop trying
+        }
+
+        return classes;
+    }
+
+    /**
+     * Scan classes from file system
+     */
+    private Set<Class<?>> scanFileSystem(URL resource, String packageName) throws ClassNotFoundException {
+        Set<Class<?>> classes = new HashSet<>();
+
+        try {
+            String path = URLDecoder.decode(resource.getFile(), StandardCharsets.UTF_8);
+            File directory = new File(path);
+
+            if (directory.exists() && directory.isDirectory()) {
+                classes.addAll(findClassesInDirectory(directory, packageName));
+            }
+        } catch (Exception e) {
+            log.error("Error scanning file system for package: {}", packageName, e);
+        }
+
+        return classes;
+    }
+
+    /**
+     * Recursively find classes in directory
+     */
+    private Set<Class<?>> findClassesInDirectory(File directory, String packageName) throws ClassNotFoundException {
+        Set<Class<?>> classes = new HashSet<>();
+
+        File[] files = directory.listFiles();
+        if (files == null) {
+            return classes;
+        }
+
+        for (File file : files) {
+            String fileName = file.getName();
+
+            if (file.isDirectory()) {
+                String subPackageName = packageName + "." + fileName;
+                classes.addAll(findClassesInDirectory(file, subPackageName));
+            } else if (fileName.endsWith(".class") && !fileName.contains("$")) {
+                String className = packageName + "." + fileName.substring(0, fileName.length() - 6);
+
+                try {
+                    Class<?> clazz = Class.forName(className);
+                    classes.add(clazz);
+                    log.trace("Found class: {}", className);
+                } catch (ClassNotFoundException e) {
+                    log.debug("Could not load class: {}", className, e);
+                } catch (NoClassDefFoundError e) {
+                    log.debug("Missing dependency for class: {}", className, e);
+                }
+            }
+        }
+
+        return classes;
+    }
+
+    /**
+     * Scan classes from JAR file
+     */
+    private Set<Class<?>> scanJarFile(URL resource, String packagePath) throws IOException, ClassNotFoundException {
+        Set<Class<?>> classes = new HashSet<>();
+
+        String jarPath = resource.getPath();
+        if (jarPath.startsWith("file:")) {
+            jarPath = jarPath.substring(5);
+        }
+
+        int separatorIndex = jarPath.indexOf("!");
+        if (separatorIndex > 0) {
+            jarPath = jarPath.substring(0, separatorIndex);
+        }
+
+        jarPath = URLDecoder.decode(jarPath, StandardCharsets.UTF_8);
+
+        try (JarFile jarFile = new JarFile(jarPath)) {
+            Enumeration<JarEntry> entries = jarFile.entries();
+
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+
+                if (entryName.startsWith(packagePath) &&
+                        entryName.endsWith(".class") &&
+                        !entryName.contains("$")) {
+
+                    String className = entryName.replace('/', '.').substring(0, entryName.length() - 6);
+
+                    try {
+                        Class<?> clazz = Class.forName(className);
+                        classes.add(clazz);
+                        log.trace("Found class in JAR: {}", className);
+                    } catch (ClassNotFoundException e) {
+                        log.debug("Could not load class from JAR: {}", className, e);
+                    } catch (NoClassDefFoundError e) {
+                        log.debug("Missing dependency for JAR class: {}", className, e);
+                    }
+                }
+            }
+        }
+
+        return classes;
     }
 }

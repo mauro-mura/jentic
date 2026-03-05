@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import dev.jentic.core.context.AgentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,6 +127,50 @@ public abstract class BaseAgent implements Agent {
         
         this.agentDescriptor = createDefaultDescriptor();
         this.memoryNamespace = "agent:" + agentId + ":";
+    }
+
+    /**
+     * Create an agent with a specific ID, receiving all core services via {@link AgentContext}.
+     *
+     * <p>Convenience for subclasses that want to accept an {@code AgentContext}
+     * in their own constructor and propagate it upward:
+     *
+     * <pre>{@code
+     * public class MyAgent extends BaseAgent {
+     *     public MyAgent(AgentContext ctx) {
+     *         super("my-agent", ctx);
+     *     }
+     * }
+     * }</pre>
+     *
+     * @param agentId the agent identifier
+     * @param ctx     the aggregated core services, not null
+     * @since 0.10.0
+     */
+    protected BaseAgent(String agentId, AgentContext ctx) {
+        this(agentId, agentId, ctx);
+    }
+
+    /**
+     * Create an agent with ID, name, and all core services via {@link AgentContext}.
+     *
+     * @param agentId   the agent identifier
+     * @param agentName the agent display name
+     * @param ctx       the aggregated core services, not null
+     * @since 0.10.0
+     */
+    protected BaseAgent(String agentId, String agentName, AgentContext ctx) {
+        this.agentId = agentId;
+        this.agentName = agentName;
+        this.agentDescriptor = createDefaultDescriptor();
+        this.memoryNamespace = "agent:" + agentId + ":";
+
+        // Pre-wire services from context; AgentFactory setter-injection is still
+        // called for BaseAgent subclasses and will be a no-op (overwrite with same refs).
+        this.messageService = ctx.messageService();
+        this.agentDirectory = ctx.agentDirectory();
+        this.behaviorScheduler = ctx.behaviorScheduler();
+        this.memoryStore = ctx.memoryStore();
     }
     
     @Override

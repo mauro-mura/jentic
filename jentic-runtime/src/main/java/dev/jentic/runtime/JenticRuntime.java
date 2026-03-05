@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
+import dev.jentic.core.context.AgentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,6 +311,29 @@ public class JenticRuntime {
      */
     public BehaviorScheduler getBehaviorScheduler() {
         return behaviorScheduler;
+    }
+
+    /**
+     * Returns an {@link AgentContext} wrapping the core runtime services.
+     *
+     * <p>Useful when manually instantiating agents that implement {@link Agent}
+     * directly (without extending {@code BaseAgent}) and need all services
+     * in a single object:
+     *
+     * <pre>{@code
+     * var agent = new MyDomainAgent(runtime.getAgentContext());
+     * runtime.registerAgent(agent);
+     * }</pre>
+     *
+     * <p>When agents are discovered via package scanning, {@code AgentFactory}
+     * builds and injects the context automatically — this method is only needed
+     * for manually registered agents.
+     *
+     * @return a new {@link AgentContext} built from the current runtime services
+     * @since 0.10.0
+     */
+    public AgentContext getAgentContext() {
+        return new AgentContext(messageService, agentDirectory, behaviorScheduler, memoryStore);
     }
 
     /**
