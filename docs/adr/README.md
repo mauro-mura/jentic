@@ -16,6 +16,7 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 | [ADR-008](ADR-008-WebConsole-Interface-First.md)                    | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
 | [ADR-009](ADR-009-agent-dialogue-protocol.md)                       | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
 | [ADR-010](ADR-010-llm-memory-management.md)                         | LLM Memory Management                | Accepted | 2025-12-23 |
+| [ADR-011](ADR-011-knowledge-store-core)                             | KnowledgeStore as Core Interface     | Accepted | 2026-03-05 |
 
 ---
 
