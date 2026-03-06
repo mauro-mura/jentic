@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **`LLMMemoryAware` interface** that allows any `Agent` implementor to receive an injected `LLMMemoryManager` from the runtime.
+- **`LLMMemoryAware` interface** in `dev.jentic.core.llm`: marker interface that allows any `Agent` implementor (including those that cannot extend `LLMAgent`) to receive an injected `LLMMemoryManager` from the runtime. `LLMAgent` now implements this interface; `JenticRuntime` injects via `LLMMemoryAware` instead of `instanceof LLMAgent`.
 - **`AgentContext` support** for plain `Agent` implementations and improved runtime agent creation.
 - **LLM-based summarization** in `SummarizationStrategy` for context window management.
 - Promotion of `KnowledgeStore` and `EmbeddingProvider` from adapters to core/runtime for broader availability.

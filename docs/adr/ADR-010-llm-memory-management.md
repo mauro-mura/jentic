@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-12-23  
+**Updated**: 2026-03-06 — Added `LLMMemoryAware` interface; injection now targets `LLMMemoryAware` instead of `LLMAgent` directly (see [CHANGELOG](../../CHANGELOG.md))
 **Authors**: Project Team
 
 ---
@@ -215,7 +216,8 @@ memoryStore.store(MemoryEntry.builder()
 - **Separation of Concerns**: BaseAgent = essentials, LLMAgent = LLM features
 - **No Pollution**: Non-LLM agents (TimerAgent, etc.) don't get unused methods
 - **Encapsulation**: Private field in LLMAgent (better than protected in BaseAgent)
-- **Semantic Clarity**: If you need LLM → extend LLMAgent
+- **Semantic Clarity**: If you need LLM → extend `LLMAgent`. If you already extend a domain
+  superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` directly.
 
 **LLMAgent Structure**:
 ```java
@@ -247,12 +249,15 @@ public abstract class LLMAgent extends BaseAgent {
 ```java
 public class JenticRuntime {
     private Function<String, LLMMemoryManager> llmMemoryManagerFactory;
-    
+
     public void registerAgent(Agent agent) {
-        if (agent instanceof LLMAgent llmAgent) {
-            // Create manager per agent
+        // Inject into any agent implementing LLMMemoryAware,
+        // regardless of whether it extends BaseAgent or LLMAgent.
+        if (agent instanceof LLMMemoryAware llmAware
+                && memoryStore != null
+                && llmMemoryManagerFactory != null) {
             LLMMemoryManager llm = llmMemoryManagerFactory.apply(agent.getAgentId());
-            llmAgent.setLLMMemoryManager(llm);
+            llmAware.setLLMMemoryManager(llm);
         }
     }
 }
@@ -262,7 +267,7 @@ public class JenticRuntime {
 - 90% code reduction (3 lines vs 20+)
 - Impossible to forget configuration
 - Correct agentId guaranteed
-- Selective injection (only LLMAgent)
+- Selective injection (any `LLMMemoryAware` implementor, not only `LLMAgent` subclasses)
 
 **Factory Pattern**:
 ```java
@@ -386,7 +391,8 @@ dev.jentic.core.memory.llm/
 └── MemoryQuery.java               (search query)
 
 dev.jentic.core.llm/
-└── LLMMessage.java                (message record)
+├── LLMMessage.java                (message record)
+└── LLMMemoryAware.java            (injection marker interface)
 
 dev.jentic.runtime.memory.llm/
 ├── DefaultLLMMemoryManager.java   (implementation)
