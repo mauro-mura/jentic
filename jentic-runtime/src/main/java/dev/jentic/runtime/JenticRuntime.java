@@ -29,6 +29,7 @@ import dev.jentic.core.MessageService;
 import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.core.config.ConfigurationLoader;
 import dev.jentic.core.exceptions.ConfigurationException;
+import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.memory.MemoryStore;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.agent.BaseAgent;
@@ -246,9 +247,11 @@ public class JenticRuntime {
             if (memoryStore != null) {
             	baseAgent.setMemoryStore(memoryStore);
             	
-            	if (agent instanceof LLMAgent llmAgent) {
+            	if (agent instanceof LLMMemoryAware llmAware
+            			&& memoryStore != null
+            			&& llmMemoryManagerFactory != null) {
             		LLMMemoryManager llmMemory = llmMemoryManagerFactory.apply(agent.getAgentId());
-            		llmAgent.setLLMMemoryManager(llmMemory);
+            		llmAware.setLLMMemoryManager(llmMemory);
             	}
             	
             }

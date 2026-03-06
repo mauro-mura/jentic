@@ -21,6 +21,7 @@ jentic-core / dev.jentic.core.llm
 ├── StreamingChunk.java          # Chunk for streaming responses
 ├── FunctionDefinition.java      # Declare callable functions
 ├── FunctionCall.java            # LLM's function call request
+├── LLMMemoryAware.java          # Injection marker interface (since 0.10.0)
 └── LLMException.java            # Typed error hierarchy
 
 jentic-core / dev.jentic.core.memory.llm
@@ -239,6 +240,30 @@ provider.chat(request).thenAccept(response -> {
 ## LLMAgent — Agents Based on LLM
 
 `LLMAgent` (in `jentic-runtime`) extends `BaseAgent` with conversation history and context window management. **Extend `LLMAgent` instead of `BaseAgent`** whenever your agent needs to interact with an LLM.
+
+If the agent already extends a domain superclass and cannot extend `LLMAgent`, implement `LLMMemoryAware` (in `dev.jentic.core.llm`) instead. The runtime detects this interface and injects a `LLMMemoryManager` automatically, exactly as it does for `LLMAgent`:
+
+```java
+@JenticAgent("my-domain-agent")
+public class MyDomainAgent extends DomainClass implements Agent, LLMMemoryAware {
+
+    private LLMMemoryManager llmMemoryManager;
+
+    public MyDomainAgent(AgentContext ctx) { ... }
+
+    @Override
+    public void setLLMMemoryManager(LLMMemoryManager manager) {
+        this.llmMemoryManager = manager;
+    }
+
+    @JenticMessageHandler("my.topic")
+    public void handle(Message msg) {
+        // llmMemoryManager is ready here
+    }
+}
+```
+
+`LLMAgent` itself implements `LLMMemoryAware` — no changes required for existing subclasses.
 
 ```java
 @JenticAgent("customer-support")

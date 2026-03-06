@@ -1,5 +1,6 @@
 package dev.jentic.runtime.agent;
 
+import dev.jentic.core.llm.LLMMemoryAware;
 import dev.jentic.core.llm.LLMMessage;
 import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.llm.ContextWindowStrategy;
@@ -59,7 +60,7 @@ import java.util.stream.Collectors;
  * 
  * @since 0.6.0
  */
-public abstract class LLMAgent extends BaseAgent {
+public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
 
     /**
      * LLM Memory support (injected by runtime)
@@ -124,6 +125,7 @@ public abstract class LLMAgent extends BaseAgent {
      * Injects the LLM memory manager (optional).
      * @param llmMemoryManager
      */
+    @Override
     public void setLLMMemoryManager(LLMMemoryManager llmMemoryManager) {
         this.llmMemoryManager = llmMemoryManager;
         log.debug("LLM memory manager configured for agent: {}", getAgentId());

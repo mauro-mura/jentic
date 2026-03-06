@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`LLMMemoryAware` interface** that allows any `Agent` implementor to receive an injected `LLMMemoryManager` from the runtime.
 - **`AgentContext` support** for plain `Agent` implementations and improved runtime agent creation.
 - **LLM-based summarization** in `SummarizationStrategy` for context window management.
 - Promotion of `KnowledgeStore` and `EmbeddingProvider` from adapters to core/runtime for broader availability.
