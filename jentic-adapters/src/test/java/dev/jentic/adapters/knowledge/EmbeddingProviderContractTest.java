@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.*;
  * <p>A {@link StubEmbeddingProvider} implementation is included for verifying
  * the contract in unit tests without any network dependency.
  */
-abstract class EmbeddingProviderContractTest {
+public abstract class EmbeddingProviderContractTest {
 
     /** Returns the provider instance under test. */
     protected abstract EmbeddingProvider provider();
@@ -45,7 +45,7 @@ abstract class EmbeddingProviderContractTest {
 
     @Test
     @DisplayName("embedAll() returns one vector per input text")
-    void embedAllReturnsOneVectorPerText() {
+    protected void embedAllReturnsOneVectorPerText() {
         List<String> texts = List.of("first", "second", "third");
         List<float[]> vectors = provider().embedAll(texts).join();
         assertThat(vectors).hasSize(texts.size());

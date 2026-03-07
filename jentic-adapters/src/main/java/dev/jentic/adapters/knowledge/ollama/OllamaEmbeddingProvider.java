@@ -80,6 +80,9 @@ public class OllamaEmbeddingProvider implements EmbeddingProvider {
                 return parseEmbedding(response.body());
             })
             .exceptionally(ex -> {
+                if (ex instanceof EmbeddingException ee) throw ee;
+                if (ex.getCause() instanceof EmbeddingException ee) throw ee;
+
                 if (ex.getCause() instanceof java.net.ConnectException) {
                     throw new EmbeddingException(
                         "Cannot connect to Ollama at " + endpoint,
