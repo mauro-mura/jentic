@@ -2,7 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-12-23  
-**Updated**: 2026-03-06 — Added `LLMMemoryAware` interface; injection now targets `LLMMemoryAware` instead of `LLMAgent` directly (see [CHANGELOG](../../CHANGELOG.md))
+**Updated**: 2026-03-06 — Added `LLMMemoryAware` interface; injection now targets `LLMMemoryAware` instead of `LLMAgent` directly (see `CHANGELOG.md`)
 **Authors**: Project Team
 
 ---
