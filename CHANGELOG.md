@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
 ## [0.10.0] - 2026-03-07
 
 ### Added
@@ -156,7 +158,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.11.0-SNAPSHOT...HEAD
+[0.11.0-SNAPSHOT]: https://github.com/mauro-mura/jentic/compare/v0.10.0...v0.11.0-SNAPSHOT
 [0.10.0]: https://github.com/mauro-mura/jentic/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/mauro-mura/jentic/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/mauro-mura/jentic/compare/v0.7.1...v0.8.0
