@@ -30,6 +30,10 @@ theme:
 plugins:
   - search
 
+# ADRs are excluded — kept only in the repository for internal reference
+exclude_docs: |
+  adr/
+
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
@@ -46,7 +50,6 @@ validation:
   nav:
     omitted_files: ignore
 
-# ADRs are excluded — kept only in the repository for internal reference
 nav:
   - Home: index.md
   - Getting Started: getting-started.md

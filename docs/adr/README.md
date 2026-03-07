@@ -4,19 +4,19 @@ This directory contains Architecture Decision Records (ADRs) for the Jentic proj
 
 ## ADR Index
 
-| #                                                                   | Title                                | Status | Date       |
-|---------------------------------------------------------------------|--------------------------------------|---------|------------|
-| [ADR-001](ADR-001-use-java-21-with-virtual-threads.md)              | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
-| [ADR-002](ADR-002-interface-first-architecture.md)                  | Interface-First Architecture         | Accepted | 2025-09-16 |
-| [ADR-003](ADR-003-maven-multi-module-structure.md)                  | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
-| [ADR-004](ADR-004-progressive-complexity-strategy.md)               | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
-| [ADR-005](ADR-005-json-message-format-with-records.md)              | JSON Message Format with Records     | Accepted | 2025-09-16 |
-| [ADR-006](ADR-006-annotation-based-agent-configuration.md)          | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
-| [ADR-007](ADR-007-llm-core.md)                                      | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
-| [ADR-008](ADR-008-WebConsole-Interface-First.md)                    | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
-| [ADR-009](ADR-009-agent-dialogue-protocol.md)                       | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
-| [ADR-010](ADR-010-llm-memory-management.md)                         | LLM Memory Management                | Accepted | 2025-12-23 |
-| [ADR-011](ADR-011-knowledge-store-core)                             | KnowledgeStore as Core Interface     | Accepted | 2026-03-05 |
+| #                                                          | Title                                | Status | Date       |
+|------------------------------------------------------------|--------------------------------------|---------|------------|
+| [ADR-001](ADR-001-use-java-21-with-virtual-threads.md)     | Use Java 21 with Virtual Threads     | Accepted | 2025-09-16 |
+| [ADR-002](ADR-002-interface-first-architecture.md)         | Interface-First Architecture         | Accepted | 2025-09-16 |
+| [ADR-003](ADR-003-maven-multi-module-structure.md)         | Maven Multi-Module Structure         | Accepted | 2025-09-16 |
+| [ADR-004](ADR-004-progressive-complexity-strategy.md)      | Progressive Complexity Strategy      | Accepted | 2025-09-16 |
+| [ADR-005](ADR-005-json-message-format-with-records.md)     | JSON Message Format with Records     | Accepted | 2025-09-16 |
+| [ADR-006](ADR-006-annotation-based-agent-configuration.md) | Annotation-Based Agent Configuration | Accepted | 2025-09-16 |
+| [ADR-007](ADR-007-llm-core.md)                             | LLMProvider as Core Interface        | Accepted | 2025-11-04 |
+| [ADR-008](ADR-008-WebConsole-Interface-First.md)           | WebConsole Interface-First Design    | Accepted | 2025-11-26 |
+| [ADR-009](ADR-009-agent-dialogue-protocol.md)              | Agent Dialogue Protocol              | Accepted | 2025-12-13 |
+| [ADR-010](ADR-010-llm-memory-management.md)                | LLM Memory Management                | Accepted | 2025-12-23 |
+| [ADR-011](ADR-011-knowledge-store-core.md)                 | KnowledgeStore as Core Interface     | Accepted | 2026-03-05 |
 
 ---
 
