@@ -2,6 +2,7 @@ package dev.jentic.runtime;
 
 import dev.jentic.core.Agent;
 import dev.jentic.core.JenticConfiguration;
+import dev.jentic.core.annotations.JenticAgent;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
@@ -348,6 +349,58 @@ class JenticRuntimeTest {
             .doesNotThrowAnyException();
     }
 
+    @Test
+    void shouldDiscoverAndStartAgentsFromConfigurationScanPackages() {
+        JenticConfiguration config = new JenticConfiguration(
+                new JenticConfiguration.RuntimeConfig("test-runtime", "development", null),
+                new JenticConfiguration.AgentsConfig(
+                        true,
+                        null,
+                        null,
+                        List.of("dev.jentic.runtime"),
+                        null
+                ),
+                null,
+                null,
+                null
+        );
+
+        runtimeUnderTest = JenticRuntime.builder()
+                .withConfiguration(config)
+                .build();
+
+        runtimeUnderTest.start().join();
+
+        assertThat(runtimeUnderTest.getAgents()).isNotEmpty();
+        assertThat(runtimeUnderTest.getAgents())
+                .allSatisfy(agent -> assertThat(agent.isRunning()).isTrue());
+    }
+
+    @Test
+    void getStats_shouldReflectScanPackagesFromConfiguration() {
+        JenticConfiguration config = new JenticConfiguration(
+                new JenticConfiguration.RuntimeConfig("test-runtime", "development", null),
+                new JenticConfiguration.AgentsConfig(
+                        true,
+                        null,
+                        null,
+                        List.of("dev.jentic.runtime.discovery"),
+                        null
+                ),
+                null,
+                null,
+                null
+        );
+
+        JenticRuntime runtime = JenticRuntime.builder()
+                .withConfiguration(config)
+                .build();
+
+        JenticRuntime.RuntimeStats stats = runtime.getStats();
+
+        assertThat(stats.scannedPackages()).isEqualTo(1);
+    }
+
     // ========== HELPERS ==========
 
     static class TestAgent extends BaseAgent {
@@ -364,6 +417,13 @@ class JenticRuntimeTest {
     static class NoIdAgent extends BaseAgent {
         NoIdAgent() {
             super();
+        }
+    }
+
+    @JenticAgent("discoverable-test-agent")
+    static class DiscoverableTestAgent extends BaseAgent {
+        public DiscoverableTestAgent() {
+            super("discoverable-test-agent", "Discoverable Test Agent");
         }
     }
 

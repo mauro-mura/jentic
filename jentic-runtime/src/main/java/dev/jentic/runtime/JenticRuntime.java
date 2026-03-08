@@ -71,7 +71,6 @@ public class JenticRuntime {
     private static final Duration DEFAULT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(10);
 
     private final Map<String, Agent> agents = new ConcurrentHashMap<>();
-    private final Set<String> scanPackages = new HashSet<>();
     private final Map<Class<?>, Object> serviceInstances = new ConcurrentHashMap<>();
 
     private volatile boolean running = false;
@@ -103,9 +102,7 @@ public class JenticRuntime {
 
         // Add default lifecycle listener
         this.lifecycleManager.addLifecycleListener(LifecycleListener.logging());
-
-        // Configuration
-        this.scanPackages.addAll(builder.scanPackages);
+        
         this.serviceInstances.putAll(builder.serviceInstances);
 
         // Register additional services with factory
@@ -143,7 +140,7 @@ public class JenticRuntime {
                 behaviorScheduler.start().join();
 
                 // Discover and create agents
-                if (!scanPackages.isEmpty()) {
+                if (!configuration.agents().getAllScanPackages().isEmpty()) {
                     discoverAndCreateAgents();
                 }
 
@@ -368,7 +365,7 @@ public class JenticRuntime {
         return new RuntimeStats(
                 agents.size(),
                 (int) runningAgents,
-                scanPackages.size(),
+                configuration.agents().getAllScanPackages().size(),
                 serviceInstances.size()
         );
     }
@@ -400,7 +397,7 @@ public class JenticRuntime {
 
         log.debug("Agent Configuration:");
         log.debug("  Auto Discovery: {}", configuration.agents().autoDiscovery());
-        log.debug("  Scan Packages: {}", configuration.agents().scanPackages());
+        log.debug("  Scan Packages: {}", configuration.agents().getAllScanPackages());
 
         if (!configuration.agents().properties().isEmpty()) {
             log.debug("  Properties:");
