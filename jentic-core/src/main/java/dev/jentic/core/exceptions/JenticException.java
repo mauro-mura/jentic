@@ -3,7 +3,7 @@ package dev.jentic.core.exceptions;
 /**
  * Base exception for all Jentic framework exceptions
  */
-public class JenticException extends Exception {
+public class JenticException extends RuntimeException {
     
     public JenticException(String message) {
         super(message);

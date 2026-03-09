@@ -1,5 +1,7 @@
 package dev.jentic.core.knowledge;
 
+import dev.jentic.core.exceptions.JenticException;
+
 import java.io.Serial;
 
 /**
@@ -21,7 +23,7 @@ import java.io.Serial;
  * });
  * }</pre>
  */
-public class EmbeddingException extends RuntimeException {
+public class EmbeddingException extends JenticException {
 
 	@Serial
 	private static final long serialVersionUID = -1951833008129004485L;

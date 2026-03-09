@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import dev.jentic.core.persistence.AgentState;
-import dev.jentic.core.exceptions.PersistenceException;
+import dev.jentic.core.persistence.PersistenceException;
 import dev.jentic.core.persistence.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

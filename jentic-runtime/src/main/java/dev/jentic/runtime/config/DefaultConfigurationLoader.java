@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import dev.jentic.core.JenticConfiguration;
 import dev.jentic.core.config.ConfigurationLoader;
-import dev.jentic.core.exceptions.ConfigurationException;
+import dev.jentic.core.config.ConfigurationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

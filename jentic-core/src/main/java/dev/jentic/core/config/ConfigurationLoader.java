@@ -1,7 +1,6 @@
 package dev.jentic.core.config;
 
 import dev.jentic.core.JenticConfiguration;
-import dev.jentic.core.exceptions.ConfigurationException;
 
 import java.io.InputStream;
 

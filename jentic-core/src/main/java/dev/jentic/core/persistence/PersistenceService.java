@@ -22,7 +22,7 @@ import java.util.concurrent.CompletableFuture;
  * read-write locks or optimistic versioning).
  *
  * <p><strong>Error Handling:</strong> When an operation fails, the returned
- * future completes exceptionally with a {@link dev.jentic.core.exceptions.PersistenceException}.
+ * future completes exceptionally with a {@link PersistenceException}.
  * Callers should use {@link CompletableFuture#exceptionally} or
  * {@link CompletableFuture#handle} to handle errors.
  *
@@ -61,7 +61,7 @@ public interface PersistenceService {
      * @param agentId the unique identifier of the agent, must not be null or blank
      * @param state   the state to persist, must not be null
      * @return a {@link CompletableFuture} that completes when the save is committed,
-     *         or completes exceptionally with {@link dev.jentic.core.exceptions.PersistenceException}
+     *         or completes exceptionally with {@link PersistenceException}
      *         on I/O or serialization failure
      * @throws NullPointerException if {@code agentId} or {@code state} is null
      * @see AgentState#version()
@@ -78,7 +78,7 @@ public interface PersistenceService {
      * @param agentId the unique identifier of the agent, must not be null or blank
      * @return a {@link CompletableFuture} containing the saved state if present,
      *         or an empty {@code Optional} if not found; completes exceptionally
-     *         with {@link dev.jentic.core.exceptions.PersistenceException} on failure
+     *         with {@link PersistenceException} on failure
      * @throws NullPointerException if {@code agentId} is null
      */
     CompletableFuture<Optional<AgentState>> loadState(String agentId);
@@ -95,7 +95,7 @@ public interface PersistenceService {
      *
      * @param agentId the unique identifier of the agent, must not be null or blank
      * @return a {@link CompletableFuture} that completes when the state is deleted,
-     *         or completes exceptionally with {@link dev.jentic.core.exceptions.PersistenceException}
+     *         or completes exceptionally with {@link PersistenceException}
      *         on failure
      * @throws NullPointerException if {@code agentId} is null
      */
@@ -111,7 +111,7 @@ public interface PersistenceService {
      * @param agentId the unique identifier of the agent, must not be null or blank
      * @return a {@link CompletableFuture} containing {@code true} if state exists,
      *         {@code false} otherwise; completes exceptionally with
-     *         {@link dev.jentic.core.exceptions.PersistenceException} on failure
+     *         {@link PersistenceException} on failure
      * @throws NullPointerException if {@code agentId} is null
      */
     CompletableFuture<Boolean> existsState(String agentId);
@@ -139,7 +139,7 @@ public interface PersistenceService {
      * @param snapshotId an optional user-defined snapshot name; if null or blank,
      *                   the implementation generates one
      * @return a {@link CompletableFuture} containing the effective snapshot identifier;
-     *         completes exceptionally with {@link dev.jentic.core.exceptions.PersistenceException}
+     *         completes exceptionally with {@link PersistenceException}
      *         if the current state does not exist or the operation fails
      * @throws NullPointerException if {@code agentId} is null
      * @see #restoreSnapshot(String, String)
@@ -173,7 +173,7 @@ public interface PersistenceService {
      * @param snapshotId the identifier of the snapshot to restore, must not be null or blank
      * @return a {@link CompletableFuture} containing the snapshot state if found,
      *         or an empty {@code Optional} if the snapshot does not exist; completes
-     *         exceptionally with {@link dev.jentic.core.exceptions.PersistenceException}
+     *         exceptionally with {@link PersistenceException}
      *         on failure
      * @throws NullPointerException if {@code agentId} or {@code snapshotId} is null
      * @see #createSnapshot(String, String)
@@ -189,7 +189,7 @@ public interface PersistenceService {
      * @param agentId the unique identifier of the agent, must not be null or blank
      * @return a {@link CompletableFuture} containing the (possibly empty) list of
      *         snapshot identifiers; completes exceptionally with
-     *         {@link dev.jentic.core.exceptions.PersistenceException} on failure
+     *         {@link PersistenceException} on failure
      * @throws NullPointerException if {@code agentId} is null
      * @see #createSnapshot(String, String)
      * @see #restoreSnapshot(String, String)

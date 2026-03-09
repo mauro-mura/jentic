@@ -1,9 +1,11 @@
-package dev.jentic.core.exceptions;
+package dev.jentic.core.persistence;
+
+import dev.jentic.core.exceptions.JenticException;
 
 /**
  * Exception thrown during persistence operations
  */
-public class PersistenceException extends RuntimeException {
+public class PersistenceException extends JenticException {
     
     private final String agentId;
     private final PersistenceOperation operation;

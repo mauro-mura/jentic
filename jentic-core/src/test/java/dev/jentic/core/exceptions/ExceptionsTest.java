@@ -1,5 +1,7 @@
 package dev.jentic.core.exceptions;
 
+import dev.jentic.core.config.ConfigurationException;
+import dev.jentic.core.persistence.PersistenceException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

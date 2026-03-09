@@ -2,6 +2,7 @@ package dev.jentic.runtime.persistence;
 
 import dev.jentic.core.AgentStatus;
 import dev.jentic.core.persistence.AgentState;
+import dev.jentic.core.persistence.PersistenceException;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
@@ -474,7 +475,7 @@ class FilePersistenceServiceTest {
         FilePersistenceService service = new FilePersistenceService(tempDir);
 
         assertThatThrownBy(() -> service.createSnapshot("no-state-agent", "snap").get())
-                .hasCauseInstanceOf(dev.jentic.core.exceptions.PersistenceException.class);
+                .hasCauseInstanceOf(PersistenceException.class);
     }
 
     // =========================================================================

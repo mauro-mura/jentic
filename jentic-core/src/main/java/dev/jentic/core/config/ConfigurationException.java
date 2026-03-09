@@ -1,6 +1,8 @@
-package dev.jentic.core.exceptions;
+package dev.jentic.core.config;
 
-public class ConfigurationException extends Exception {
+import dev.jentic.core.exceptions.JenticException;
+
+public class ConfigurationException extends JenticException {
         public ConfigurationException(String message) {
             super(message);
         }

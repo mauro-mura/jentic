@@ -1,5 +1,7 @@
 package dev.jentic.core.memory;
 
+import dev.jentic.core.exceptions.JenticException;
+
 /**
  * Base exception for memory storage operations.
  * 
@@ -27,7 +29,7 @@ package dev.jentic.core.memory;
  * 
  * @since 0.6.0
  */
-public class MemoryException extends RuntimeException {
+public class MemoryException extends JenticException {
     
     private static final long serialVersionUID = -2380496751158852185L;
 	private final ErrorType errorType;
