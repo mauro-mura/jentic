@@ -3,6 +3,7 @@ package dev.jentic.runtime;
 import dev.jentic.core.Agent;
 import dev.jentic.core.JenticConfiguration;
 import dev.jentic.core.annotations.JenticAgent;
+import dev.jentic.core.config.ConfigurationException;
 import dev.jentic.runtime.agent.BaseAgent;
 import dev.jentic.runtime.directory.LocalAgentDirectory;
 import dev.jentic.runtime.messaging.InMemoryMessageService;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -108,7 +110,7 @@ class JenticRuntimeTest {
         runtimeUnderTest = JenticRuntime.builder().build();
         runtimeUnderTest.start().join();
 
-        // Second start must return immediately without error or state change
+        // The second start must return immediately without error or state change
         assertThatCode(() -> runtimeUnderTest.start().join()).doesNotThrowAnyException();
         assertThat(runtimeUnderTest.isRunning()).isTrue();
     }
@@ -399,6 +401,36 @@ class JenticRuntimeTest {
         JenticRuntime.RuntimeStats stats = runtime.getStats();
 
         assertThat(stats.scannedPackages()).isEqualTo(1);
+    }
+
+    @Test
+    void builder_withDefaultConfig_shouldThrowWhenLoadedConfigIsInvalid() throws Exception {
+
+        // Build a config with an empty runtime name (violates validation rule).
+        var badRuntime = new JenticConfiguration.RuntimeConfig("", "development", Map.of());
+        var badConfig  = new JenticConfiguration(badRuntime, null, null, null, null);
+
+        // withConfiguration must now throw instead of silently accepting.
+        assertThatThrownBy(() -> JenticRuntime.builder().withConfiguration(badConfig))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("runtime.name");
+    }
+
+    @Test
+    void withConfiguration_shouldThrowWhenConfigIsNull() {
+        assertThatThrownBy(() -> JenticRuntime.builder().withConfiguration(null))
+                .isInstanceOf(ConfigurationException.class)
+                .hasMessageContaining("cannot be null");
+    }
+
+    @Test
+    void withConfiguration_shouldThrowWhenConfigIsInvalid() {
+        // runtime.name blank → validation must fail
+        var badRuntime = new JenticConfiguration.RuntimeConfig("   ", "development", Map.of());
+        var badConfig  = new JenticConfiguration(badRuntime, null, null, null, null);
+
+        assertThatThrownBy(() -> JenticRuntime.builder().withConfiguration(badConfig))
+                .isInstanceOf(ConfigurationException.class);
     }
 
     // ========== HELPERS ==========

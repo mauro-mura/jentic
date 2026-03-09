@@ -35,7 +35,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromFile(String path) throws ConfigurationException {
+    public JenticConfiguration loadFromFile(String path) {
         if (path == null || path.trim().isEmpty()) {
             throw new ConfigurationException("Configuration path cannot be null or empty");
         }
@@ -67,7 +67,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromClasspath(String resourcePath) throws ConfigurationException {
+    public JenticConfiguration loadFromClasspath(String resourcePath) {
         if (resourcePath == null || resourcePath.trim().isEmpty()) {
             throw new ConfigurationException("Resource path cannot be null or empty");
         }
@@ -99,7 +99,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public JenticConfiguration loadFromStream(InputStream inputStream, String format) throws ConfigurationException {
+    public JenticConfiguration loadFromStream(InputStream inputStream, String format) {
         if (inputStream == null) {
             throw new ConfigurationException("Input stream cannot be null");
         }
@@ -144,7 +144,7 @@ public class DefaultConfigurationLoader implements ConfigurationLoader {
     }
 
     @Override
-    public void validate(JenticConfiguration config) throws ConfigurationException {
+    public void validate(JenticConfiguration config) {
         if (config == null) {
             throw new ConfigurationException("Configuration cannot be null");
         }

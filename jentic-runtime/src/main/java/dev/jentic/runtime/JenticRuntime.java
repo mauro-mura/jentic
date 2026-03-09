@@ -45,7 +45,7 @@ import dev.jentic.runtime.messaging.InMemoryMessageService;
 import dev.jentic.runtime.scheduler.SimpleBehaviorScheduler;
 
 /**
- * Main runtime for Jentic framework with automatic agent discovery.
+ * Main runtime for the Jentic framework with automatic agent discovery.
  * Manages agent lifecycle, service discovery, and annotation processing.
  */
 public class JenticRuntime {
@@ -104,7 +104,7 @@ public class JenticRuntime {
         
         this.serviceInstances.putAll(builder.serviceInstances);
 
-        // Register additional services with factory
+        // Register additional services with the factory
         for (Map.Entry<Class<?>, Object> entry : serviceInstances.entrySet()) {
             registerServiceUnchecked(entry.getKey(), entry.getValue());
         }
@@ -181,7 +181,7 @@ public class JenticRuntime {
                         CompletableFuture<Void> stopFuture = lifecycleManager
                                 .stopAgent(agent, DEFAULT_SHUTDOWN_TIMEOUT)
                                 .thenCompose(v -> {
-                                    // Unregister from directory after successful stop
+                                    // Unregister from the directory after a successful stop
                                     log.debug("Unregistering agent {} from directory", agent.getAgentId());
                                     return agentDirectory.unregister(agent.getAgentId());
                                 })
@@ -253,7 +253,7 @@ public class JenticRuntime {
             }
         }
 
-        // Create descriptor and register in directory
+        // Create a descriptor and register in a directory
         AgentDescriptor descriptor = agentFactory.createDescriptor(
                 agent.getClass(),
                 agent
@@ -271,7 +271,7 @@ public class JenticRuntime {
     }
 
     /**
-     * Create agent from class using annotation discovery
+     * Create an agent from a class using annotation discovery
      */
     public <T extends Agent> T createAgent(Class<T> agentClass) {
         try {
@@ -458,13 +458,13 @@ public class JenticRuntime {
         List<CompletableFuture<Void>> startFutures = new ArrayList<>();
 
         for (Agent agent : agents.values()) {
-            // Check if agent should auto-start
+            // Check if the agent should auto-start
             if (shouldAutoStart(agent)) {
                 // Use LifecycleManager for proper state tracking and timeout handling
                 CompletableFuture<Void> startFuture = lifecycleManager
                         .startAgent(agent, DEFAULT_STARTUP_TIMEOUT)
                         .thenCompose(v -> {
-                            // Update agent status in directory after successful start
+                            // Update agent status in the directory after a successful start
                             log.debug("Updating agent {} status to RUNNING in directory",
                                     agent.getAgentId());
                             return agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.RUNNING);
@@ -472,14 +472,14 @@ public class JenticRuntime {
                         .exceptionally(throwable -> {
                             log.error("Failed to start agent: {} - {}",
                                     agent.getAgentId(), throwable.getMessage());
-                            // Update status to ERROR in directory
+                            // Update status to ERROR in the directory
                             agentDirectory.updateStatus(agent.getAgentId(), AgentStatus.ERROR)
                                     .exceptionally(ex -> {
                                         log.warn("Could not update error status for agent {}",
                                                 agent.getAgentId());
                                         return null;
                                     });
-                            // Don't fail entire startup for one agent
+                            // Don't fail the entire startup for one agent
                             return null;
                         });
                 startFutures.add(startFuture);
@@ -491,7 +491,7 @@ public class JenticRuntime {
     }
 
     /**
-     * Check if agent should auto-start based on annotation
+     * Check if the agent should auto-start based on annotation
      */
     private boolean shouldAutoStart(Agent agent) {
         JenticAgent annotation = agent.getClass().getAnnotation(JenticAgent.class);
@@ -540,7 +540,7 @@ public class JenticRuntime {
                 ? agent.stop()
                 : CompletableFuture.completedFuture(null);
 
-        // Then unregister from directory
+        // Then unregister from the directory
         return stopFuture
                 .thenCompose(v -> agentDirectory.unregister(agentId))
                 .exceptionally(throwable -> {
@@ -570,13 +570,13 @@ public class JenticRuntime {
         private final Map<Class<?>, Object> serviceInstances = new HashMap<>();
 
         /**
-         * Load configuration from YAML/JSON file
+         * Load configuration from the YAML / JSON file
          *
          * @param configPath path to a configuration file
          * @return this builder
-         * @throws ConfigurationException if loading fails
+         * @throws ConfigurationException if loading fails or the configuration is invalid
          */
-        public Builder fromFilesystemConfig(String configPath) throws ConfigurationException {
+        public Builder fromFilesystemConfig(String configPath) {
             ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadFromFile(configPath);
             loader.validate(this.configuration);
@@ -591,7 +591,7 @@ public class JenticRuntime {
          * @return this builder
          * @throws ConfigurationException if loading fails
          */
-        public Builder fromClasspathConfig(String resourcePath) throws ConfigurationException {
+        public Builder fromClasspathConfig(String resourcePath) {
             ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadFromClasspath(resourcePath);
             loader.validate(this.configuration);
@@ -600,12 +600,17 @@ public class JenticRuntime {
         }
 
         /**
-         * Use provided configuration object
+         * Use the provided configuration object
          *
          * @param config the configuration to use
          * @return this builder
+         * @throws ConfigurationException if the configuration is null or invalid
          */
         public Builder withConfiguration(JenticConfiguration config) {
+            if (config == null) {
+                throw new ConfigurationException("Configuration cannot be null");
+            }
+            new DefaultConfigurationLoader().validate(config);
             this.configuration = config;
             log.info("Using provided configuration: {}", config.runtime().name());
             return this;
@@ -615,15 +620,12 @@ public class JenticRuntime {
          * Load the default configuration (jentic.yml from filesystem or classpath)
          *
          * @return this builder
+         * @throws ConfigurationException if loading fails or the configuration is invalid
          */
         public Builder withDefaultConfig() {
             ConfigurationLoader loader = new DefaultConfigurationLoader();
             this.configuration = loader.loadDefault();
-            try {
-                loader.validate(this.configuration);
-            } catch (ConfigurationException e) {
-                log.warn("Default configuration validation failed: {}", e.getMessage());
-            }
+            loader.validate(this.configuration);
             log.info("Loaded default configuration");
             return this;
         }
