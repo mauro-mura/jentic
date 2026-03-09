@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Configuration-driven package scanning**: `JenticRuntime` now uses `getAllScanPackages()` from configuration for agent discovery.
+
+### Changed
+- **Exception Hierarchy (BREAKING CHANGE)**: Restructured all core exceptions (LLM, Persistence, Memory, Embedding) to inherit from `JenticException` (a `RuntimeException`) and moved them to their respective functional packages (e.g., `dev.jentic.core.persistence`).
+- **Configuration Loading**: Simplified `ConfigurationLoader` API by removing explicit checked `ConfigurationException` from `loadFromFile`.
+- **Validation Logic**: Improved configuration validation in `JenticRuntime.Builder`, ensuring invalid configurations are caught early.
+
+### Fixed
+- **Documentation Workflows**: Fixed table formatting in ADR index and link formatting in documentation deployment workflows.
+
 ## [0.10.0] - 2026-03-07
 
 ### Added
@@ -158,8 +169,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.11.0-SNAPSHOT...HEAD
-[0.11.0-SNAPSHOT]: https://github.com/mauro-mura/jentic/compare/v0.10.0...v0.11.0-SNAPSHOT
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.10.0...HEAD
 [0.10.0]: https://github.com/mauro-mura/jentic/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/mauro-mura/jentic/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/mauro-mura/jentic/compare/v0.7.1...v0.8.0
