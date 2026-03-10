@@ -9,12 +9,12 @@ Jentic supports configuration via YAML files and programmatic builders. This pag
 ```java
 import dev.jentic.runtime.JenticRuntime;
 
-// Load from filesystem path
+// Load from a filesystem path (throws ConfigurationException on invalid config)
 var runtime = JenticRuntime.builder()
     .fromFilesystemConfig("./jentic.yml")
     .build();
 
-// Load from classpath resource
+// Load from classpath resource (throws ConfigurationException on invalid config)
 var runtime = JenticRuntime.builder()
     .fromClasspathConfig("jentic-test.yml")
     .build();
@@ -29,9 +29,13 @@ JenticConfiguration config = JenticConfiguration.defaults();
 var runtime = JenticRuntime.builder()
     .withConfiguration(config)
     .build();
+
+// withConfiguration validates the provided config and throws ConfigurationException
+// if it is null or fails validation (e.g. blank runtime.name).
 ```
 
 If none of the config builder methods are called, `JenticRuntime` starts with built-in defaults.
+**Note:** All builder config methods throw `ConfigurationException` (unchecked) if the loaded or provided configuration fails validation. No checked exception handling is required at the call site.
 
 ### Direct loader usage
 
