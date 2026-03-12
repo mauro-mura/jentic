@@ -354,3 +354,11 @@ See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 ## 📄 License
 
 Apache License 2.0 - see [LICENSE](LICENSE) file for details.
+
+## 🙋 Support
+
+- 🐛 Issues: [GitHub Issues](https://github.com/mauro-mura/jentic/issues)
+
+## 🤖 Development
+
+Developed with AI-assisted code generation and design using Claude AI.
