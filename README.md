@@ -333,6 +333,7 @@ mvn exec:java -pl jentic-examples \
 - [CircuitBreakerBehavior](docs/behaviors/CircuitBreakerBehavior.md) - Fault tolerance circuit breaker
 - [PipelineBehavior](docs/behaviors/PipelineBehavior.md) - Multi-stage data transformation
 - [RetryBehavior](docs/behaviors/RetryBehavior.md) - Automatic retry with back-off
+- [ReflectionBehavior](docs/behaviors/ReflectionBehavior.md) - LLM Generate → Critique → Revise loop
 
 See [docs/behaviors/README.md](docs/behaviors/README.md) for a full overview.
 

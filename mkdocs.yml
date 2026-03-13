@@ -72,6 +72,7 @@ nav:
     - Retry: behaviors/RetryBehavior.md
     - Throttled: behaviors/ThrottledBehavior.md
     - CircuitBreaker: behaviors/CircuitBreakerBehavior.md
+    - Reflection: behaviors/ReflectionBehavior.md
   - Messaging:
     - Message Filtering: message-filtering.md
     - Dialog Protocol: dialog-protocol.md

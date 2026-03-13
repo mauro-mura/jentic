@@ -25,6 +25,7 @@ Behaviors are the primary mechanism for implementing agent logic. Every behavior
 | `CircuitBreakerBehavior` | Fault-tolerance circuit breaker pattern |
 | `PipelineBehavior` | Multi-stage sequential data transformation |
 | `RetryBehavior` | Automatic retry with configurable back-off |
+| `ReflectionBehavior` | Generate → Critique → Revise loop for LLM output self-improvement |
 
 ## Quick Reference
 
