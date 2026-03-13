@@ -14,8 +14,8 @@ configured threshold or `maxIterations` is reached.
 ## How It Works
 
 ```
-┌─────────┐     ┌──────────┐     score >= threshold  ┌────────┐
-│ action()│────▶│ critique │─────────────────────────▶│ DONE   │
+┌─────────┐     ┌──────────┐     score >= threshold   ┌────────┐
+│ action()│────>│ critique │─────────────────────────>│ DONE   │
 └─────────┘     └────┬─────┘                          └────────┘
                      │ shouldRevise && iter < max
                      ▼
@@ -31,6 +31,8 @@ The best output scored across all iterations is always retained and returned eve
 ---
 
 ## Usage
+
+**Note**: `ReflectionBehavior` requires a `ReflectionStrategy` and typed lambdas that cannot be expressed via `@JenticBehavior`. Use the builder API and register the behavior manually in `onStart()` or via `addBehavior()`.
 
 ### Builder
 
@@ -145,8 +147,3 @@ ReflectionBehavior.builder()                    // auto-generated ID
 - `dev.jentic.core.reflection.ReflectionConfig`
 - `dev.jentic.runtime.reflection.DefaultReflectionStrategy`
 - `docs/adr/ADR-012-reflection-behavior.md`
-
----
-
-**Since**: Jentic 0.8.0  
-**Status**: Production Ready ✅
