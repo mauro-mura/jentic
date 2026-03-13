@@ -47,7 +47,7 @@ public class ReflectionExample {
     public static void main(String[] args) throws Exception {
       String apiKey = System.getenv("OPENAI_API_KEY");
       if (apiKey == null || apiKey.isBlank()) {
-          System.err.println("ERROR: OPENAI_API_KEY environment variable is not set.");
+          log.error("ERROR: OPENAI_API_KEY environment variable is not set.");
           System.exit(1);
       }
 
