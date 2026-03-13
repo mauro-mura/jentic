@@ -6,10 +6,16 @@ import dev.jentic.core.memory.MemoryEntry;
 import dev.jentic.core.memory.llm.ContextWindowStrategy;
 import dev.jentic.core.memory.llm.LLMMemoryManager;
 import dev.jentic.runtime.memory.llm.ContextWindowStrategies;
+import dev.jentic.core.llm.LLMProvider;
+import dev.jentic.core.reflection.CritiqueResult;
+import dev.jentic.core.reflection.ReflectionConfig;
+import dev.jentic.core.reflection.ReflectionStrategy;
+import dev.jentic.runtime.reflection.DefaultReflectionStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -94,6 +100,26 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
     protected int messagesToSummarize = 10;
     
     /**
+     * Optional LLM provider registered by subclasses to enable automatic
+     * creation of {@link DefaultReflectionStrategy} when no explicit
+     * {@link ReflectionStrategy} is configured.
+     *
+     * <p>Subclasses call {@link #setLLMProvider} in their constructor or
+     * {@code onStart()} to opt in to the auto-default behavior.
+     * 
+     * @since 0.12.0
+     */
+    private LLMProvider llmProvider;
+    
+    /**
+     * Optional reflection strategy. When {@code null}, {@link #reflect} creates
+     * a {@link DefaultReflectionStrategy} backed by {@link #llmProvider} if set.
+     * 
+     * @since 0.12.0
+     */
+    private ReflectionStrategy reflectionStrategy;
+    
+    /**
      * Creates an LLM agent with auto-generated ID.
      */
     protected LLMAgent() {
@@ -149,6 +175,139 @@ public abstract class LLMAgent extends BaseAgent implements LLMMemoryAware {
      */
     protected boolean hasLLMMemory() {
         return llmMemoryManager != null;
+    }
+    
+    // -------------------------------------------------------------------------
+    // Reflection — provider registration
+    // -------------------------------------------------------------------------
+    
+    /**
+     * Registers the {@link LLMProvider} used by this agent.
+     *
+     * <p>Subclasses call this method to enable the automatic creation of a
+     * {@link DefaultReflectionStrategy} when {@link #reflect} is invoked
+     * without an explicit strategy configured.
+     *
+     * <pre>{@code
+     * public MyAgent() {
+     *     this.provider = LLMProviderFactory.openai().apiKey(...).build();
+     *     setLLMProvider(provider);  // opt in to auto-default reflection
+     * }
+     * }</pre>
+     *
+     * @param provider the LLM provider (non-null)
+     * 
+     * @since 0.12.0
+     */
+    protected void setLLMProvider(LLMProvider provider) {
+        this.llmProvider = Objects.requireNonNull(provider, "provider must not be null");
+    }
+    
+    // -------------------------------------------------------------------------
+    // Reflection — strategy injection
+    // -------------------------------------------------------------------------
+ 
+    /**
+     * Sets a custom {@link ReflectionStrategy} for this agent.
+     *
+     * <p>When set, {@link #reflect} uses this strategy instead of creating a
+     * {@link DefaultReflectionStrategy} automatically.
+     *
+     * @param strategy the strategy to use, or {@code null} to revert to auto-default
+     * 
+     * @since 0.12.0
+     */
+    public void setReflectionStrategy(ReflectionStrategy strategy) {
+        this.reflectionStrategy = strategy;
+    }
+ 
+    /**
+     * Returns the currently configured {@link ReflectionStrategy}, or
+     * {@code null} if none has been set explicitly.
+     *
+     * @return the reflection strategy, or {@code null}
+     * 
+     * @since 0.12.0
+     */
+    public ReflectionStrategy getReflectionStrategy() {
+        return reflectionStrategy;
+    }
+    
+    // -------------------------------------------------------------------------
+    // Reflection — convenience entry point
+    // -------------------------------------------------------------------------
+ 
+    /**
+     * Critiques {@code output} against {@code task} using the configured
+     * {@link ReflectionStrategy}.
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>If {@link #setReflectionStrategy} was called → use that strategy.</li>
+     *   <li>Else if {@link #setLLMProvider} was called → create a
+     *       {@link DefaultReflectionStrategy} backed by that provider.</li>
+     *   <li>Else → throw {@link IllegalStateException}.</li>
+     * </ol>
+     *
+     * <p>Example:
+     * <pre>{@code
+     * String output = callLLM(prompt);
+     * CritiqueResult critique = reflect(output, task, ReflectionConfig.defaults()).join();
+     * if (critique.shouldRevise()) {
+     *     output = callLLM(buildRevisionPrompt(output, critique.feedback()));
+     * }
+     * }</pre>
+     *
+     * @param output the LLM-generated text to evaluate (non-null)
+     * @param task   the original task description (non-null)
+     * @param config reflection parameters (non-null)
+     * @return future resolving to a {@link CritiqueResult}
+     * @throws IllegalStateException if neither {@code reflectionStrategy} nor
+     *                               {@code llmProvider} has been configured
+     *                               
+     * @since 0.12.0                              
+     */
+    protected CompletableFuture<CritiqueResult> reflect(
+            String output, String task, ReflectionConfig config) {
+        ReflectionStrategy effective = resolveStrategy();
+        return effective.critique(output, task, config);
+    }
+ 
+    /**
+     * Critiques {@code output} using {@link ReflectionConfig#defaults()}.
+     *
+     * @param output the LLM-generated text to evaluate (non-null)
+     * @param task   the original task description (non-null)
+     * @return future resolving to a {@link CritiqueResult}
+     * @throws IllegalStateException if neither strategy nor provider is configured
+     * 
+     * @since 0.12.0
+     */
+    protected CompletableFuture<CritiqueResult> reflect(String output, String task) {
+        return reflect(output, task, ReflectionConfig.defaults());
+    }
+ 
+    /**
+     * Returns {@code true} if reflection is available (strategy or provider set).
+     *
+     * @return {@code true} if {@link #reflect} can be called without throwing
+     * 
+     * @since 0.12.0
+     */
+    protected boolean hasReflection() {
+        return reflectionStrategy != null || llmProvider != null;
+    }
+    
+    private ReflectionStrategy resolveStrategy() {
+        if (reflectionStrategy != null) {
+            return reflectionStrategy;
+        }
+        if (llmProvider != null) {
+            return new DefaultReflectionStrategy(llmProvider);
+        }
+        throw new IllegalStateException(
+                "Reflection is not configured. Call setReflectionStrategy() or " +
+                "setLLMProvider() before invoking reflect().");
     }
 
     // ========== BASE LLM MEMORY OPERATIONS ==========

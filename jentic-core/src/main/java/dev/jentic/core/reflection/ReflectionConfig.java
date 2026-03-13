@@ -32,6 +32,8 @@ package dev.jentic.core.reflection;
  *
  * @see ReflectionStrategy
  * @see CritiqueResult
+ * 
+ * @since 0.12.0
  */
 public record ReflectionConfig(
         int maxIterations,

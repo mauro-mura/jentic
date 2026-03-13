@@ -21,6 +21,8 @@ import java.util.concurrent.CompletableFuture;
  *
  * @see CritiqueResult
  * @see ReflectionConfig
+ * 
+ * @since 0.12.0
  */
 @FunctionalInterface
 public interface ReflectionStrategy {

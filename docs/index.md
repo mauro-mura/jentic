@@ -38,6 +38,7 @@ New to Jentic? Start with the **[Getting Started Guide](getting-started.md)**.
 | [BatchBehavior](behaviors/BatchBehavior.md) | Bulk item processing |
 | [CircuitBreakerBehavior](behaviors/CircuitBreakerBehavior.md) | Fault-tolerance pattern |
 | [PipelineBehavior](behaviors/PipelineBehavior.md) | Multi-stage transformation |
+| [ReflectionBehavior](behaviors/ReflectionBehavior.md) | LLM output reflection loop |
 
 ## Examples
 

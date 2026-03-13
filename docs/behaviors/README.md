@@ -76,3 +76,4 @@ addBehavior() → [active=true] → execute() loops → stop() → [active=false
 - [CircuitBreakerBehavior](CircuitBreakerBehavior.md)
 - [PipelineBehavior](PipelineBehavior.md)
 - [RetryBehavior](RetryBehavior.md)
+- [ReflectionBehavior](ReflectionBehavior.md)

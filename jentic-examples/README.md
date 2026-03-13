@@ -83,6 +83,7 @@ Requires `OPENAI_API_KEY` environment variable.
 | `LLMDirectMessagingExample` | `dev.jentic.examples.llm.LLMDirectMessagingExample` | Manual registration + point-to-point direct messaging |
 | `LLMCapabilityDiscoveryExample` | `dev.jentic.examples.llm.capabilities.LLMCapabilityDiscoveryExample` | `scanPackages` + `AgentDirectory` capability queries |
 | `LLMFaultToleranceExample` | `dev.jentic.examples.llm.dynamic_discovery.LLMFaultToleranceExample` | Dynamic discovery + fault tolerance (agent stops mid-run) |
+| `ReflectionExample` | `dev.jentic.examples.behaviors.ReflectionExample` | ReflectionBehavior — Generate → Critique → Revise loop |
 
 The three `LLM*` examples use the same research-team domain intentionally — comparing
 them side by side shows how the same problem is solved with different discovery patterns.

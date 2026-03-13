@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
  * DefaultReflectionStrategy strategy = new DefaultReflectionStrategy(llmProvider);
  * CritiqueResult result = strategy.critique(output, task, ReflectionConfig.defaults()).join();
  * }</pre>
+ * 
+ * @since 0.12.0
  */
 public class DefaultReflectionStrategy implements ReflectionStrategy {
 

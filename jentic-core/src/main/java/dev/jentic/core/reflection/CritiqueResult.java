@@ -26,6 +26,8 @@ package dev.jentic.core.reflection;
  *
  * @see ReflectionStrategy
  * @see ReflectionConfig
+ * 
+ * @since 0.12.0
  */
 public record CritiqueResult(
         String feedback,
