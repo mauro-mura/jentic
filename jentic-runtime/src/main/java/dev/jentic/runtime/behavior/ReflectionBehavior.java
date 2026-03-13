@@ -45,6 +45,8 @@ import java.util.function.Supplier;
  *
  * @see ReflectionStrategy
  * @see ReflectionConfig
+ * 
+ * @since 0.12.0
  */
 public class ReflectionBehavior extends OneShotBehavior {
 
