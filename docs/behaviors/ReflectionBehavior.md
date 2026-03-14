@@ -7,7 +7,7 @@ After each output is produced, a `ReflectionStrategy` evaluates its quality and
 decides whether a revision cycle is needed. The loop stops when the score meets the
 configured threshold or `maxIterations` is reached.
 
-**Since**: v0.12.0 | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.jentic.runtime.behavior`
+**Since**: v0.13.0-SNAPSHOT | **Type**: `BehaviorType.ONE_SHOT` | **Package**: `dev.jentic.runtime.behavior`
 
 ---
 
