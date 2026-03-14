@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-14
+
+### Added
+- **Reflection Pattern (ADR-012)**: Introduced `ReflectionStrategy` and `ReflectionBehavior` for the Generate → Critique → Revise loop.
+  - `ReflectionStrategy`, `CritiqueResult`, and `ReflectionConfig` added to `jentic-core` as core abstractions.
+  - `DefaultReflectionStrategy` and `ReflectionBehavior` added to `jentic-runtime` for LLM-backed self-critique.
+- **Reflection Example**: Added `ReflectionExample` demonstrating the self-correction loop in `jentic-examples`.
+- **Documentation**: New dedicated guide for `ReflectionBehavior` and updated `mkdocs.yml` navigation.
+
+### Changed
+- **Project Structure**: Expanded ADR documentation with ADR-012 and updated README with Support and Development sections.
+
 ## [0.11.0] - 2026-03-11
 
 ### Added
@@ -172,7 +184,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ADR-based architecture (Architectural Decision Records).
 - Architecture guide and initial documentation.
 
-[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/mauro-mura/jentic/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/mauro-mura/jentic/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/mauro-mura/jentic/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/mauro-mura/jentic/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/mauro-mura/jentic/compare/v0.8.0...v0.9.0
